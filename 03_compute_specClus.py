@@ -75,7 +75,7 @@ def main(argv):
 	for opt, arg in opts:
 		if opt == '-n':
 			n_cells = int(arg)
-		elif opt == '-t':
+		elif opt == '-i':
 			identifiersFile = arg
 
 	with open(identifiersFile, 'r') as iF:
