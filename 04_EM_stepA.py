@@ -204,7 +204,7 @@ def main(argv):
 			theta = float(arg)
 
 	with open(labelsFile, 'r') as f:
-		labels = f.read().split()
+		labels = f.read().split(',')
 
 
 	n_cells = len(labels)
