@@ -19,8 +19,8 @@ file only if it passes the pre-processing heuristics.
 The code performing pre-processing.
 
 Required arguments:
-* -n <int> - number of cells in the data set
-* -t <float> - theta, expected error rate
+* -n \<int\> - number of cells in the data set
+* -t \<float\> - theta, expected error rate
 
 #### run_mpileup.sh
 An example script to run samtools mpileup + preprocessing on each chromosome separately.
