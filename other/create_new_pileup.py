@@ -132,11 +132,12 @@ def main(argv):
 			cells = arg
 
 
-	#labels = np.genfromtxt(labF, delimiter=",")
-	#cells_ids = [x for x in range(len(labels)) if labels[x]==label]
-	cells_ids = np.genfromtxt(cells, delimiter=",")
-	#with open("cells_cluster1", 'w') as f:
-	#	f.write(",".join([str(x) for x in cells_ids]))	
+	if labF!="":
+		labels = np.genfromtxt(labF, delimiter=",")
+		cells_ids = [x for x in range(len(labels)) if labels[x]==label]
+	else:
+		cells_ids = np.genfromtxt(cells, delimiter=",")
+	
 
 	createNewMpileup(oldF, newF, cells_ids, theta)
 
