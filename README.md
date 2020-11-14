@@ -77,7 +77,7 @@ Outputs a tab-separated file with information on the called variants.
 Required arguments:
 * -l <string> - comma-separated file containing soft labels of cells; labels are numbers between 0 and 1, giving the probability of belonging to cluster 1
 * -f <string> - the mpileup file, result of pre-processing
-* -i <string> - identifier, typically chromosome name; the output file will be called "varCalls_ch<i>"
+* -i <string> - identifier, typically chromosome name; the output file will be called "varCalls_ch<id>"
   
 Optional arguments:
 * -t <float> - theta, error rate; default 0.01
@@ -105,4 +105,4 @@ Required arguments:
  Compares the variant calls with true mutations - classifies each call as TP or FP, plus adds all FNs.
  
  Required arguments:
- * -i <string> - identifier, typically chromosome name; reads data from "varCalls_chr<i>", results are stored to "true_chr<i>"
+ * -i <string> - identifier, typically chromosome name; reads data from "varCalls_chr<id>", results are stored to "true_chr<id>"
