@@ -5,6 +5,7 @@
 #include <gflags/gflags.h>
 
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
