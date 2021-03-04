@@ -14,19 +14,37 @@
 #include <numeric>
 
 DEFINE_double(seq_error_rate, 0.001, "Sequencing errors rate, denoted by theta");
-DEFINE_double(mutation_rate, 0, "Fraction of muated loci, denoted by epsilon");
-DEFINE_uint32(num_cells, 0, "Number of sequenced cells");
-DEFINE_string(mpileup_file, "", "File containing TODO");
-DEFINE_string(cells_file, "", "File containing the relevant cell ids");
-DEFINE_string(cell_group_file, "", "File containing the cell groupings");
-DEFINE_uint32(chromosome, 0, "The chromosome number to process [1-23]");
-DEFINE_uint32(max_insert, 1000, "TODO");
+DEFINE_double(mutation_rate,
+              0,
+              "epsilon, estimated frequency of mutated loci in the pre-processed data set");
 // estimate of how many positions are actually homozygous germline, were only included because of
 // sequencing (or alignment!) errors
 DEFINE_double(
         hzygous_prob,
         0,
         "The probability that a loci is homozygous, (not filtered correctly in the first step");
+
+DEFINE_string(mpileup_file,
+              "",
+              "Input file containing 'pileup' textual format from an alignment, as written by "
+              "preprocessing.py");
+DEFINE_uint32(num_cells, 0, "Number of sequenced cells");
+DEFINE_string(cells_file,
+              "",
+              "File with identifiers of cells (numbers between 0 and (num_of_cells - 1); the "
+              "matrices will be computed only for these cells; if absent, all cells are used.");
+DEFINE_string(cell_group_file,
+              "",
+              "For each cell, it contains a group to which it belongs. Cells from one group will "
+              "be treated as one cell. Useful e.g. when creating data with artificially higher "
+              "coverage; if absent, each cell has its own group");
+
+DEFINE_uint32(run_id,
+              0,
+              "Identifier of the run (e.g. chromosome number); the resulting files will be called "
+              "'mat_same_<run_id>.csv' and 'mat_diff_<id>.csv'");
+DEFINE_uint32(max_insert, 1000, "Maximal considered insert size (for paired-end sequencing)");
+
 
 /** Caches a bunch of combinations and powers used again and again in the computation */
 struct Cache {
@@ -310,9 +328,9 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
     }
 
     // save mat_same and mat_diff into file
-    write_mat("mat_same_" + std::to_string(FLAGS_chromosome) + ".csv", mat_same);
-    write_mat("mat_diff_" + std::to_string(FLAGS_chromosome) + ".csv", mat_diff);
-    write_mat("combs_xs_xd_" + std::to_string(FLAGS_chromosome) + ".csv", combs_xs_xd);
+    write_mat("mat_same_" + std::to_string(FLAGS_run_id) + ".csv", mat_same);
+    write_mat("mat_diff_" + std::to_string(FLAGS_run_id) + ".csv", mat_diff);
+    write_mat("combs_xs_xd_" + std::to_string(FLAGS_run_id) + ".csv", combs_xs_xd);
 }
 
 int main(int argc, char *argv[]) {
