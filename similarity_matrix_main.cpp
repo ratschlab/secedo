@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <cassert>
 #include <cmath>
 
 DEFINE_double(seq_error_rate, 0.001, "Sequencing errors rate, denoted by theta");
