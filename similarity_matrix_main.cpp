@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <cassert>
 #include <cmath>
 #include <iostream>
 
