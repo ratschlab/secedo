@@ -4,15 +4,15 @@
 
 #include <gflags/gflags.h>
 
-#include <fstream>
 #include <limits>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
 
 #include <iostream>
-#include <math.h>
 #include <numeric>
+
+#include <cmath>
 
 DEFINE_double(seq_error_rate, 0.001, "Sequencing errors rate, denoted by theta");
 DEFINE_double(mutation_rate,
@@ -249,7 +249,11 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
 
     // line counter
     uint32_t n_lines = 0;
-    // process the mpileup file line by line
+    // traverse the pre-processed file line by line. Each line in the file is of the form:
+    // chromosome_id    position    coverage    bases   cells   readNames
+    // For example the line:
+    // 22      10719571        2       TG      0,3  name1,name2
+    // Means that at position 10719571 of chromosome 22, we read 'T' in cell 0 and 'G' in cell 3
     std::ifstream f(FLAGS_mpileup_file);
     std::string line;
     std::vector<uint32_t> line_cells;
@@ -276,7 +280,7 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
                 case 5: // 6th field: read identifiers
                     line_reads = int_split(s, ',');
                     break;
-            };
+            }
             ++idx;
         }
         for (auto it = active_reads.begin(); it != active_reads.end();) {
@@ -295,8 +299,6 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
                 std::get<0>(r_value) += '*';
                 ++it;
             } else { // the read does not continue; compute its overlaps with all other active reads
-                uint32_t cell_id = std::get<2>(r_value);
-                uint32_t pos = std::get<1>(r_value);
                 std::string seq = std::get<0>(r_value);
                 // remove the read from active_reads
                 it = active_reads.erase(it);
@@ -338,7 +340,7 @@ int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     std::vector<uint32_t> cells_ids;
-    if (FLAGS_cells_file != "") {
+    if (!FLAGS_cells_file.empty()) {
         cells_ids = int_split(read_file(FLAGS_cells_file), ' ');
         // num_cells = len(cells_ids);
     } else {
@@ -347,7 +349,7 @@ int main(int argc, char *argv[]) {
     }
 
     std::vector<uint32_t> cell_groups;
-    if (FLAGS_cell_group_file != "") {
+    if (!FLAGS_cell_group_file.empty()) {
         cell_groups = int_split(read_file(FLAGS_cells_file), ',');
     } else {
         cells_ids.resize(FLAGS_num_cells);
