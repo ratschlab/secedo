@@ -13,14 +13,15 @@
 
 #include <gflags/gflags.h>
 
-#include <numeric>
 #include <fstream>
 #include <limits>
+#include <numeric>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
 
 #include <cmath>
+#include <iostream>
 
 DEFINE_double(seq_error_rate, 0.001, "Sequencing errors rate, denoted by theta");
 DEFINE_double(mutation_rate,
@@ -48,6 +49,7 @@ DEFINE_string(cell_group_file,
               "be treated as one cell. Useful e.g. when creating data with artificially higher "
               "coverage; if absent, each cell has its own group");
 
+DEFINE_string(out_dir, "./", "Directory where the similarity matrices will be written to");
 DEFINE_uint32(run_id,
               0,
               "Identifier of the run (e.g. chromosome number); the resulting files will be called "
@@ -219,7 +221,7 @@ ParsedLine parse_line(const std::string &line) {
     std::getline(stream, bases, '\t');
     std::getline(stream, cell_ids, '\t');
     std::getline(stream, read_ids, '\t');
-    return {position, bases, int_split(cell_ids, ','), split(read_ids, ',') };
+    return { position, bases, int_split(cell_ids, ','), split(read_ids, ',') };
 }
 
 void compare_with_reads(const std::unordered_map<std::string, Read> &active_reads,
@@ -256,6 +258,9 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
             }
 
             // update the distance matrices
+            if (read1.cell_id >= cell_ids.size()) {
+                std::cerr << "Cell id " << read1.cell_id;
+            }
             uint32_t index1 = cell_groups[cell_ids[read1.cell_id]];
             uint32_t index2 = cell_groups[cell_ids[read2.cell_id]];
             if (index1 != index2) {
@@ -327,12 +332,15 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
                 // the read is complete; compute its overlaps with all other active reads, i.e. all
                 // reads that have some bases in the last FLAGS_max_read_size positions
 
+                // make a copy before deleting the iterator, which invalidates read
+                Read read_copy = read;
+
                 // remove the read from active_reads
                 it = active_reads.erase(it);
 
                 // compare with all other reads in active_reads
-                compare_with_reads(active_reads, read, cell_ids, cell_groups, mat_same, mat_diff,
-                                   log_probs_same, log_probs_diff, combs_xs_xd, cache);
+                compare_with_reads(active_reads, read_copy, cell_ids, cell_groups, mat_same,
+                                   mat_diff, log_probs_same, log_probs_diff, combs_xs_xd, cache);
             }
         }
 
@@ -358,9 +366,9 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
     }
 
     // save mat_same and mat_diff into file
-    write_mat("mat_same_" + std::to_string(FLAGS_run_id) + ".csv", mat_same);
-    write_mat("mat_diff_" + std::to_string(FLAGS_run_id) + ".csv", mat_diff);
-    write_mat("combs_xs_xd_" + std::to_string(FLAGS_run_id) + ".csv", combs_xs_xd);
+    write_mat(FLAGS_out_dir + "mat_same_" + std::to_string(FLAGS_run_id) + ".csv", mat_same);
+    write_mat(FLAGS_out_dir + "mat_diff_" + std::to_string(FLAGS_run_id) + ".csv", mat_diff);
+    write_mat(FLAGS_out_dir + "combs_xs_xd_" + std::to_string(FLAGS_run_id) + ".csv", combs_xs_xd);
 }
 
 int main(int argc, char *argv[]) {
