@@ -1,3 +1,4 @@
+import getopt
 import re
 import math
 import numpy as np

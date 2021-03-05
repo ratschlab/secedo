@@ -144,8 +144,8 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
                             diff = pos_2 - pos
                             for i in range(len(seq_2)):
                                 # both read and the same
-                                if seq_2[i] != '*' and seq[i + diff] != '*' and seq_2[i].capitalize() == seq[
-                                    i + diff].capitalize():
+                                if seq_2[i] != '*' and seq[i + diff] != '*' \
+                                        and seq_2[i].capitalize() == seq[i + diff].capitalize():
                                     x_s += 1
                                 # both read and different
                                 elif seq_2[i] != '*' and seq[i + diff] != '*':
@@ -153,8 +153,8 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
                         else:
                             diff = pos - pos_2
                             for i in range(len(seq)):
-                                if seq_2[i + diff] != '*' and seq[i] != '*' and seq[i].capitalize() == seq_2[
-                                    i + diff].capitalize():
+                                if seq_2[i + diff] != '*' and seq[i] != '*' \
+                                        and seq[i].capitalize() == seq_2[i + diff].capitalize():
                                     x_s += 1
                                 elif seq_2[i + diff] != '*' and seq[i] != '*':
                                     x_d += 1
