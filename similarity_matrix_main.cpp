@@ -15,9 +15,9 @@
 
 #include <fstream>
 #include <limits>
-#include <map>
 #include <numeric>
 #include <sstream>
+#include <unordered_map>
 #include <vector>
 
 #include <cassert>
@@ -224,7 +224,7 @@ ParsedLine parse_line(const std::string &line) {
     return { position, bases, int_split(cell_ids, ','), split(read_ids, ',') };
 }
 
-void compare_with_reads(const std::map<std::string, Read> &active_reads,
+void compare_with_reads(const std::unordered_map<std::string, Read> &active_reads,
                         Read read1, // sent by copy as it's changed
                         const std::vector<uint32_t> &cell_ids,
                         const std::vector<uint32_t> &cell_groups,
@@ -233,8 +233,7 @@ void compare_with_reads(const std::map<std::string, Read> &active_reads,
                         Matd &log_probs_same,
                         Matd &log_probs_diff,
                         Mat32u &combs_xs_xd,
-                        Cache &cache,
-                        std::string r_id) { // TODO: remove) {
+                        Cache &cache) {
     for (auto it : active_reads) {
         Read read2 = it.second;
         if (read2.cell_id == read1.cell_id) {
@@ -248,9 +247,6 @@ void compare_with_reads(const std::map<std::string, Read> &active_reads,
 
         uint32_t x_s = 0;
         uint32_t x_d = 0;
-        if (read1.seq == "C*" && read2.seq == "c") {
-            std::cout << "da\n";
-        }
         for (; it1 != read1.seq.end() && it2 != read2.seq.end(); ++it1, ++it2) {
             if (*it1 != '*' && *it2 != '*') {
                 toupper(*it1) == toupper(*it2) ? x_s++ : x_d++;
@@ -272,12 +268,6 @@ void compare_with_reads(const std::map<std::string, Read> &active_reads,
             mat_diff[index1][index2]
                     += log_prob_diff_genotype(x_s, x_d, log_probs_diff, combs_xs_xd, cache);
             mat_diff[index2][index1] = mat_diff[index1][index2];
-            double p1 = log_prob_same_genotype(x_s, x_d, log_probs_same, combs_xs_xd, cache);
-            double p2 = log_prob_diff_genotype(x_s, x_d, log_probs_diff, combs_xs_xd, cache);
-            std::cout << mat_same[index1][index2] << "\t" << mat_diff[index1][index2] << "\t"
-                      << read1.cell_id << "\t" << read2.cell_id << "\t" << x_s << "\t" << x_d << "\t" << read1.seq
-                      << "\t" << read2.seq << "\t" << p1 << "\t" << p2 << "\t" << r_id << "\t"
-                      << it.first << std::endl;
         }
     }
 }
@@ -303,7 +293,7 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
 
     // key: read id of an active read
     // value: A Read struct, containing: sequence, line number, cell_id and position in genome
-    std::map<std::string, Read> active_reads;
+    std::unordered_map<std::string, Read> active_reads;
 
     Cache cache; // store intermediate values to avoid recomputation
 
@@ -346,8 +336,7 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
 
                 // compare with all other reads in active_reads
                 compare_with_reads(active_reads, read_copy, cell_ids, cell_groups, mat_same,
-                                   mat_diff, log_probs_same, log_probs_diff, combs_xs_xd, cache,
-                                   r_id);
+                                   mat_diff, log_probs_same, log_probs_diff, combs_xs_xd, cache);
             }
         }
 
@@ -359,22 +348,17 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
                         = { b, line_count, curr_read.cell_ids[i], curr_read.pos };
             }
         }
-        for (auto [key, value] : active_reads) {
-            std::cout << key << " ";
-        }
-        std::cout << std::endl;
     }
     f.close();
 
     // in the end, process all the leftover active reads
     for (auto it = active_reads.begin(); it != active_reads.end();) {
         const Read &read = it->second;
-        std::string r_id = it->first; // TODO:remove
         it = active_reads.erase(it); // delete the read from active_reads
 
         // compare with all other reads in active_reads
         compare_with_reads(active_reads, read, cell_ids, cell_groups, mat_same, mat_diff,
-                           log_probs_same, log_probs_diff, combs_xs_xd, cache, r_id);
+                           log_probs_same, log_probs_diff, combs_xs_xd, cache);
     }
 
     // save mat_same and mat_diff into file
