@@ -60,6 +60,8 @@ DEFINE_uint32(max_read_size,
               "is the maximal length of a read we consider. Reads that are longer will not be "
               "mapped correctly.");
 
+DEFINE_uint32(num_threads, 8, "Number of threads to use");
+
 
 /** Caches a bunch of combinations and powers used again and again in the computation */
 struct Cache {
@@ -233,8 +235,17 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
                         Matd &log_probs_diff,
                         Mat32u &combs_xs_xd,
                         Cache &cache) {
-    for (auto it : active_reads) {
-        Read read2 = it.second;
+    auto element = active_reads.begin();
+
+#pragma omp parallel for shared(element) num_threads(FLAGS_num_threads)
+    for (int i = 0; i < active_reads.size(); ++i) {
+        const Read *current_second = nullptr;
+#pragma omp critical
+        {
+            current_second = &element->second;
+            ++element;
+        }
+        Read read2 = *current_second;
         if (read2.cell_id == read1.cell_id) {
             continue; // only compare reads from different cells
         }
