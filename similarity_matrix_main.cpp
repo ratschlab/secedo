@@ -98,6 +98,7 @@ struct Cache {
 
 
     Cache() {
+        std::cout << "Pre-computing combinations and powers...";
         auto extend = [](std::vector<double> &a) { a.push_back(a.back() * a[1]); };
         for (uint32_t p = 2; p < FLAGS_max_read_size; ++p) {
             extend(pow_p_same_same);
@@ -120,6 +121,7 @@ struct Cache {
             }
             comb.push_back(std::move(new_comb));
         }
+        std::cout << "done" << std::endl;
     }
 };
 
@@ -229,7 +231,7 @@ ParsedLine parse_line(const std::string &line) {
 }
 
 void compare_with_reads(const std::unordered_map<std::string, Read> &active_reads,
-                        Read read1, // sent by copy as it's changed
+                        const Read& read1,
                         const std::vector<uint32_t> &cell_ids,
                         const std::vector<uint32_t> &cell_groups,
                         Matd &mat_same,
@@ -238,17 +240,17 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
                         Matd &log_probs_diff,
                         Mat32u &combs_xs_xd,
                         Cache &cache) {
-    auto element = active_reads.begin();
+    auto it = active_reads.begin();
 
-#pragma omp parallel for shared(element) num_threads(FLAGS_num_threads)
-    for (int i = 0; i < active_reads.size(); ++i) {
+#pragma omp parallel for num_threads(FLAGS_num_threads)
+    for (uint32_t i = 0; i < active_reads.size(); ++i) {
         const Read *current_second = nullptr;
 #pragma omp critical
         {
-            current_second = &element->second;
-            ++element;
+            current_second = &it->second;
+            ++it;
         }
-        Read read2 = *current_second;
+        const Read &read2 = *current_second;
         if (read2.cell_id == read1.cell_id) {
             continue; // only compare reads from different cells
         }
