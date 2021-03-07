@@ -8,6 +8,8 @@ import numpy as np
 import scipy.special
 import math
 
+from sortedcontainers import SortedDict
+
 '''
 Functions to retrieve or compute the probability of result (x_s, x_d).
 '''
@@ -72,7 +74,7 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
     #	- starting position (line number) (int)
     #	- cell id (string)
     #	- starting position in real coordinates (int)
-    activeReads = {}
+    activeReads = SortedDict()
     # distance matrices
     mat_same = np.zeros(shape=(n_cells, n_cells))
     mat_diff = np.zeros(shape=(n_cells, n_cells))
@@ -126,7 +128,8 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
                 # print("Delete " + r_id)
 
                 # compare with all other reads in activeReads
-                for r_id_2, r_value_2 in activeReads.items():
+                for r_id_2 in activeReads.keys():
+                    r_value_2 = activeReads[r_id_2]
                     if r_id_2 == r_id:
                         print("The same read id was present twice in activeReads; something is wrong.")
                         quit()
@@ -176,6 +179,16 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
                                                                                  p_same_same, p_same_diff, p_diff_same,
                                                                                  p_diff_diff)
                                 mat_diff[index_2, index_1] = mat_diff[index_1, index_2]
+                                # TODO: remove
+                                p1 = log_prob_of_result(x_s, x_d, 0, propHomo + 0.5 * epsilon,
+                                                        log_probs_same, combs_xs_xd,
+                                                        p_same_same, p_same_diff, p_diff_same,
+                                                        p_diff_diff)
+                                p2 = log_prob_of_result(x_s, x_d, epsilon, propHomo,
+                                                        log_probs_diff, combs_xs_xd,
+                                                        p_same_same, p_same_diff, p_diff_same,
+                                                        p_diff_diff)
+                                print(f'{mat_same[index_2, index_1]:.6f}\t{mat_diff[index_2, index_1]:.6f}\t{cell_id}\t{cell_id_2}\t{x_s}\t{x_d}\t{seq}\t{seq_2}\t{p1:.6f}\t{p2:.6f}\t{r_id}\t{r_id_2}')
 
         # for each read in line_reads, check, if it is in activeReads; if not, add it
         for i in range(len(line_reads)):
@@ -184,6 +197,8 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
                 # print("Add " + line_reads[i])
                 cell_id = int(line_cells[i])
                 activeReads[line_reads[i]] = [b, n_lines, cell_id, line_pos]
+
+        print(' '.join(activeReads.keys()), ' ')
 
     f.close()
 
@@ -244,6 +259,7 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
                                                                          combs_xs_xd, p_same_same, p_same_diff,
                                                                          p_diff_same, p_diff_diff)
                         mat_diff[index_2, index_1] = mat_diff[index_1, index_2]
+                        print(mat_same[index_2, index_1], mat_diff[index_2, index_1], combs_xs_xd[x_s, x_d])
 
     # save mat_same and mat_diff into file
     np.savetxt('mat_same_' + str(index) + '.csv', mat_same, delimiter=',')

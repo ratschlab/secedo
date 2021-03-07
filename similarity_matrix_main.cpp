@@ -15,9 +15,9 @@
 
 #include <fstream>
 #include <limits>
+#include <map>
 #include <numeric>
 #include <sstream>
-#include <unordered_map>
 #include <vector>
 
 #include <cassert>
@@ -83,10 +83,10 @@ struct Cache {
     std::vector<double> pow_p_diff_same = { 1, p_diff_same };
     std::vector<double> pow_p_diff_diff = { 1, p_diff_diff };
 
-    std::vector<double> pow_1_h_epsilon = { 1 - epsilon - h };
-    std::vector<double> pow_1_h_epsilon2 = { 1 - epsilon / 2 - h };
-    std::vector<double> pow_h_epsilon2 = { h + epsilon / 2 };
-    std::vector<double> pow_h = { 1, FLAGS_hzygous_prob };
+    std::vector<double> pow_1_h_epsilon = { 1, 1 - epsilon - h };
+    std::vector<double> pow_1_h_epsilon2 = { 1, 1 - epsilon * 0.5 - h };
+    std::vector<double> pow_h_epsilon2 = { 1, h + epsilon * 0.5 };
+    std::vector<double> pow_h = { 1, h };
     std::vector<double> pow_epsilon = { 1, epsilon };
     std::vector<double> pow_0_5 = { 1, 0.5 };
     std::vector<double> pow_pss_pds = { 1, p_same_same + p_diff_same };
@@ -98,20 +98,21 @@ struct Cache {
         if (max < pow_p_same_same.size()) {
             return; // cache is up to date
         }
+        auto extend = [](std::vector<double> &a) { a.push_back(a.back() * a[1]); };
         for (uint32_t p = pow_p_same_same.size(); p <= max; ++p) {
-            pow_p_same_same.push_back(pow_p_same_same.back() * p_same_same);
-            pow_p_same_diff.push_back(pow_p_same_diff.back() * p_same_diff);
-            pow_p_diff_same.push_back(pow_p_diff_same.back() * p_diff_same);
-            pow_p_diff_diff.push_back(pow_p_diff_diff.back() * p_diff_diff);
-            pow_1_h_epsilon.push_back(pow_1_h_epsilon.back() * (1 - epsilon - h));
-            pow_1_h_epsilon2.push_back(pow_1_h_epsilon2.back() * (1 - epsilon / 2 - h));
-            pow_h_epsilon2.push_back(pow_h_epsilon2.back() * (h + epsilon / 2));
-            pow_h.push_back(pow_h.back() * h);
-            pow_epsilon.push_back(pow_epsilon.back() * epsilon);
-            pow_0_5.push_back(pow_0_5.back() * 0.5);
-            pow_pss_pds.push_back(pow_pss_pds.back() * (p_same_same + p_diff_same));
-            pow_psd_pdd.push_back(pow_psd_pdd.back() * (p_same_diff + p_diff_diff));
-            std::vector<uint64_t> new_comb(p + 2);
+            extend(pow_p_same_same);
+            extend(pow_p_same_diff);
+            extend(pow_p_diff_same);
+            extend(pow_p_diff_diff);
+            extend(pow_1_h_epsilon);
+            extend(pow_1_h_epsilon2);
+            extend(pow_h_epsilon2);
+            extend(pow_h);
+            extend(pow_epsilon);
+            extend(pow_0_5);
+            extend(pow_pss_pds);
+            extend(pow_psd_pdd);
+            std::vector<uint64_t> new_comb(p + 1);
             new_comb[0] = 1;
             new_comb.back() = 1;
             for (uint32_t i = 1; i < comb.back().size(); ++i) {
@@ -179,17 +180,15 @@ log_prob_same_genotype(uint32_t x_s, uint32_t x_d, Matd &log_probs, Mat32u &comb
     if (log_probs[x_s][x_d] != std::numeric_limits<double>::max()) {
         return log_probs[x_s][x_d];
     }
-    c.update(x_s + x_d); // TODO: only update combinations to max
+    c.update(x_s + x_d);
     double p = 0;
     for (uint32_t k = 0; k <= x_s; ++k) {
         for (uint32_t l = 0; l <= x_d; l++) {
-            double term = c.comb[x_s][k] * c.comb[x_d][l] * c.pow_1_h_epsilon2[k + l];
-            term *= 0.5;
-            term *= c.pow_p_same_same[k] * c.pow_p_same_diff[l] + c.pow_p_diff_same[k]
-                    + c.pow_p_diff_diff[l];
-            term *= c.pow_h_epsilon2[x_s + x_d - k - l] * c.pow_p_same_same[x_s - k]
+            p += c.comb[x_s][k] * c.comb[x_d][l] * c.pow_1_h_epsilon2[k + l] * 0.5
+                    * (c.pow_p_same_same[k] * c.pow_p_same_diff[l]
+                       + c.pow_p_diff_same[k] * c.pow_p_diff_diff[l])
+                    * c.pow_h_epsilon2[x_s + x_d - k - l] * c.pow_p_same_same[x_s - k]
                     * c.pow_p_same_diff[x_d - l];
-            p += term;
         }
     }
     p *= c.comb[x_s + x_d][x_s];
@@ -225,7 +224,7 @@ ParsedLine parse_line(const std::string &line) {
     return { position, bases, int_split(cell_ids, ','), split(read_ids, ',') };
 }
 
-void compare_with_reads(const std::unordered_map<std::string, Read> &active_reads,
+void compare_with_reads(const std::map<std::string, Read> &active_reads,
                         Read read1, // sent by copy as it's changed
                         const std::vector<uint32_t> &cell_ids,
                         const std::vector<uint32_t> &cell_groups,
@@ -234,44 +233,51 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
                         Matd &log_probs_same,
                         Matd &log_probs_diff,
                         Mat32u &combs_xs_xd,
-                        Cache &cache) {
-    for (auto [r_id_2, read2] : active_reads) {
+                        Cache &cache,
+                        std::string r_id) { // TODO: remove) {
+    for (auto it : active_reads) {
+        Read read2 = it.second;
+        if (read2.cell_id == read1.cell_id) {
+            continue; // only compare reads from different cells
+        }
         //  read is not from the same cell -> count the number of matches and mismatches in the
-        //  overlap
-        if (read2.cell_id != read1.cell_id) {
-            uint32_t diff = read2.pos - read1.pos;
-            if (read1.pos > read2.pos) {
-                std::swap(read1, read2);
-                diff = read2.pos - read1.pos;
-            }
+        //  overlap (all active reads include the current position in the genome, so they overlap)
+        int32_t offset = static_cast<int32_t>(read2.line - read1.line);
+        auto it1 = read1.seq.cbegin() + (offset > 0 ? offset : 0);
+        auto it2 = read2.seq.cbegin() + (offset > 0 ? 0 : -offset);
 
-            uint32_t x_s = 0;
-            uint32_t x_d = 0;
-            for (uint32_t i = 0; i < read2.seq.size(); ++i) {
-                const char c1 = read1.seq[i + diff];
-                const char c2 = read2.seq[i];
-                if (c1 != '*' && c2 != '*') {
-                    toupper(c1) == toupper(c2) ? x_s++ : x_d++;
-                }
+        uint32_t x_s = 0;
+        uint32_t x_d = 0;
+        if (read1.seq == "C*" && read2.seq == "c") {
+            std::cout << "da\n";
+        }
+        for (; it1 != read1.seq.end() && it2 != read2.seq.end(); ++it1, ++it2) {
+            if (*it1 != '*' && *it2 != '*') {
+                toupper(*it1) == toupper(*it2) ? x_s++ : x_d++;
             }
-            if (x_s == 0 && x_d == 0) {
-                continue; // no overlapping positions, nothing to do
-            }
+        }
+        assert(it2 <= read2.seq.end());
 
-            // update the distance matrices
-            if (read1.cell_id >= cell_ids.size()) {
-                std::cerr << "Cell id " << read1.cell_id;
-            }
-            uint32_t index1 = cell_groups[cell_ids[read1.cell_id]];
-            uint32_t index2 = cell_groups[cell_ids[read2.cell_id]];
-            if (index1 != index2) {
-                mat_same[index1][index2]
-                        += log_prob_same_genotype(x_s, x_d, log_probs_same, combs_xs_xd, cache);
-                mat_same[index2][index1] = mat_same[index1][index2];
-                mat_diff[index1][index2]
-                        += log_prob_diff_genotype(x_s, x_d, log_probs_diff, combs_xs_xd, cache);
-                mat_diff[index2][index1] = mat_diff[index1][index2];
-            }
+        if (x_s == 0 && x_d == 0) {
+            continue; // no overlapping positions, nothing to do
+        }
+
+        // update the distance matrices
+        uint32_t index1 = cell_groups[cell_ids[read1.cell_id]];
+        uint32_t index2 = cell_groups[cell_ids[read2.cell_id]];
+        if (index1 != index2) {
+            mat_same[index1][index2]
+                    += log_prob_same_genotype(x_s, x_d, log_probs_same, combs_xs_xd, cache);
+            mat_same[index2][index1] = mat_same[index1][index2];
+            mat_diff[index1][index2]
+                    += log_prob_diff_genotype(x_s, x_d, log_probs_diff, combs_xs_xd, cache);
+            mat_diff[index2][index1] = mat_diff[index1][index2];
+            double p1 = log_prob_same_genotype(x_s, x_d, log_probs_same, combs_xs_xd, cache);
+            double p2 = log_prob_diff_genotype(x_s, x_d, log_probs_diff, combs_xs_xd, cache);
+            std::cout << mat_same[index1][index2] << "\t" << mat_diff[index1][index2] << "\t"
+                      << read1.cell_id << "\t" << read2.cell_id << "\t" << x_s << "\t" << x_d << "\t" << read1.seq
+                      << "\t" << read2.seq << "\t" << p1 << "\t" << p2 << "\t" << r_id << "\t"
+                      << it.first << std::endl;
         }
     }
 }
@@ -297,7 +303,7 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
 
     // key: read id of an active read
     // value: A Read struct, containing: sequence, line number, cell_id and position in genome
-    std::unordered_map<std::string, Read> active_reads;
+    std::map<std::string, Read> active_reads;
 
     Cache cache; // store intermediate values to avoid recomputation
 
@@ -309,23 +315,21 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
         // splits the line by tabs and fills in the relevant fields into parsed_line
         ParsedLine curr_read = parse_line(line);
 
-        // for each active read check if it spans the current position
+        // for each active read check if it has a base in the current position
         for (auto it = active_reads.begin(); it != active_reads.end();) {
             Read &read = it->second;
-            auto line_it
+            auto read_id_it
                     = std::find(curr_read.read_ids.begin(), curr_read.read_ids.end(), it->first);
-            if (line_it != curr_read.read_ids.end()) { // the read continues
-                // position of the read in parsed_line.read_ids
-                uint32_t read_idx = line_it - curr_read.read_ids.begin();
+            if (read_id_it != curr_read.read_ids.end()) { // *it has a base at teh current position
+                // index of the read in parsed_line.read_ids
+                uint32_t read_idx = std::distance(curr_read.read_ids.begin(), read_id_it);
                 read.seq += curr_read.bases[read_idx];
-
                 ++it;
 
             } else if (read.pos >= curr_read.pos - FLAGS_max_read_size) {
                 // if we are less than max_read_size from the start of the read,
                 // it is possible the read still continues later, only this particular position is
                 // unknown (deletion, or low quality, or we are in between the two mates)
-
                 read.seq += '*';
                 ++it;
 
@@ -336,12 +340,14 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
                 // make a copy before deleting the iterator, which invalidates read
                 Read read_copy = read;
 
+                std::string r_id = it->first;
                 // remove the read from active_reads
                 it = active_reads.erase(it);
 
                 // compare with all other reads in active_reads
                 compare_with_reads(active_reads, read_copy, cell_ids, cell_groups, mat_same,
-                                   mat_diff, log_probs_same, log_probs_diff, combs_xs_xd, cache);
+                                   mat_diff, log_probs_same, log_probs_diff, combs_xs_xd, cache,
+                                   r_id);
             }
         }
 
@@ -353,17 +359,22 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
                         = { b, line_count, curr_read.cell_ids[i], curr_read.pos };
             }
         }
+        for (auto [key, value] : active_reads) {
+            std::cout << key << " ";
+        }
+        std::cout << std::endl;
     }
     f.close();
 
-    // in the end, process all the remaining active reads
+    // in the end, process all the leftover active reads
     for (auto it = active_reads.begin(); it != active_reads.end();) {
         const Read &read = it->second;
+        std::string r_id = it->first; // TODO:remove
         it = active_reads.erase(it); // delete the read from active_reads
 
         // compare with all other reads in active_reads
         compare_with_reads(active_reads, read, cell_ids, cell_groups, mat_same, mat_diff,
-                           log_probs_same, log_probs_diff, combs_xs_xd, cache);
+                           log_probs_same, log_probs_diff, combs_xs_xd, cache, r_id);
     }
 
     // save mat_same and mat_diff into file
