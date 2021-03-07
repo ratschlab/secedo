@@ -4,6 +4,8 @@ project(SomaticVariantCalling)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
+find_package(OpenMP REQUIRED)
+
 include_directories(.)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG")
@@ -16,4 +18,4 @@ file(GLOB similarity_matrix_files util.cpp)
 add_library(lib_similarity_matrix ${similarity_matrix_files})
 
 add_executable(similarity_matrix similarity_matrix_main.cpp)
-target_link_libraries(similarity_matrix lib_similarity_matrix gflags)
+target_link_libraries(similarity_matrix lib_similarity_matrix gflags OpenMP::OpenMP_CXX)

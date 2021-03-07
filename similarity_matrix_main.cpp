@@ -22,7 +22,6 @@
 
 #include <cassert>
 #include <cmath>
-#include <iostream>
 
 DEFINE_double(seq_error_rate, 0.001, "Sequencing errors rate, denoted by theta");
 DEFINE_double(mutation_rate,
