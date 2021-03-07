@@ -12,6 +12,7 @@
 #include "util.hpp"
 
 #include <gflags/gflags.h>
+#include <progress_bar/progress_bar.hpp>
 
 #include <fstream>
 #include <limits>
@@ -95,12 +96,10 @@ struct Cache {
 
     std::vector<std::vector<uint64_t>> comb = { { 1 }, { 1, 1 } };
 
-    void update(uint32_t max) {
-        if (max < pow_p_same_same.size()) {
-            return; // cache is up to date
-        }
+
+    Cache() {
         auto extend = [](std::vector<double> &a) { a.push_back(a.back() * a[1]); };
-        for (uint32_t p = pow_p_same_same.size(); p <= max; ++p) {
+        for (uint32_t p = 2; p < FLAGS_max_read_size; ++p) {
             extend(pow_p_same_same);
             extend(pow_p_same_diff);
             extend(pow_p_diff_same);
@@ -129,19 +128,21 @@ struct Cache {
  * different genotypes.
  * @param x_s the number of matches
  * @param x_d the number of mismatches
+ * @param c caches frequently computed values, such as combinations and powers of h and
+ * epsilon
  * @param[in, out] log_probs table containing the cached log probabilities of cells being
  * *different* for x_s and x_d; if the table is empty at the desired location, the value is computed
  * @param[in, out] combs_xs_xd number of times we have seen a combination of x_s and x_d
- * @param[in, out] c caches frequently computed values, such as combinations and powers of h and
- * epsilon
  */
-double
-log_prob_diff_genotype(uint32_t x_s, uint32_t x_d, Matd &log_probs, Mat32u &combs_xs_xd, Cache &c) {
+double log_prob_diff_genotype(uint32_t x_s,
+                              uint32_t x_d,
+                              const Cache &c,
+                              Matd &log_probs,
+                              Mat32u &combs_xs_xd) {
     combs_xs_xd[x_s][x_d]++;
     if (log_probs[x_s][x_d] != std::numeric_limits<double>::max()) {
         return log_probs[x_s][x_d];
     }
-    c.update(x_s + x_d); // TODO: only update combinations to max
     double prob = 0;
     for (uint32_t k = 0; k <= x_s; ++k) {
         for (uint32_t l = 0; l <= x_d; l++) {
@@ -169,19 +170,21 @@ log_prob_diff_genotype(uint32_t x_s, uint32_t x_d, Matd &log_probs, Mat32u &comb
  * the same genotype.
  * @param x_s the number of matches
  * @param x_d the number of mismatches
+ * @param c caches frequently computed values, such as combinations and powers of h and
+ * epsilon
  * @param[in, out] log_probs table containing the cached log probabilities of cells having the samge
  * genotype given x_s and x_d; if the table is empty at the desired location, the value is computed
  * @param[in, out] combs_xs_xd number of times we have seen a combination of x_s and x_d
- * @param[in, out] c caches frequently computed values, such as combinations and powers of h and
- * epsilon
  */
-double
-log_prob_same_genotype(uint32_t x_s, uint32_t x_d, Matd &log_probs, Mat32u &combs_xs_xd, Cache &c) {
+double log_prob_same_genotype(uint32_t x_s,
+                              uint32_t x_d,
+                              const Cache &c,
+                              Matd &log_probs,
+                              Mat32u &combs_xs_xd) {
     combs_xs_xd[x_s][x_d]++;
     if (log_probs[x_s][x_d] != std::numeric_limits<double>::max()) {
         return log_probs[x_s][x_d];
     }
-    c.update(x_s + x_d);
     double p = 0;
     for (uint32_t k = 0; k <= x_s; ++k) {
         for (uint32_t l = 0; l <= x_d; l++) {
@@ -273,10 +276,10 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
         uint32_t index2 = cell_groups[cell_ids[read2.cell_id]];
         if (index1 != index2) {
             mat_same[index1][index2]
-                    += log_prob_same_genotype(x_s, x_d, log_probs_same, combs_xs_xd, cache);
+                    += log_prob_same_genotype(x_s, x_d, cache, log_probs_same, combs_xs_xd);
             mat_same[index2][index1] = mat_same[index1][index2];
             mat_diff[index1][index2]
-                    += log_prob_diff_genotype(x_s, x_d, log_probs_diff, combs_xs_xd, cache);
+                    += log_prob_diff_genotype(x_s, x_d, cache, log_probs_diff, combs_xs_xd);
             mat_diff[index2][index1] = mat_diff[index1][index2];
         }
     }
@@ -311,6 +314,8 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
     // chromosome_id    position    coverage    bases   cells   read_ids
     std::ifstream f(FLAGS_mpileup_file);
     std::string line;
+    ProgressBar read_progress(std::filesystem::file_size(FLAGS_mpileup_file), "Processed;",
+                              std::cout);
     for (uint32_t line_count = 0; std::getline(f, line); ++line_count) {
         // splits the line by tabs and fills in the relevant fields into parsed_line
         ParsedLine curr_read = parse_line(line);
@@ -358,6 +363,7 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
                         = { b, line_count, curr_read.cell_ids[i], curr_read.pos };
             }
         }
+        read_progress += line.size() + 1;
     }
     f.close();
 
