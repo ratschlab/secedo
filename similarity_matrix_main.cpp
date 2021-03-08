@@ -232,7 +232,8 @@ ParsedLine parse_line(const std::string &line) {
 }
 
 void compare_with_reads(const std::unordered_map<std::string, Read> &active_reads,
-                        const Read &read1,
+                        const std::deque<std::string> &active_keys,
+                        uint32_t start_idx,
                         const std::vector<uint32_t> &cell_ids,
                         const std::vector<uint32_t> &cell_groups,
                         Matd &mat_same,
@@ -241,7 +242,9 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
                         Matd &log_probs_diff,
                         Mat32u &combs_xs_xd,
                         Cache &cache) {
-    for (const auto &[id2, read2] : active_reads) {
+    const Read &read1 = active_reads.at(active_keys.at(start_idx));
+    for (uint32_t idx = start_idx + 1; idx < active_keys.size(); ++idx) {
+        const Read &read2 = active_reads.at(active_keys[idx]);
         if (read2.cell_id == read1.cell_id) {
             continue; // only compare reads from different cells
         }
@@ -307,32 +310,36 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
     std::string line;
     ProgressBar read_progress(std::filesystem::file_size(FLAGS_mpileup_file), "Processed;",
                               std::cout);
-    std::deque<std::string> active_read_keys;
+    std::deque<std::string> active_keys;
+    // the number of completed reads, i.e. reads that started FLAGS_max_read_size ago
+    uint32_t completed = 0;
     for (uint32_t line_count = 0; std::getline(f, line); ++line_count) {
         // splits the line by tabs and fills in the relevant fields into parsed_line
         ParsedLine curr_read = parse_line(line);
 
-        // figure out which of the active keys are now complete, i.e. they started more than
-        // FLAGS_max_read_size bases ago
-        uint32_t idx = 0; // the index of the last complete read
-        while (idx < active_read_keys.size()
-               && active_reads[active_read_keys[idx]].pos[0] + FLAGS_max_read_size
-                       <= curr_read.pos) {
-            ++idx;
+        // update the number of complete reads
+        for (uint32_t i = completed; i < active_keys.size()
+             && active_reads[active_keys[i]].pos[0] + FLAGS_max_read_size <= curr_read.pos;
+             ++i) {
+            ++completed;
         }
 
-        for (uint32_t i = 0; i < idx; ++i) {
-            // the read is complete; compute its overlaps with all other active reads, i.e. all
-            // reads that have some bases in the last FLAGS_max_read_size positions
-
-            // make a copy before deleting the iterator, which invalidates read
-            Read read = active_reads[active_read_keys.front()];
-            active_reads.erase(active_read_keys.front()); // remove the read from active_reads
-            active_read_keys.pop_front();
-
-            // compare with all other reads in active_reads
-            compare_with_reads(active_reads, read, cell_ids, cell_groups, mat_same, mat_diff,
-                               log_probs_same, log_probs_diff, combs_xs_xd, cache);
+        constexpr uint32_t BATCH_SIZE = 2;
+        // if we batched up enough completed reads, process them in parallel
+        if (completed >= BATCH_SIZE * FLAGS_num_threads) {
+#pragma omp parallel for schedule(static, BATCH_SIZE)
+            for (uint32_t i = 0; i < completed; ++i) {
+                // compute its overlaps with all other active reads, i.e. all
+                // reads that have some bases in the last FLAGS_max_read_size positions
+                compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, mat_same,
+                                   mat_diff, log_probs_same, log_probs_diff, combs_xs_xd, cache);
+            }
+            // remove processed reads
+            for (uint32_t i = 0; i < completed; ++i) {
+                active_reads.erase(active_keys.front());
+                active_keys.pop_front();
+            }
+            completed = 0;
         }
 
         // update active_reads with the reads from the current line
@@ -342,7 +349,7 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
             if (read_it == active_reads.end()) { // create a new read
                 Read read = { { curr_base }, line_count, curr_read.cell_ids[i], { curr_read.pos } };
                 active_reads[curr_read.read_ids[i]] = read;
-                active_read_keys.push_back(curr_read.read_ids[i]);
+                active_keys.push_back(curr_read.read_ids[i]);
             } else {
                 Read &read = read_it->second;
                 // if we have different reads at the same position
@@ -368,17 +375,11 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
     }
     f.close();
 
-    // TODO: remove
-    // save mat_same and mat_diff into file
-    write_mat(FLAGS_out_dir + "mat_same_1_" + std::to_string(FLAGS_run_id) + ".csv", mat_same);
-
     // in the end, process all the leftover active reads
-    for (auto it = active_reads.begin(); it != active_reads.end();) {
-        const Read read = it->second;
-        it = active_reads.erase(it); // delete the read from active_reads
-
+#pragma omp parallel for schedule(static, active_keys.size() / FLAGS_num_threads)
+    for (uint32_t i = 0; i < active_keys.size(); ++i) {
         // compare with all other reads in active_reads
-        compare_with_reads(active_reads, read, cell_ids, cell_groups, mat_same, mat_diff,
+        compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, mat_same, mat_diff,
                            log_probs_same, log_probs_diff, combs_xs_xd, cache);
     }
 
