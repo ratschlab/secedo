@@ -9,6 +9,7 @@ template <typename T>
 using Mat = std::vector<std::vector<T>>;
 using Matd = Mat<double>;
 using Mat32u = Mat<uint32_t>;
+using Mat64u = Mat<uint64_t>;
 
 template <typename T>
 Mat<T> newMat(uint32_t l, uint32_t c, T v = 0) {
