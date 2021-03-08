@@ -246,8 +246,11 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
                         mat_diff[index_2, index_1] = mat_diff[index_1, index_2]
 
     # save mat_same and mat_diff into file
-    np.savetxt('mat_same_' + str(index) + '.csv', mat_same, delimiter=',')
-    np.savetxt('mat_diff_' + str(index) + '.csv', mat_diff, delimiter=',')
+    np.set_printoptions(precision=3, suppress=True)
+    np.set_printoptions(suppress=True,
+                        formatter={'float_kind': '{:7.3f}'.format})
+    np.savetxt('mat_same_' + str(index) + '.csv', mat_same, '%9.3f', delimiter=',')
+    np.savetxt('mat_diff_' + str(index) + '.csv', mat_diff, '%9.3f', delimiter=',')
     np.savetxt('combs_xs_xd_' + str(index) + '.csv', combs_xs_xd, delimiter=',')
 
 

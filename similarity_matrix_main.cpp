@@ -14,6 +14,7 @@
 #include <gflags/gflags.h>
 #include <progress_bar/progress_bar.hpp>
 
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <numeric>
@@ -203,10 +204,10 @@ double log_prob_same_genotype(uint32_t x_s,
 }
 
 struct Read {
-    std::string seq; // the DNA sequence corresponding to this read
+    std::vector<char> bases; // the DNA sequence corresponding to this read
     uint32_t line;
     uint32_t cell_id;
-    uint32_t pos;
+    std::vector<uint64_t> pos;
 };
 
 struct ParsedLine {
@@ -231,7 +232,7 @@ ParsedLine parse_line(const std::string &line) {
 }
 
 void compare_with_reads(const std::unordered_map<std::string, Read> &active_reads,
-                        const Read& read1,
+                        const Read &read1,
                         const std::vector<uint32_t> &cell_ids,
                         const std::vector<uint32_t> &cell_groups,
                         Matd &mat_same,
@@ -240,34 +241,22 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
                         Matd &log_probs_diff,
                         Mat32u &combs_xs_xd,
                         Cache &cache) {
-    auto it = active_reads.begin();
-
-#pragma omp parallel for num_threads(FLAGS_num_threads)
-    for (uint32_t i = 0; i < active_reads.size(); ++i) {
-        const Read *current_second = nullptr;
-#pragma omp critical
-        {
-            current_second = &it->second;
-            ++it;
-        }
-        const Read &read2 = *current_second;
+    for (const auto &[id2, read2] : active_reads) {
         if (read2.cell_id == read1.cell_id) {
             continue; // only compare reads from different cells
         }
+
         //  read is not from the same cell -> count the number of matches and mismatches in the
         //  overlap (all active reads include the current position in the genome, so they overlap)
-        int32_t offset = static_cast<int32_t>(read2.line - read1.line);
-        auto it1 = read1.seq.cbegin() + (offset > 0 ? offset : 0);
-        auto it2 = read2.seq.cbegin() + (offset > 0 ? 0 : -offset);
-
         uint32_t x_s = 0;
         uint32_t x_d = 0;
-        for (; it1 != read1.seq.end() && it2 != read2.seq.end(); ++it1, ++it2) {
-            if (*it1 != '*' && *it2 != '*') {
-                toupper(*it1) == toupper(*it2) ? x_s++ : x_d++;
+        for (uint32_t idx1 = 0, idx2 = 0; idx1 < read1.bases.size() && idx2 < read2.bases.size();) {
+            if (read1.pos[idx1] == read2.pos[idx2]) {
+                toupper(read1.bases[idx1++]) == toupper(read2.bases[idx2++]) ? x_s++ : x_d++;
+            } else {
+                read1.pos[idx1] < read2.pos[idx2] ? idx1++ : idx2++;
             }
         }
-        assert(it2 <= read2.seq.end());
 
         if (x_s == 0 && x_d == 0) {
             continue; // no overlapping positions, nothing to do
@@ -318,60 +307,74 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
     std::string line;
     ProgressBar read_progress(std::filesystem::file_size(FLAGS_mpileup_file), "Processed;",
                               std::cout);
+    std::deque<std::string> active_read_keys;
     for (uint32_t line_count = 0; std::getline(f, line); ++line_count) {
         // splits the line by tabs and fills in the relevant fields into parsed_line
         ParsedLine curr_read = parse_line(line);
 
-        // for each active read check if it has a base in the current position
-        for (auto it = active_reads.begin(); it != active_reads.end();) {
-            Read &read = it->second;
-            auto read_id_it
-                    = std::find(curr_read.read_ids.begin(), curr_read.read_ids.end(), it->first);
-            if (read_id_it != curr_read.read_ids.end()) { // *it has a base at teh current position
-                // index of the read in parsed_line.read_ids
-                uint32_t read_idx = std::distance(curr_read.read_ids.begin(), read_id_it);
-                read.seq += curr_read.bases[read_idx];
-                ++it;
-
-            } else if (read.pos >= curr_read.pos - FLAGS_max_read_size) {
-                // if we are less than max_read_size from the start of the read,
-                // it is possible the read still continues later, only this particular position is
-                // unknown (deletion, or low quality, or we are in between the two mates)
-                read.seq += '*';
-                ++it;
-
-            } else {
-                // the read is complete; compute its overlaps with all other active reads, i.e. all
-                // reads that have some bases in the last FLAGS_max_read_size positions
-
-                // make a copy before deleting the iterator, which invalidates read
-                Read read_copy = read;
-
-                std::string r_id = it->first;
-                // remove the read from active_reads
-                it = active_reads.erase(it);
-
-                // compare with all other reads in active_reads
-                compare_with_reads(active_reads, read_copy, cell_ids, cell_groups, mat_same,
-                                   mat_diff, log_probs_same, log_probs_diff, combs_xs_xd, cache);
-            }
+        // figure out which of the active keys are now complete, i.e. they started more than
+        // FLAGS_max_read_size bases ago
+        uint32_t idx = 0; // the index of the last complete read
+        while (idx < active_read_keys.size()
+               && active_reads[active_read_keys[idx]].pos[0] + FLAGS_max_read_size
+                       <= curr_read.pos) {
+            ++idx;
         }
 
-        // for each read_id in the current line check, if it is in active_reads; if not, add it
+        for (uint32_t i = 0; i < idx; ++i) {
+            // the read is complete; compute its overlaps with all other active reads, i.e. all
+            // reads that have some bases in the last FLAGS_max_read_size positions
+
+            // make a copy before deleting the iterator, which invalidates read
+            Read read = active_reads[active_read_keys.front()];
+            active_reads.erase(active_read_keys.front()); // remove the read from active_reads
+            active_read_keys.pop_front();
+
+            // compare with all other reads in active_reads
+            compare_with_reads(active_reads, read, cell_ids, cell_groups, mat_same, mat_diff,
+                               log_probs_same, log_probs_diff, combs_xs_xd, cache);
+        }
+
+        // update active_reads with the reads from the current line
         for (uint32_t i = 0; i < curr_read.read_ids.size(); ++i) {
-            if (!active_reads.contains(curr_read.read_ids[i])) {
-                std::string b(1, curr_read.bases[i]);
-                active_reads[curr_read.read_ids[i]]
-                        = { b, line_count, curr_read.cell_ids[i], curr_read.pos };
+            auto read_it = active_reads.find(curr_read.read_ids[i]);
+            const char curr_base = curr_read.bases[i];
+            if (read_it == active_reads.end()) { // create a new read
+                Read read = { { curr_base }, line_count, curr_read.cell_ids[i], { curr_read.pos } };
+                active_reads[curr_read.read_ids[i]] = read;
+                active_read_keys.push_back(curr_read.read_ids[i]);
+            } else {
+                Read &read = read_it->second;
+                // if we have different reads at the same position
+                // (can happen due to paired-end sequencing)
+                if (!read.pos.empty() && read.pos.back() == curr_read.pos) {
+                    // different reads at the same position, so we remove the existing read, as
+                    // there's a 50% chance of error
+                    if (toupper(read.bases.back()) != toupper(curr_base)) {
+                        read.bases.pop_back();
+                        read.pos.pop_back();
+                    }
+                    continue;
+                }
+
+                // add a new base to an existing read
+                assert(read.pos.empty() || read.pos.back() < curr_read.pos);
+                read.bases.push_back(curr_base);
+                read.pos.push_back(curr_read.pos);
             }
         }
+
         read_progress += line.size() + 1;
     }
     f.close();
 
+    // TODO: remove
+    // save mat_same and mat_diff into file
+    write_mat(FLAGS_out_dir + "mat_same_1_" + std::to_string(FLAGS_run_id) + ".csv", mat_same);
+
     // in the end, process all the leftover active reads
     for (auto it = active_reads.begin(); it != active_reads.end();) {
-        const Read &read = it->second;
+        const Read read = it->second;
         it = active_reads.erase(it); // delete the read from active_reads
 
         // compare with all other reads in active_reads
