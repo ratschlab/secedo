@@ -9,7 +9,7 @@ import scipy.special
 import math
 
 '''
-Functions to retrieve or compute the probability of result (x_s, x_d).
+Retrieves (if cached) or computes the probability of (x_s, x_d) matches/mismatches.
 '''
 
 
@@ -44,17 +44,18 @@ def log_prob_of_result(x_s, x_d, epsilon, h, log_probs, combs_xs_xd, p_same_same
 
 # function to compute mat_same (the matrix giving probabilities of cells i and j given they are in the same cluster)
 # and mat_diff (prob. of cells i and j given they are in different clusters)
-# propHomo ... estimate of how many positions are actually homozygous germline, were only included because of errors
-def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, propHomo, index, theta=0.001,
-                            readLen=100, maxInsert=1000):
+# hzygous_prob ... estimate of how many positions are actually homozygous germline, were only included because of errors
+def compute_similarity_matrix(pileup_file, n_cells, cells, cell_groups, epsilon, hzygous_prob, index, theta=0.001,
+                              read_len
+                              =100, max_insert=1000):
     # arrays with values of already computed probabilities
     # NaN if not yet computed
-    log_probs_same = np.empty((2 * readLen, 2 * readLen))
+    log_probs_same = np.empty((2 * read_len, 2 * read_len))
     log_probs_same[:] = np.nan
-    log_probs_diff = np.empty((2 * readLen, 2 * readLen))
+    log_probs_diff = np.empty((2 * read_len, 2 * read_len))
     log_probs_diff[:] = np.nan
     # count how many times we have seen a given combination of x_s, x_d
-    combs_xs_xd = np.zeros((2 * readLen, 2 * readLen))
+    combs_xs_xd = np.zeros((2 * read_len, 2 * read_len))
 
     # probability that two same letters will be read as different
     p_same_diff = 2 * theta * (1 - theta) + 2 * (theta ** 2) / 3
@@ -80,7 +81,7 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
     # line counter
     n_lines = 0
     # process the mpileup file line by line
-    f = open(mpileupFile, 'r')
+    f = open(pileup_file, 'r')
     while True:
         line = f.readline()
 
@@ -111,10 +112,10 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
                 # the sequenced base
                 tmp_base = line_bases[tmp_pos]
                 activeReads[r_id] = [r_value[0] + tmp_base, r_value[1], r_value[2], r_value[3]]
-            # if we are not more than maxInsert from start of the mate,
+            # if we are not more than max_insert from start of the mate,
             # it is possible the read still continues, only this particular base is unknown
             # (deletion, or low quality, or we are inbetween the two mates)
-            elif r_value[3] >= line_pos - maxInsert:
+            elif r_value[3] >= line_pos - max_insert:
                 activeReads[r_id] = [r_value[0] + '*', r_value[1], r_value[2], r_value[3]]
             # the read does not continue; compute its overlaps with all other active reads
             else:
@@ -166,12 +167,12 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
                             index_1 = int(cell_groups[cells.index(cell_id)])
                             index_2 = int(cell_groups[cells.index(cell_id_2)])
                             if index_1 != index_2:
-                                mat_same[index_1, index_2] += log_prob_of_result(x_s, x_d, 0, propHomo + 0.5 * epsilon,
+                                mat_same[index_1, index_2] += log_prob_of_result(x_s, x_d, 0, hzygous_prob + 0.5 * epsilon,
                                                                                  log_probs_same, combs_xs_xd,
                                                                                  p_same_same, p_same_diff, p_diff_same,
                                                                                  p_diff_diff)
                                 mat_same[index_2, index_1] = mat_same[index_1, index_2]
-                                mat_diff[index_1, index_2] += log_prob_of_result(x_s, x_d, epsilon, propHomo,
+                                mat_diff[index_1, index_2] += log_prob_of_result(x_s, x_d, epsilon, hzygous_prob,
                                                                                  log_probs_diff, combs_xs_xd,
                                                                                  p_same_same, p_same_diff, p_diff_same,
                                                                                  p_diff_diff)
@@ -236,19 +237,16 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
                     index_1 = int(cell_groups[cells.index(cell_id)])
                     index_2 = int(cell_groups[cells.index(cell_id_2)])
                     if index_1 != index_2:
-                        mat_same[index_1, index_2] += log_prob_of_result(x_s, x_d, 0, propHomo + 0.5 * epsilon,
+                        mat_same[index_1, index_2] += log_prob_of_result(x_s, x_d, 0, hzygous_prob + 0.5 * epsilon,
                                                                          log_probs_same, combs_xs_xd, p_same_same,
                                                                          p_same_diff, p_diff_same, p_diff_diff)
                         mat_same[index_2, index_1] = mat_same[index_1, index_2]
-                        mat_diff[index_1, index_2] += log_prob_of_result(x_s, x_d, epsilon, propHomo, log_probs_diff,
+                        mat_diff[index_1, index_2] += log_prob_of_result(x_s, x_d, epsilon, hzygous_prob, log_probs_diff,
                                                                          combs_xs_xd, p_same_same, p_same_diff,
                                                                          p_diff_same, p_diff_diff)
                         mat_diff[index_2, index_1] = mat_diff[index_1, index_2]
 
     # save mat_same and mat_diff into file
-    np.set_printoptions(precision=3, suppress=True)
-    np.set_printoptions(suppress=True,
-                        formatter={'float_kind': '{:7.3f}'.format})
     np.savetxt('mat_same_' + str(index) + '.csv', mat_same, '%9.3f', delimiter=',')
     np.savetxt('mat_diff_' + str(index) + '.csv', mat_diff, '%9.3f', delimiter=',')
     np.savetxt('combs_xs_xd_' + str(index) + '.csv', combs_xs_xd, delimiter=',')
@@ -258,15 +256,15 @@ def computeSimilarityMatrix(mpileupFile, n_cells, cells, cell_groups, epsilon, p
 
 def main(argv):
     theta = 0.001
-    readLen = 100
+    read_len = 100
     # number of cells
     n_cells = 0
     # epsilon
     epsilon = 0
     # chromosome
     chromosome = 0
-    # mpileupFile
-    mpileupFile = ""
+    # pileup_file
+    pileup_file = ""
     # file with the relevant cell ids
     cellsFile = ""
     cellGroupFile = ""
@@ -284,11 +282,11 @@ def main(argv):
         elif opt == '-e':
             epsilon = float(arg)
         elif opt == '-h':
-            propHomo = float(arg)
+            hzygous_prob = float(arg)
         elif opt == '-i':
             chromosome = arg
         elif opt == '-f':
-            mpileupFile = arg
+            pileup_file = arg
         elif opt == '-t':
             theta = float(arg)
         elif opt == '-c':
@@ -296,7 +294,7 @@ def main(argv):
         elif opt == '-g':
             cellGroupFile = arg
         elif opt == '-m':
-            maxInsert = int(arg)
+            max_insert = int(arg)
 
     if cellsFile != "":
         with open(cellsFile, 'r') as f:
@@ -315,8 +313,9 @@ def main(argv):
 
     # print(cell_groups)
 
-    computeSimilarityMatrix(mpileupFile, n_cells, cells_ids, cell_groups, epsilon, propHomo, chromosome, theta, readLen,
-                            maxInsert)
+    compute_similarity_matrix(pileup_file, n_cells, cells_ids, cell_groups, epsilon, hzygous_prob, chromosome, theta,
+                              read_len,
+                              max_insert)
 
 
 if __name__ == "__main__":
