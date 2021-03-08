@@ -245,8 +245,10 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
     const Read &read1 = active_reads.at(active_keys.at(start_idx));
     for (uint32_t idx = start_idx + 1; idx < active_keys.size(); ++idx) {
         const Read &read2 = active_reads.at(active_keys[idx]);
-        if (read2.cell_id == read1.cell_id) {
-            continue; // only compare reads from different cells
+        uint32_t index1 = cell_groups[cell_ids[read1.cell_id]];
+        uint32_t index2 = cell_groups[cell_ids[read2.cell_id]];
+        if (index1 == index2 || read2.pos.front() > read1.pos.back()) {
+            continue; // read intersection is void, or reads are from the same cell
         }
 
         //  read is not from the same cell -> count the number of matches and mismatches in the
@@ -266,9 +268,8 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
         }
 
         // update the distance matrices
-        uint32_t index1 = cell_groups[cell_ids[read1.cell_id]];
-        uint32_t index2 = cell_groups[cell_ids[read2.cell_id]];
-        if (index1 != index2) {
+#pragma omp critical
+        {
             mat_same[index1][index2]
                     += log_prob_same_genotype(x_s, x_d, cache, log_probs_same, combs_xs_xd);
             mat_same[index2][index1] = mat_same[index1][index2];
@@ -324,10 +325,10 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
             ++completed;
         }
 
-        constexpr uint32_t BATCH_SIZE = 2;
+        constexpr uint32_t BATCH_SIZE = 4;
         // if we batched up enough completed reads, process them in parallel
         if (completed >= BATCH_SIZE * FLAGS_num_threads) {
-#pragma omp parallel for schedule(static, BATCH_SIZE)
+#pragma omp parallel for schedule(static, BATCH_SIZE) num_threads(FLAGS_num_threads)
             for (uint32_t i = 0; i < completed; ++i) {
                 // compute its overlaps with all other active reads, i.e. all
                 // reads that have some bases in the last FLAGS_max_read_size positions
@@ -376,7 +377,7 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
     f.close();
 
     // in the end, process all the leftover active reads
-#pragma omp parallel for schedule(static, active_keys.size() / FLAGS_num_threads)
+#pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < active_keys.size(); ++i) {
         // compare with all other reads in active_reads
         compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, mat_same, mat_diff,
