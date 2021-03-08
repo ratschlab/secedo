@@ -15,6 +15,7 @@
 #include <omp.h>
 #include <progress_bar/progress_bar.hpp>
 
+#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <limits>
