@@ -8,6 +8,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Werror -Wfatal-errors -msse4")
 
 find_package(OpenMP REQUIRED)
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+
 
 include_directories(.)
 include_directories(third_party)
@@ -27,6 +29,10 @@ add_library(lib_similarity_matrix ${similarity_matrix_files})
 file(GLOB expectation_maximization_files expectation_maximization.cpp util.cpp)
 add_library(lib_expectation_maximization ${expectation_maximization_files})
 
+file(GLOB spectral_clustering_files spectral_clustering.cpp spectral_clustering.cpp util.cpp)
+add_library(lib_spectral_clustering ${spectral_clustering_files})
+target_link_libraries(lib_spectral_clustering Eigen3::Eigen)
+
 add_executable(similarity_matrix similarity_matrix_main.cpp)
 target_link_libraries(similarity_matrix lib_similarity_matrix gflags OpenMP::OpenMP_CXX progress_bar)
 
@@ -35,8 +41,6 @@ target_link_libraries(expectation_maximization lib_expectation_maximization gfla
 
 
 # TESTS
-
-
 enable_testing()
 include(GoogleTest)
 
@@ -47,7 +51,7 @@ target_compile_options(gtest PRIVATE -w)
 file(GLOB test_files "tests/*.cpp")
 
 add_executable(tests ${test_files})
-target_link_libraries(tests gtest_main gtest gmock lib_expectation_maximization)
+target_link_libraries(tests gtest_main gtest gmock lib_expectation_maximization lib_spectral_clustering)
 target_include_directories(tests PRIVATE "include")
 
 gtest_discover_tests(tests)
