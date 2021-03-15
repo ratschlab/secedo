@@ -8,6 +8,7 @@ from sklearn.cluster import SpectralClustering
 from sklearn.cluster import KMeans
 
 
+# compute the Akaike information criterion (AIC) or Bayesian information criterion (BIC)
 def compute_aic_bic(sim_mat, index):
     # compute graph Laplacian,the eigenvalues and eigenvectors
     L = csgraph_laplacian(sim_mat, normed=True)
