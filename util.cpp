@@ -35,3 +35,14 @@ std::vector<uint32_t> int_split(const std::string &s, char c) {
     }
     return result;
 }
+
+std::vector<double> double_split(const std::string &s, char c) {
+    std::string segment;
+    std::vector<double> result;
+    std::stringstream in(s);
+
+    while (std::getline(in, segment, c)) {
+        result.push_back(std::stod(segment));
+    }
+    return result;
+}
