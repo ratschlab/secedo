@@ -2,8 +2,16 @@
 
 #include <cstdint>
 #include <fstream>
+#include <numeric>
 #include <string>
 #include <vector>
+
+constexpr uint8_t CharToInt[128]
+        = { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5, 2, 5, 5, 5, 3, 5, 5, 5, 5, 5, 5,
+            5, 5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5, 2, 5, 5, 5, 3,
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 };
 
 template <typename T>
 using Mat = std::vector<std::vector<T>>;
@@ -19,6 +27,18 @@ Mat<T> newMat(uint32_t l, uint32_t c, T v = 0) {
 
 /** Read an entire file into a string */
 std::string read_file(const std::string &fname);
+
+/**
+ * Write a vector to a file, with elements separated by comma.
+ */
+template <typename T>
+void write_vec(const std::string &name, const std::vector<T> &vec) {
+    std::ofstream out(name);
+    for (const auto v : vec) {
+        out << v << ", ";
+    }
+    out << std::endl;
+}
 
 /**
  * Write a matrix line by line to a file, with elements separated by comma.
@@ -43,3 +63,40 @@ std::vector<std::string> split(const std::string &s, char c);
  * Split a string by character c into integer components.
  */
 std::vector<uint32_t> int_split(const std::string &s, char c);
+
+/**
+ * Split a string by character c into integer components.
+ */
+std::vector<double> double_split(const std::string &s, char c);
+
+template <typename T>
+T sum(const std::vector<T> &vec) {
+    return std::accumulate(vec.begin(), vec.end(), T(0));
+}
+
+/**
+ * Returns a permutation of {0....a.size()-1}, such that the elements of a are sorted.
+ * @param a a to sort
+ * @return permutation of the a elements such that they are sorted in ascending order
+ */
+template <typename Vec>
+std::vector<uint32_t> argsort(const Vec &a) {
+    std::vector<uint32_t> result(a.size());
+    std::iota(result.begin(), result.end(), 0);
+    std::sort(result.begin(), result.end(), [&a](int left, int right) -> bool {
+        // sort indices according to corresponding a element
+        return a[left] < a[right];
+    });
+
+    return result;
+}
+
+template <class T>
+inline std::ostream &operator<<(std::ostream &os, const std::vector<T> &v) {
+    os << "[";
+    for (auto &x : v) {
+        os << " " << x;
+    }
+    os << " ]";
+    return os;
+}
