@@ -73,3 +73,30 @@ template <typename T>
 T sum(const std::vector<T> &vec) {
     return std::accumulate(vec.begin(), vec.end(), T(0));
 }
+
+/**
+ * Returns a permutation of {0....a.size()-1}, such that the elements of a are sorted.
+ * @param a a to sort
+ * @return permutation of the a elements such that they are sorted in ascending order
+ */
+template <typename Vec>
+std::vector<uint32_t> argsort(const Vec &a) {
+    std::vector<uint32_t> result(a.size());
+    std::iota(result.begin(), result.end(), 0);
+    std::sort(result.begin(), result.end(), [&a](int left, int right) -> bool {
+        // sort indices according to corresponding a element
+        return a[left] < a[right];
+    });
+
+    return result;
+}
+
+template <class T>
+inline std::ostream &operator<<(std::ostream &os, const std::vector<T> &v) {
+    os << "[";
+    for (auto &x : v) {
+        os << " " << x;
+    }
+    os << " ]";
+    return os;
+}

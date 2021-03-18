@@ -8,11 +8,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Werror -Wfatal-errors -msse4")
 
 find_package(OpenMP REQUIRED)
-find_package (Eigen3 3.3 REQUIRED NO_MODULE)
-
 
 include_directories(.)
 include_directories(third_party)
+include_directories(third_party/armadillo-10.3.0/include)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
@@ -23,6 +22,10 @@ add_library(progress_bar third_party/progress_bar/progress_bar.cpp)
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 
+# Armadillo Linear algebra library
+add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/armadillo-10.3.0 EXCLUDE_FROM_ALL)
+target_compile_options(armadillo PUBLIC -Wno-unused-parameter)
+
 file(GLOB similarity_matrix_files util.cpp)
 add_library(lib_similarity_matrix ${similarity_matrix_files})
 
@@ -31,7 +34,7 @@ add_library(lib_expectation_maximization ${expectation_maximization_files})
 
 file(GLOB spectral_clustering_files spectral_clustering.cpp spectral_clustering.cpp util.cpp)
 add_library(lib_spectral_clustering ${spectral_clustering_files})
-target_link_libraries(lib_spectral_clustering Eigen3::Eigen)
+target_link_libraries(lib_spectral_clustering armadillo)
 
 add_executable(similarity_matrix similarity_matrix_main.cpp)
 target_link_libraries(similarity_matrix lib_similarity_matrix gflags OpenMP::OpenMP_CXX progress_bar)
