@@ -67,14 +67,10 @@ double aic(const arma::gmm_full &gmm, const arma::mat &data) {
 std::vector<double>
 get_probabilities(const arma::gmm_full &gmm, const arma::mat &data, uint32_t idx) {
     arma::Row<double> likelihoods = arma::exp(gmm.log_p(data, idx)) * gmm.hefts[idx];
-    arma::Row<double> sum = arma::exp(gmm.log_p(data, 0)) * gmm.hefts[0]
-            + arma::exp(gmm.log_p(data, 1)) * gmm.hefts[1];
-    arma::Row<double> sum_likelihoods
-            = gmm.n_gaus() > 1 ? sum : arma::exp(gmm.log_p(data, 0)) * gmm.hefts[0];
-    std::cout << "likelihoods: " << likelihoods / sum << std::endl;
-    // gmm.assign(data, arma::eucl_dist)
-    // double sum = arma::sum(likelihoods);
-    //    std::cout << "probabilities: " << likelihoods/sum << std::endl;
+    arma::Row<double> sum = arma::exp(gmm.log_p(data, 0)) * gmm.hefts[0];
+    for (uint32_t i = 1; i < gmm.n_gaus(); ++i) {
+        sum += arma::exp(gmm.log_p(data, i)) * gmm.hefts[i];
+    }
     return arma::conv_to<std::vector<double>>::from(likelihoods / sum);
 }
 
@@ -157,12 +153,9 @@ bool spectral_clustering(const Matd &similarity,
     double aic2 = aic(gmm2, cell_coord);
     double bic2 = bic(gmm2, cell_coord);
 
-    std::cout << "Avg log likelyhood for GMM with 1 component is " << gmm1.avg_log_p(cell_coord)
-              << std::endl;
-    std::cout << "Avg log likelyhood for GMM with 2 component is " << gmm2.avg_log_p(cell_coord)
-              << std::endl;
-
-    std::cout << "aic 1/2: " << aic1 << '/' << aic2 << " bic 1/2: " << bic1 << "/" << bic2
+    std::cout << "Avg log likelyhood for GMM 1/2 " << gmm1.avg_log_p(cell_coord) << "/"
+              << gmm2.avg_log_p(cell_coord) << "\t"
+              << "aic 1/2: " << aic1 << '/' << aic2 << " bic 1/2: " << bic1 << "/" << bic2
               << std::endl;
 
     // TODO: investigate using gmm with tied variances as in the Python version
