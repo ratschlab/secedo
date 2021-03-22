@@ -4,9 +4,8 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <vector>
-
-#include <cstddef>
 
 /**
  * Computes the log cluster center for a given position in the chromosome.

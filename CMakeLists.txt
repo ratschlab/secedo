@@ -12,6 +12,7 @@ find_package(OpenMP REQUIRED)
 include_directories(.)
 include_directories(third_party)
 include_directories(third_party/armadillo-10.3.0/include)
+include_directories(third_party/spdlog/include)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
@@ -26,22 +27,34 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/armadillo-10.3.0 EXCLUDE_FROM_ALL)
 target_compile_options(armadillo PUBLIC -Wno-unused-parameter)
 
-file(GLOB similarity_matrix_files util.cpp)
-add_library(lib_similarity_matrix ${similarity_matrix_files})
+# Spdlog logging library
+add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/spdlog EXCLUDE_FROM_ALL)
 
-file(GLOB expectation_maximization_files expectation_maximization.cpp util.cpp)
+file(GLOB util_files util.cpp pileup_reader.cpp)
+add_library(lib_util ${util_files})
+
+file(GLOB expectation_maximization_files expectation_maximization.cpp)
 add_library(lib_expectation_maximization ${expectation_maximization_files})
+target_link_libraries(lib_expectation_maximization util)
 
-file(GLOB spectral_clustering_files spectral_clustering.cpp spectral_clustering.cpp util.cpp)
+file(GLOB similarity_matrix_files similarity_matrix.cpp)
+add_library(lib_similarity_matrix ${similarity_matrix_files})
+target_link_libraries(lib_similarity_matrix progress_bar lib_util OpenMP::OpenMP_CXX)
+
+file(GLOB spectral_clustering_files spectral_clustering.cpp)
 add_library(lib_spectral_clustering ${spectral_clustering_files})
-target_link_libraries(lib_spectral_clustering armadillo)
+target_link_libraries(lib_spectral_clustering armadillo lib_util)
 
-add_executable(similarity_matrix similarity_matrix_main.cpp)
-target_link_libraries(similarity_matrix lib_similarity_matrix gflags OpenMP::OpenMP_CXX progress_bar)
+file(GLOB variant_calling_files variant_calling.cpp variant_calling.cpp)
+add_library(lib_variant_calling ${variant_calling_files})
+target_link_libraries(lib_variant_calling lib_util)
 
 add_executable(expectation_maximization expectation_maximization_main.cpp)
 target_link_libraries(expectation_maximization lib_expectation_maximization gflags OpenMP::OpenMP_CXX)
 
+add_executable(svc svc_main.cpp)
+target_link_libraries(svc lib_expectation_maximization lib_variant_calling lib_similarity_matrix lib_util gflags
+    spdlog)
 
 # TESTS
 enable_testing()
@@ -58,3 +71,6 @@ target_link_libraries(tests gtest_main gtest gmock lib_expectation_maximization 
 target_include_directories(tests PRIVATE "include")
 
 gtest_discover_tests(tests)
+
+# copy the data into the binary directory, so that tests can reference it
+file(COPY tests/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

@@ -9,15 +9,15 @@
  * Means that at position 10719571 of chromosome 22, we read 'T' and 'A' in cell 0 and 'G' in cell 3
  */
 
+#include "similarity_matrix.hpp"
+
 #include "util.hpp"
 
-#include <gflags/gflags.h>
 #include <omp.h>
 #include <progress_bar/progress_bar.hpp>
+#include <spdlog/spdlog.h>
 
 #include <deque>
-#include <filesystem>
-#include <fstream>
 #include <limits>
 #include <numeric>
 #include <sstream>
@@ -27,53 +27,15 @@
 #include <cassert>
 #include <cmath>
 
-DEFINE_double(seq_error_rate, 0.001, "Sequencing errors rate, denoted by theta");
-DEFINE_double(mutation_rate,
-              0,
-              "epsilon, estimated frequency of mutated loci in the pre-processed data set");
-// estimate of how many positions are actually homozygous germline, were only included because of
-// sequencing (or alignment!) errors
-DEFINE_double(
-        hzygous_prob,
-        0,
-        "The probability that a loci is homozygous, (not filtered correctly in the first step");
-
-DEFINE_string(mpileup_file,
-              "",
-              "Input file containing 'pileup' textual format from an alignment, as written by "
-              "preprocessing.py");
-DEFINE_uint32(num_cells, 0, "Number of sequenced cells");
-DEFINE_string(cells_file,
-              "",
-              "File with identifiers of cells (numbers between 0 and (num_of_cells - 1); the "
-              "matrices will be computed only for these cells; if absent, all cells are used.");
-DEFINE_string(cell_group_file,
-              "",
-              "For each cell, it contains a group to which it belongs. Cells from one group will "
-              "be treated as one cell. Useful e.g. when creating data with artificially higher "
-              "coverage; if absent, each cell has its own group");
-
-DEFINE_string(out_dir, "./", "Directory where the similarity matrices will be written to");
-DEFINE_uint32(run_id,
-              0,
-              "Identifier of the run (e.g. chromosome number); the resulting files will be called "
-              "'mat_same_<run_id>.csv' and 'mat_diff_<id>.csv'");
-DEFINE_uint32(max_read_size,
-              1000,
-              "Maximal considered insert size (for paired-end sequencing). In plain English, this "
-              "is the maximal length of a read we consider. Reads that are longer will not be "
-              "mapped correctly.");
-
-DEFINE_uint32(num_threads, 8, "Number of threads to use");
-
+constexpr uint32_t max_read_size = 1000;
 
 /** Caches a bunch of combinations and powers used again and again in the computation */
 struct Cache {
-    const double epsilon = FLAGS_mutation_rate;
-    const double h = FLAGS_hzygous_prob;
+    const double epsilon;
+    const double h;
 
     // probability that two same letters will be read as different
-    const double theta = FLAGS_seq_error_rate;
+    const double theta;
     const double theta2 = theta * theta;
     const double p_same_diff = 2 * theta * (1 - theta) + 2 * theta2 / 3;
     // probability that two same letters will be read as same
@@ -100,10 +62,16 @@ struct Cache {
     Mat64u comb = { { 1 }, { 1, 1 } };
 
 
-    Cache() {
-        std::cout << "Pre-computing combinations and powers...";
+    /**
+     * @param mutation_rate estimated mutation rate
+     * @param heterozygous_rate estimated probability that a loci is heterozygous
+     * @param seq_error_rate estimated error rate in the sequencing technology
+     */
+    Cache(double mutation_rate, double heterozygous_rate, double seq_error_rate)
+        : epsilon(mutation_rate), h(heterozygous_rate), theta(seq_error_rate) {
+        spdlog::trace("Pre-computing combinations and powers...");
         auto extend = [](std::vector<double> &a) { a.push_back(a.back() * a[1]); };
-        for (uint32_t p = 2; p < FLAGS_max_read_size; ++p) {
+        for (uint32_t p = 2; p < max_read_size; ++p) {
             extend(pow_p_same_same);
             extend(pow_p_same_diff);
             extend(pow_p_diff_same);
@@ -124,7 +92,6 @@ struct Cache {
             }
             comb.push_back(std::move(new_comb));
         }
-        std::cout << "done" << std::endl;
     }
 };
 
@@ -207,7 +174,6 @@ double log_prob_same_genotype(uint32_t x_s,
 
 struct Read {
     std::vector<char> bases; // the DNA sequence corresponding to this read
-    uint32_t line;
     uint32_t cell_id;
     std::vector<uint64_t> pos;
 };
@@ -230,11 +196,11 @@ ParsedLine parse_line(const std::string &line) {
     std::getline(stream, bases, '\t');
     std::getline(stream, cell_ids, '\t');
     std::getline(stream, read_ids, '\t');
-    return { position, bases, int_split(cell_ids, ','), split(read_ids, ',') };
+    return { position, bases, int_split<uint32_t>(cell_ids, ','), split(read_ids, ',') };
 }
 
 /**
- * Compares the read #start_idx with all the subsequent reads (as determined by #active_keys) and
+ * Compares the read at #start_idx with all the subsequent reads (as determined by #active_keys) and
  * updates mat_same and mat_diff accordingly. Well it doesn't update mat_same and mat_diff directly
  * in order to avoid a critical section, it pushes the updates into #updates_same and #updates_diff.
  */
@@ -299,106 +265,117 @@ void apply_updates(Mat<std::tuple<uint32_t, uint32_t, double>> &updates, Matd &m
  * Compute mat_same (the matrix giving probabilities of cells i and j given they are in
  * the same cluster) and mat_diff (prob. of cells i and j given they are in different clusters)
  */
-void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
-                             const std::vector<uint32_t> &cell_groups) {
-    constexpr uint32_t read_len = 100; // maximum read length for computing the
+void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
+                             uint32_t num_cells,
+                             const std::vector<uint32_t> &cell_ids,
+                             const std::vector<uint32_t> &cell_groups,
+                             double mutation_rate,
+                             double heterozygous_rate,
+                             double seq_error_rate,
+                             const uint32_t num_threads,
+                             const std::string &out_dir) {
+    constexpr uint32_t read_len = 200; // maximum read length
 
     // distance matrices - the desired result of the computation
-    Matd mat_same = newMat(FLAGS_num_cells, FLAGS_num_cells, 0.);
-    Matd mat_diff = newMat(FLAGS_num_cells, FLAGS_num_cells, 0.);
+    Matd mat_same = newMat(num_cells, num_cells, 0.);
+    Matd mat_diff = newMat(num_cells, num_cells, 0.);
 
     // stores temp updates to mat_same and mat_diff in order to avoid a critical section
-    Mat<std::tuple<uint32_t, uint32_t, double>> updates_same(FLAGS_num_threads);
-    Mat<std::tuple<uint32_t, uint32_t, double>> updates_diff(FLAGS_num_threads);
+    Mat<std::tuple<uint32_t, uint32_t, double>> updates_same(num_threads);
+    Mat<std::tuple<uint32_t, uint32_t, double>> updates_diff(num_threads);
 
     // arrays with values of already computed probabilities, max_double if not yet computed
     Matd log_probs_same = newMat(read_len, read_len, std::numeric_limits<double>::max());
     Matd log_probs_diff = newMat(read_len, read_len, std::numeric_limits<double>::max());
 
-    // count how many times we have seen a given combination of x_s, x_d
+    // count how many times we have seen a given combination of x_s, x_d. x_s counts how many times
+    // we've seen the same base in other cells at a specific position, x_d how many times we've seen
+    // a different base
     Mat32u combs_xs_xd = newMat(read_len, read_len, 0u);
 
     // key: read id of an active read
     // value: A Read struct, containing: sequence, line number, cell_id and position in genome
     std::unordered_map<std::string, Read> active_reads;
 
-    Cache cache; // store intermediate values to avoid recomputation
+    Cache cache(mutation_rate, heterozygous_rate, seq_error_rate); // store intermediate values to avoid recomputation
 
-    // traverse the pre-processed mpileup file line by line. Each line in the file has the form:
-    // chromosome_id    position    coverage    bases   cells   read_ids
-    std::ifstream f(FLAGS_mpileup_file);
-    std::string line;
-    ProgressBar read_progress(std::filesystem::file_size(FLAGS_mpileup_file), "Processed;",
-                              std::cout);
+    uint64_t total_positions = 0;
+    for(const auto& v : pos_data) {
+        total_positions += v.size();
+    }
+
+    ProgressBar read_progress(total_positions, "Processed;", std::cout);
     std::deque<std::string> active_keys;
     // the number of completed reads, i.e. reads that started FLAGS_max_read_size ago
     uint32_t completed = 0;
-    for (uint32_t line_count = 0; std::getline(f, line); ++line_count) {
-        // splits the line by tabs and fills in the relevant fields into parsed_line
-        ParsedLine curr_read = parse_line(line);
+    for (const auto &chromosome_data : pos_data) {
+        for (const PosData &pd : chromosome_data) {
+            // splits the line by tabs and fills in the relevant fields into parsed_line
+            // ParsedLine curr_read = parse_line(line);
 
-        // update the number of complete reads
-        for (uint32_t i = completed; i < active_keys.size()
-             && active_reads[active_keys[i]].pos[0] + FLAGS_max_read_size <= curr_read.pos;
-             ++i) {
-            ++completed;
-        }
-
-        constexpr uint32_t BATCH_SIZE = 4;
-        // if we batched up enough completed reads, process them in parallel
-        if (completed >= BATCH_SIZE * FLAGS_num_threads) {
-#pragma omp parallel for schedule(static, BATCH_SIZE) num_threads(FLAGS_num_threads)
-            for (uint32_t i = 0; i < completed; ++i) {
-                // compute its overlaps with all other active reads, i.e. all
-                // reads that have some bases in the last FLAGS_max_read_size positions
-                compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, cache,
-                                   updates_same, updates_diff, log_probs_same, log_probs_diff,
-                                   combs_xs_xd);
+            // update the number of complete reads
+            for (uint32_t i = completed; i < active_keys.size()
+                 && active_reads[active_keys[i]].pos[0] + max_read_size <= pd.position;
+                 ++i) {
+                ++completed;
             }
-            apply_updates(updates_same, mat_same);
-            apply_updates(updates_diff, mat_diff);
-            // remove processed reads
-            for (uint32_t i = 0; i < completed; ++i) {
-                active_reads.erase(active_keys.front());
-                active_keys.pop_front();
-            }
-            completed = 0;
-        }
 
-        // update active_reads with the reads from the current line
-        for (uint32_t i = 0; i < curr_read.read_ids.size(); ++i) {
-            auto read_it = active_reads.find(curr_read.read_ids[i]);
-            const char curr_base = curr_read.bases[i];
-            if (read_it == active_reads.end()) { // create a new read
-                Read read = { { curr_base }, line_count, curr_read.cell_ids[i], { curr_read.pos } };
-                active_reads[curr_read.read_ids[i]] = read;
-                active_keys.push_back(curr_read.read_ids[i]);
-            } else {
-                Read &read = read_it->second;
-                // if we have two reads at the same position (happens due to paired-end sequencing)
-                if (!read.pos.empty() && read.pos.back() == curr_read.pos) {
-                    // different reads at the same position, so we remove the existing read, as
-                    // there's a 50% chance of error
-                    if (toupper(read.bases.back()) != toupper(curr_base)) {
-                        read.bases.pop_back();
-                        read.pos.pop_back();
-                    }
-                    continue;
+            constexpr uint32_t BATCH_SIZE = 4;
+            // if we batched up enough completed reads, process them in parallel
+            if (completed >= BATCH_SIZE * num_threads) {
+#pragma omp parallel for schedule(static, BATCH_SIZE) num_threads(num_threads)
+                for (uint32_t i = 0; i < completed; ++i) {
+                    // compute its overlaps with all other active reads, i.e. all
+                    // reads that have some bases in the last FLAGS_max_read_size positions
+                    compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, cache,
+                                       updates_same, updates_diff, log_probs_same, log_probs_diff,
+                                       combs_xs_xd);
                 }
-
-                // add a new base to an existing read
-                assert(read.pos.empty() || read.pos.back() < curr_read.pos);
-                read.bases.push_back(curr_base);
-                read.pos.push_back(curr_read.pos);
+                apply_updates(updates_same, mat_same);
+                apply_updates(updates_diff, mat_diff);
+                // remove processed reads
+                for (uint32_t i = 0; i < completed; ++i) {
+                    active_reads.erase(active_keys.front());
+                    active_keys.pop_front();
+                }
+                completed = 0;
             }
-        }
 
-        read_progress += line.size() + 1;
+            // update active_reads with the reads from the current line
+            for (const CellData &cd : pd.cells_data) {
+                auto read_it = active_reads.find(cd.read_id);
+                const char curr_base = cd.base;
+                if (read_it == active_reads.end()) { // create a new read
+                    Read read = { { curr_base }, cd.cell_id, { pd.position } };
+                    active_reads[cd.read_id] = read;
+                    active_keys.push_back(cd.read_id);
+                } else {
+                    Read &read = read_it->second;
+                    // if we have two reads at the same position (happens due to paired-end
+                    // sequencing)
+                    if (!read.pos.empty() && read.pos.back() == pd.position) {
+                        // different reads at the same position, so we remove the existing read, as
+                        // there's a 50% chance of error
+                        if (toupper(read.bases.back()) != toupper(curr_base)) {
+                            read.bases.pop_back();
+                            read.pos.pop_back();
+                        }
+                        continue;
+                    }
+
+                    // add a new base to an existing read
+                    assert(read.pos.empty() || read.pos.back() < pd.position);
+                    read.bases.push_back(curr_base);
+                    read.pos.push_back(pd.position);
+                }
+            }
+
+            read_progress +=  1;
+        }
     }
-    f.close();
 
     // in the end, process all the leftover active reads
-#pragma omp parallel for num_threads(FLAGS_num_threads)
+#pragma omp parallel for num_threads(num_threads)
     for (uint32_t i = 0; i < active_keys.size(); ++i) {
         // compare with all other reads in active_reads
         compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, cache, updates_same,
@@ -409,30 +386,7 @@ void computeSimilarityMatrix(const std::vector<uint32_t> &cell_ids,
     apply_updates(updates_diff, mat_diff);
 
     // save mat_same and mat_diff into file
-    write_mat(FLAGS_out_dir + "mat_same_" + std::to_string(FLAGS_run_id) + ".csv", mat_same);
-    write_mat(FLAGS_out_dir + "mat_diff_" + std::to_string(FLAGS_run_id) + ".csv", mat_diff);
-    write_mat(FLAGS_out_dir + "combs_xs_xd_" + std::to_string(FLAGS_run_id) + ".csv", combs_xs_xd);
-}
-
-int main(int argc, char *argv[]) {
-    gflags::ParseCommandLineFlags(&argc, &argv, true);
-
-    std::vector<uint32_t> cells_ids;
-    if (!FLAGS_cells_file.empty()) {
-        cells_ids = int_split(read_file(FLAGS_cells_file), ' ');
-        // num_cells = len(cells_ids);
-    } else {
-        cells_ids.resize(FLAGS_num_cells);
-        std::iota(cells_ids.begin(), cells_ids.end(), 0);
-    }
-
-    std::vector<uint32_t> cell_groups;
-    if (!FLAGS_cell_group_file.empty()) {
-        cell_groups = int_split(read_file(FLAGS_cells_file), ',');
-    } else {
-        cell_groups.resize(FLAGS_num_cells);
-        std::iota(cell_groups.begin(), cell_groups.end(), 0);
-    }
-
-    computeSimilarityMatrix(cells_ids, cell_groups);
+    write_mat(out_dir + "mat_same.csv", mat_same);
+    write_mat(out_dir + "mat_diff.csv", mat_diff);
+    write_mat(out_dir + "combs_xs_xd.csv", combs_xs_xd);
 }
