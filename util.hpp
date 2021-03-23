@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "mat.hpp"
+
 constexpr uint8_t CharToInt[128]
         = { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
@@ -15,14 +17,14 @@ constexpr uint8_t CharToInt[128]
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 };
 
 template <typename T>
-using Mat = std::vector<std::vector<T>>;
-using Matd = Mat<double>;
-using Mat32u = Mat<uint32_t>;
-using Mat64u = Mat<uint64_t>;
+using Vec2 = std::vector<std::vector<T>>;
+using Vec2d = Vec2<double>;
+using Vec2u32 = Vec2<uint32_t>;
+using Vec2u64 = Vec2<uint64_t>;
 
 template <typename T>
-Mat<T> newMat(uint32_t l, uint32_t c, T v = 0) {
-    return Mat<T>(l, std::vector<T>(c, v));
+Mat<T> newVec2(uint32_t l, uint32_t c, T v = 0) {
+    return Vec2<T>(l, std::vector<T>(c, v));
 }
 
 
@@ -51,7 +53,7 @@ std::string to_string(const std::vector<T> &vec) {
     }
     std::stringstream out;
     out << '[';
-    for (uint32_t i = 0; i < vec.size() -1; ++i) {
+    for (uint32_t i = 0; i < vec.size() - 1; ++i) {
         out << vec[i] << ", ";
     }
     out << vec.back() << ']';
@@ -64,15 +66,14 @@ std::string to_string(const std::vector<T> &vec) {
 template <typename T>
 void write_mat(const std::string &name, const Mat<T> &mat) {
     std::ofstream out(name);
-    for (const auto &vec : mat) {
-        if (vec.empty()) {
-            out << std::endl;
-            continue;
+    if (mat.empty()) {
+        return;
+    }
+    for (uint32_t r = 0; r < mat.rows(); ++r) {
+        for (uint32_t i = 0; i < mat.cols() - 1; ++i) {
+            out << mat(r, i) << ",";
         }
-        for (uint32_t i = 0; i < vec.size() - 1; ++i) {
-            out << vec[i] << ",";
-        }
-        out << vec.back() << std::endl;
+        out << mat(r, mat.cols() - 1) << std::endl;
     }
 }
 

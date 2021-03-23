@@ -8,19 +8,19 @@
 #include <vector>
 
 Matd laplacian(const Matd &a) {
-    std::vector<double> diag(a.size());
-    for (uint32_t r = 0; r < a.size(); ++r) {
-        assert(a[r][r] == 0); // diagonal elements MUST be zero
-        for (uint32_t c = 0; c < a[r].size(); ++c) {
-            diag[r] += a[r][c];
+    std::vector<double> diag(a.rows());
+    for (uint32_t r = 0; r < a.rows(); ++r) {
+        assert(a(r, r) == 0); // diagonal elements MUST be zero
+        for (uint32_t c = 0; c < a.cols(); ++c) {
+            diag[r] += a(r, c);
         }
     }
     std::transform(diag.begin(), diag.end(), diag.begin(),
                    [](double v) { return 1 / std::sqrt(v); });
-    Matd result = newMat(a.size(), a[0].size(), 0.0);
-    for (uint32_t r = 0; r < a.size(); ++r) {
-        for (uint32_t c = 0; c < a[r].size(); ++c) {
-            result[r][c] = (r == c ? 1 : 0) - diag[r] * diag[c] * a[r][c];
+    Matd result = Matd::zeros(a.rows(), a.rows());
+    for (uint32_t r = 0; r < a.rows(); ++r) {
+        for (uint32_t c = 0; c < a.cols(); ++c) {
+            result(r,c) = (r == c ? 1 : 0) - diag[r] * diag[c] * a(r,c);
         }
     }
     return result;
@@ -93,14 +93,14 @@ bool spectral_clustering(const Matd &similarity,
                          const ClusteringType &clustering,
                          const Termination &termination,
                          std::vector<double> *cluster) {
-    cluster->resize(similarity.size());
+    cluster->resize(similarity.rows());
 
     // compute graph Laplacian, the eigenvalues and eigenvectors
     Matd L = laplacian(similarity);
-    arma::mat lap(similarity.size(), similarity.size());
-    for (uint32_t r = 0; r < similarity.size(); ++r) {
-        for (uint32_t c = 0; c < similarity.size(); ++c) {
-            lap(r, c) = L[r][c];
+    arma::mat lap(similarity.rows(), similarity.rows());
+    for (uint32_t r = 0; r < similarity.rows(); ++r) {
+        for (uint32_t c = 0; c < similarity.rows(); ++c) {
+            lap(r, c) = L(r,c);
         }
     }
 
@@ -176,14 +176,14 @@ bool spectral_clustering(const Matd &similarity,
         ev = ev.t(); // kmeans expects each column to be one sample
         arma::mat means;
         arma::kmeans(means, ev, 2, arma::random_spread, 10 /* iterations */, false);
-        for (uint32_t i = 0; i < similarity.size(); ++i) {
+        for (uint32_t i = 0; i < similarity.rows(); ++i) {
             (*cluster)[i]
                     = arma::norm(means.col(0) - ev.col(i)) > arma::norm(means.col(1) - ev.col(i));
         }
     } else if (clustering == ClusteringType::FIEDLER) {
         // TODO: use the min-sparsity cut described in
         // https://people.eecs.berkeley.edu/~jrs/189s17/lec/22.pdf rather than the 0 cut
-        for (uint32_t i = 0; i < similarity.size(); ++i) {
+        for (uint32_t i = 0; i < similarity.rows(); ++i) {
             cluster->at(i) = eigenvectors(i, 1) >= 0;
         }
     }

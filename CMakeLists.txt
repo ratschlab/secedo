@@ -50,7 +50,7 @@ add_library(lib_variant_calling ${variant_calling_files})
 target_link_libraries(lib_variant_calling lib_util)
 
 add_executable(expectation_maximization expectation_maximization_main.cpp)
-target_link_libraries(expectation_maximization lib_expectation_maximization gflags OpenMP::OpenMP_CXX)
+target_link_libraries(expectation_maximization lib_expectation_maximization lib_util gflags OpenMP::OpenMP_CXX)
 
 add_executable(svc svc_main.cpp)
 target_link_libraries(svc lib_expectation_maximization lib_variant_calling lib_similarity_matrix lib_util gflags

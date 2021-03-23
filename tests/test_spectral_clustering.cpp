@@ -12,14 +12,14 @@ using namespace testing;
 class SpectralClustering : public testing::TestWithParam<std::pair<ClusteringType, Termination>> {};
 
 TEST(Laplacian, SomeMatrix) {
-    Matd a = { { 0, .5, .2 }, { .5, 0, .5 }, { .2, .5, 0 } };
+    Matd a(3, 3, { 0, .5, .2, .5, 0, .5, .2, .5, 0 });
     Matd L = laplacian(a);
-    Matd expectedL = { { 1., -0.5976143, -0.28571429 },
-                       { -0.5976143, 1., -0.5976143 },
-                       { -0.28571429, -0.5976143, 1. } };
-    for (uint32_t r = 0; r < a.size(); ++r) {
-        for (uint32_t c = 0; c < a.size(); ++c) {
-            EXPECT_NEAR(L[r][c], expectedL[r][c], 1e-3);
+    Matd expectedL(3, 3,
+                   { 1., -0.5976143, -0.28571429, -0.5976143, 1., -0.5976143, -0.28571429,
+                     -0.5976143, 1. });
+    for (uint32_t r = 0; r < a.rows(); ++r) {
+        for (uint32_t c = 0; c < a.cols(); ++c) {
+            EXPECT_NEAR(L(r, c), expectedL(r, c), 1e-3);
         }
     }
 }
@@ -34,12 +34,11 @@ TEST_P(SpectralClustering, OneCluster) {
         std::vector<double> cluster;
         // we have 10 identical cells
         constexpr uint32_t num_cells = 100;
-        Matd similarity(num_cells);
+        Matd similarity(num_cells, num_cells);
         for (uint32_t i = 0; i < num_cells; ++i) {
-            similarity[i] = std::vector<double>(num_cells);
             for (uint32_t j = 0; j < i; ++j) {
-                similarity[i][j] = 1 + noise(generator);
-                similarity[j][i] = similarity[i][j];
+                similarity(i, j) = 1 + noise(generator);
+                similarity(j, i) = similarity(i, j);
             }
         }
 
@@ -62,17 +61,17 @@ TEST_P(SpectralClustering, TwoClusters) {
     std::vector<double> cluster;
     // we have 100 cells, with the first 50 and last 50 being identical (module some nosie) to each
     // other
-    Matd similarity = newMat(num_cells, num_cells, 0.);
+    Matd similarity = Matd::zeros(num_cells, num_cells);
     const uint32_t half = num_cells / 2;
     for (uint32_t i = 0; i < half; ++i) {
         for (uint32_t j = 0; j < i; ++j) {
             // 1st cluster
-            similarity[i][j] = 1 + noise(generator);
-            similarity[j][i] = similarity[i][j];
+            similarity(i, j) = 1 + noise(generator);
+            similarity(j, i) = similarity(i, j);
 
             // 2nd cluster
-            similarity[i + half][j + half] = 1 + noise(generator);
-            similarity[j + half][i + half] = similarity[i + half][j + half];
+            similarity(i + half, j + half) = 1 + noise(generator);
+            similarity(j + half, i + half) = similarity(i + half, j + half);
         }
     }
 
@@ -98,9 +97,9 @@ TEST_P(SpectralClustering, ThreeClusters) {
     // we have 90 cells, with the first 30, next 30 and last 30 being identical, and the first 30
     // and next 30 being slightly more similar to each other than to the last 30 the clustering
     // should thus group the first 60 cells and last 30 cells together
-    Matd similarity
-            = { { 0., 1, 0.1, 0.1, 0, 0 }, { 1., 0, 0.1, 0.1, 0, 0 }, { 0.1, 0.1, 0, 1, 0, 0 },
-                { 0.1, 0.1, 1, 0, 0, 0 },  { 0, 0, 0, 0, 0, 1 },      { 0, 0, 0, 0, 1, 0 } };
+    Matd similarity(6, 6,
+                    { 0.,  1,   0.1, 0.1, 0, 0, 1., 0, 0.1, 0.1, 0, 0, 0.1, 0.1, 0, 1, 0, 0,
+                      0.1, 0.1, 1,   0,   0, 0, 0,  0, 0,   0,   0, 1, 0,   0,   0, 0, 1, 0 });
 
     bool done = spectral_clustering(similarity, clustering, termination, &cluster);
 

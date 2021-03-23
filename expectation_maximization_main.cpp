@@ -23,6 +23,8 @@ DEFINE_string(chromosomes,
               "1,2,3,4,5,6,7,8,9,10,11,12,13.14,15,16,17,18,19,20,21,22,X");
 
 int main(int argc, char *argv[]) {
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
+
     std::vector<double> prob_cluster_b = double_split(read_file(FLAGS_labels_file), ',');
     const std::vector<std::string> chromosomes = split(FLAGS_chromosomes, ',');
 

@@ -11,6 +11,7 @@
 
 #include "similarity_matrix.hpp"
 
+#include "mat.hpp"
 #include "util.hpp"
 
 #include <omp.h>
@@ -59,7 +60,7 @@ struct Cache {
     std::vector<double> pow_pss_pds = { 1, p_same_same + p_diff_same };
     std::vector<double> pow_psd_pdd = { 1, p_same_diff + p_diff_diff };
 
-    Mat64u comb = { { 1 }, { 1, 1 } };
+    Vec2u64 comb = { { 1 }, { 1, 1 } };
 
 
     /**
@@ -111,9 +112,9 @@ double log_prob_diff_genotype(uint32_t x_s,
                               const Cache &c,
                               Matd &log_probs,
                               Mat32u &combs_xs_xd) {
-    combs_xs_xd[x_s][x_d]++;
-    if (log_probs[x_s][x_d] != std::numeric_limits<double>::max()) {
-        return log_probs[x_s][x_d];
+    combs_xs_xd(x_s,x_d)++;
+    if (log_probs(x_s, x_d) != std::numeric_limits<double>::max()) {
+        return log_probs(x_s, x_d);
     }
     double prob = 0;
     for (uint32_t k = 0; k <= x_s; ++k) {
@@ -133,8 +134,8 @@ double log_prob_diff_genotype(uint32_t x_s,
         }
     }
     prob *= c.comb[x_s + x_d][x_s];
-    log_probs[x_s][x_d] = log(prob);
-    return log_probs[x_s][x_d];
+    log_probs(x_s, x_d) = log(prob);
+    return log_probs(x_s, x_d);
 }
 
 /**
@@ -153,9 +154,9 @@ double log_prob_same_genotype(uint32_t x_s,
                               const Cache &c,
                               Matd &log_probs,
                               Mat32u &combs_xs_xd) {
-    combs_xs_xd[x_s][x_d]++;
-    if (log_probs[x_s][x_d] != std::numeric_limits<double>::max()) {
-        return log_probs[x_s][x_d];
+    combs_xs_xd(x_s, x_d)++;
+    if (log_probs(x_s, x_d) != std::numeric_limits<double>::max()) {
+        return log_probs(x_s, x_d);
     }
     double p = 0;
     for (uint32_t k = 0; k <= x_s; ++k) {
@@ -168,8 +169,8 @@ double log_prob_same_genotype(uint32_t x_s,
         }
     }
     p *= c.comb[x_s + x_d][x_s];
-    log_probs[x_s][x_d] = log(p);
-    return log_probs[x_s][x_d];
+    log_probs(x_s, x_d) = log(p);
+    return log_probs(x_s, x_d);
 }
 
 struct Read {
@@ -210,8 +211,8 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
                         const std::vector<uint32_t> &cell_ids,
                         const std::vector<uint32_t> &cell_groups,
                         const Cache &cache,
-                        Mat<std::tuple<uint32_t, uint32_t, double>> &updates_same,
-                        Mat<std::tuple<uint32_t, uint32_t, double>> &updates_diff,
+                        Vec2<std::tuple<uint32_t, uint32_t, double>> &updates_same,
+                        Vec2<std::tuple<uint32_t, uint32_t, double>> &updates_diff,
                         Matd &log_probs_same,
                         Matd &log_probs_diff,
                         Mat32u &combs_xs_xd) {
@@ -251,11 +252,11 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
 }
 
 /** Applies the updates in the updates vector to mat */
-void apply_updates(Mat<std::tuple<uint32_t, uint32_t, double>> &updates, Matd &mat) {
+void apply_updates(Vec2<std::tuple<uint32_t, uint32_t, double>> &updates, Matd &mat) {
     for (auto &update : updates) {
         for (auto [i, j, v] : update) {
-            mat[i][j] += v;
-            mat[j][i] = mat[i][j];
+            mat(i,j) += v;
+            mat(j,i) = mat(i,j);
         }
         update.resize(0);
     }
@@ -277,21 +278,24 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     constexpr uint32_t read_len = 200; // maximum read length
 
     // distance matrices - the desired result of the computation
-    Matd mat_same = newMat(num_cells, num_cells, 0.);
-    Matd mat_diff = newMat(num_cells, num_cells, 0.);
+    Matd mat_same = Matd::zeros(num_cells, num_cells);
+    Matd mat_diff = Matd::zeros(num_cells, num_cells);
 
     // stores temp updates to mat_same and mat_diff in order to avoid a critical section
-    Mat<std::tuple<uint32_t, uint32_t, double>> updates_same(num_threads);
-    Mat<std::tuple<uint32_t, uint32_t, double>> updates_diff(num_threads);
+    Vec2<std::tuple<uint32_t, uint32_t, double>> updates_same(num_threads);
+    Vec2<std::tuple<uint32_t, uint32_t, double>> updates_diff(num_threads);
 
     // arrays with values of already computed probabilities, max_double if not yet computed
-    Matd log_probs_same = newMat(read_len, read_len, std::numeric_limits<double>::max());
-    Matd log_probs_diff = newMat(read_len, read_len, std::numeric_limits<double>::max());
+    Matd log_probs_same = Matd::fill(read_len, read_len, std::numeric_limits<double>::max());
+    Matd log_probs_diff = Matd::fill(read_len, read_len, std::numeric_limits<double>::max());
 
     // count how many times we have seen a given combination of x_s, x_d. x_s counts how many times
     // we've seen the same base in other cells at a specific position, x_d how many times we've seen
     // a different base
-    Mat32u combs_xs_xd = newMat(read_len, read_len, 0u);
+    std::vector<Mat32u> combs_xs_xd(num_threads);
+    for (auto & c: combs_xs_xd) {
+        c = Mat32u::zeros(read_len, read_len);
+    }
 
     // key: read id of an active read
     // value: A Read struct, containing: sequence, line number, cell_id and position in genome
@@ -329,7 +333,7 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                     // reads that have some bases in the last FLAGS_max_read_size positions
                     compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, cache,
                                        updates_same, updates_diff, log_probs_same, log_probs_diff,
-                                       combs_xs_xd);
+                                       combs_xs_xd[omp_get_thread_num()]);
                 }
                 apply_updates(updates_same, mat_same);
                 apply_updates(updates_diff, mat_diff);
@@ -379,14 +383,18 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     for (uint32_t i = 0; i < active_keys.size(); ++i) {
         // compare with all other reads in active_reads
         compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, cache, updates_same,
-                           updates_diff, log_probs_same, log_probs_diff, combs_xs_xd);
+                           updates_diff, log_probs_same, log_probs_diff, combs_xs_xd[omp_get_thread_num()]);
     }
 
     apply_updates(updates_same, mat_same);
     apply_updates(updates_diff, mat_diff);
+    Mat32u combs_all = Mat32u::zeros(read_len, read_len);
+    for (const auto& comb : combs_xs_xd) {
+        combs_all += comb;
+    }
 
     // save mat_same and mat_diff into file
     write_mat(out_dir + "mat_same.csv", mat_same);
     write_mat(out_dir + "mat_diff.csv", mat_diff);
-    write_mat(out_dir + "combs_xs_xd.csv", combs_xs_xd);
+    write_mat(out_dir + "combs_xs_xd.csv", combs_all);
 }

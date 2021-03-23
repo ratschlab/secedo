@@ -80,5 +80,4 @@ TEST(Reader, three_rows) {
     }
 }
 
-
 } // namespace
