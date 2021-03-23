@@ -130,7 +130,7 @@ public:
     void operator+=(const Mat<T> &other) const {
         assert(r == other.r && c == other.c && "Incompatible matrix shapes for addition");
         for (uint32_t i = 0; i < r * c; ++i) {
-            el[i] += el[i];
+            el[i] += other.el[i];
         }
     }
 

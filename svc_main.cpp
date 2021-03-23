@@ -39,7 +39,7 @@ DEFINE_string(cell_group_file,
               "coverage; if absent, each cell has its own group");
 
 DEFINE_string(out_dir, "./", "Directory where the similarity matrices will be written to");
-//TODO: do we need this or leave as constexpr?
+// TODO: do we need this or leave as constexpr?
 DEFINE_uint32(max_read_size,
               1000,
               "Maximal considered insert size (for paired-end sequencing). In plain English, this "
@@ -106,4 +106,5 @@ int main(int argc, char *argv[]) {
     computeSimilarityMatrix(pos_data, num_cells, cell_id_map, cell_group_map, FLAGS_mutation_rate,
                             FLAGS_hzygous_prob, FLAGS_seq_error_rate, FLAGS_num_threads,
                             FLAGS_out_dir);
+    spdlog::info("Done.");
 }

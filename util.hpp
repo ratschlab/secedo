@@ -54,7 +54,7 @@ std::string to_string(const std::vector<T> &vec) {
     std::stringstream out;
     out << '[';
     for (uint32_t i = 0; i < vec.size() - 1; ++i) {
-        out << vec[i] << ", ";
+        out << vec[i] << ",";
     }
     out << vec.back() << ']';
     return out.str();

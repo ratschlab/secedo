@@ -7,12 +7,14 @@
 #include <filesystem>
 #include <vector>
 
-constexpr bool simplify = false;
+constexpr bool simplify = true;
 
-std::pair<std::vector<PosData>, std::unordered_set<uint32_t>> read_pileup(const std::string fname) {
+std::pair<std::vector<PosData>, std::unordered_set<uint32_t>>
+read_pileup_text(const std::string fname) {
     std::vector<PosData> result;
 
     std::ofstream out(fname + ".simplified");
+    std::ofstream out_bin(fname + ".bin", std::ios::binary);
 
     if (!std::filesystem::exists(fname)) {
         spdlog::error("File {} does not exist or is not readable.", fname);
@@ -40,12 +42,13 @@ std::pair<std::vector<PosData>, std::unordered_set<uint32_t>> read_pileup(const 
 
         // 6th column: read ids, comma separated. Each single cell sequence has its own read id
         std::vector<std::string> read_ids = split(splitLine[5], ',');
+        std::vector<uint32_t> read_ids_int(read_ids.size());
         if (simplify) {
             for (uint32_t j = 0; j < read_ids.size(); ++j) {
                 if (!id_map.contains(read_ids[j])) {
                     id_map[read_ids[j]] = id_count++;
                 }
-                read_ids[j] = std::to_string(id_map[read_ids[j]]);
+                read_ids_int[j] = id_map[read_ids[j]];
             }
         }
 
@@ -66,7 +69,65 @@ std::pair<std::vector<PosData>, std::unordered_set<uint32_t>> read_pileup(const 
                 out << '\t';
             }
             out << std::endl;
+
+            uint8_t chromosome = std::stoi(splitLine[0]);
+            out_bin.write(reinterpret_cast<char *>(&chromosome), 1);
+            out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
+            uint16_t coverage = bases.size();
+            out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
+            out_bin.write(reinterpret_cast<char *>(bases.data()), bases.size());
+            out_bin.write(reinterpret_cast<char *>(cell_ids.data()),
+                          cell_ids.size() * sizeof(cell_ids.data()[0]));
+            out_bin.write(reinterpret_cast<char *>(read_ids_int.data()),
+                          read_ids_int.size() * sizeof(read_ids_int.data()[0]));
         }
     }
     return { result, all_cell_ids };
+}
+
+std::pair<std::vector<PosData>, std::unordered_set<uint32_t>>
+read_pileup_bin(const std::string fname) {
+    std::vector<PosData> result;
+
+    if (!std::filesystem::exists(fname)) {
+        spdlog::error("File {} does not exist or is not readable.", fname);
+        std::exit(1);
+    }
+
+    std::ifstream f(fname, std::ios::binary);
+    std::string line;
+    std::unordered_set<uint32_t> all_cell_ids;
+    std::unordered_map<std::string, uint32_t> id_map;
+
+    while (f.good()) {
+        uint8_t chromosome;
+        uint64_t position;
+        uint16_t coverage;
+        f.read(reinterpret_cast<char *>(&chromosome), 1);
+        f.read(reinterpret_cast<char *>(&position), sizeof(position));
+        f.read(reinterpret_cast<char *>(&coverage), sizeof(coverage));
+
+        std::vector<char> bases(coverage);
+        std::vector<uint16_t> cell_ids(coverage);
+        std::vector<uint32_t> read_ids(coverage);
+
+        f.read(bases.data(), bases.size());
+        f.read(reinterpret_cast<char *>(cell_ids.data()), cell_ids.size() * sizeof(cell_ids[0]));
+        f.read(reinterpret_cast<char *>(read_ids.data()), read_ids.size() * sizeof(read_ids[0]));
+
+        std::copy(cell_ids.begin(), cell_ids.end(),
+                  std::inserter(all_cell_ids, all_cell_ids.end()));
+
+        std::vector<CellData> cells_data;
+        for (uint32_t j = 0; j < bases.size(); ++j) {
+            cells_data.push_back(
+                    { std::to_string(read_ids[j]), cell_ids[j], CharToInt[(uint8_t)bases[j]] });
+        }
+        result.push_back({ position, cells_data });
+    }
+    return { result, all_cell_ids };
+}
+
+std::pair<std::vector<PosData>, std::unordered_set<uint32_t>> read_pileup(const std::string fname) {
+    return fname.ends_with(".bin") ? read_pileup_bin(fname) : read_pileup_text(fname);
 }

@@ -292,7 +292,7 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     // count how many times we have seen a given combination of x_s, x_d. x_s counts how many times
     // we've seen the same base in other cells at a specific position, x_d how many times we've seen
     // a different base
-    std::vector<Mat32u> combs_xs_xd(num_threads);
+    std::vector<Mat<std::atomic<uint32_t>>> combs_xs_xd(num_threads);
     for (auto & c: combs_xs_xd) {
         c = Mat32u::zeros(read_len, read_len);
     }
