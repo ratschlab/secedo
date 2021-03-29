@@ -1,5 +1,8 @@
 #pragma once
 
+// inlude only here, so that all files use the same default logger
+#include <spdlog/spdlog.h>
+
 #include <cstdint>
 #include <fstream>
 #include <numeric>

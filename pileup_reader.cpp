@@ -1,15 +1,15 @@
 #include "pileup_reader.hpp"
 
+#include "logger.hpp"
 #include "util.hpp"
 
-#include <spdlog/spdlog.h>
-
 #include <filesystem>
+#include <iostream>
 #include <vector>
 
 constexpr bool simplify = true;
 
-std::pair<std::vector<PosData>, std::unordered_set<uint32_t>>
+std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup_text(const std::string fname) {
     std::vector<PosData> result;
 
@@ -25,6 +25,7 @@ read_pileup_text(const std::string fname) {
     std::string line;
     std::unordered_set<uint32_t> all_cell_ids;
     std::unordered_map<std::string, uint32_t> id_map;
+    std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> id_stats;
     uint32_t id_count = 0;
     // process position by position
     while (std::getline(f, line)) {
@@ -47,7 +48,9 @@ read_pileup_text(const std::string fname) {
             for (uint32_t j = 0; j < read_ids.size(); ++j) {
                 if (!id_map.contains(read_ids[j])) {
                     id_map[read_ids[j]] = id_count++;
+                    id_stats[read_ids[j]] = { position, position };
                 }
+                id_stats[read_ids[j]] = { id_stats[read_ids[j]].first, position };
                 read_ids_int[j] = id_map[read_ids[j]];
             }
         }
@@ -82,10 +85,18 @@ read_pileup_text(const std::string fname) {
                           read_ids_int.size() * sizeof(read_ids_int.data()[0]));
         }
     }
-    return { result, all_cell_ids };
+
+    uint32_t max_length = 0;
+    for (const auto &[k, v] : id_stats) {
+        max_length = std::max(max_length, v.second - v.first);
+    }
+    logger()->trace("{}: found {} cell ids, {} reads. Longest read has {} bases", fname,
+                    all_cell_ids.size(), id_stats.size(), max_length);
+
+    return { result, all_cell_ids, max_length };
 }
 
-std::pair<std::vector<PosData>, std::unordered_set<uint32_t>>
+std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup_bin(const std::string fname) {
     std::vector<PosData> result;
 
@@ -97,13 +108,17 @@ read_pileup_bin(const std::string fname) {
     std::ifstream f(fname, std::ios::binary);
     std::string line;
     std::unordered_set<uint32_t> all_cell_ids;
-    std::unordered_map<std::string, uint32_t> id_map;
+
+    std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> id_stats;
 
     while (f.good()) {
         uint8_t chromosome;
         uint64_t position;
         uint16_t coverage;
         f.read(reinterpret_cast<char *>(&chromosome), 1);
+        if (!f.good()) {
+            break;
+        }
         f.read(reinterpret_cast<char *>(&position), sizeof(position));
         f.read(reinterpret_cast<char *>(&coverage), sizeof(coverage));
 
@@ -120,14 +135,29 @@ read_pileup_bin(const std::string fname) {
 
         std::vector<CellData> cells_data;
         for (uint32_t j = 0; j < bases.size(); ++j) {
+            if (id_stats.contains(read_ids[j])) {
+                id_stats[read_ids[j]] = { id_stats[read_ids[j]].first, position };
+            } else {
+                id_stats[read_ids[j]] = { position, position };
+            }
             cells_data.push_back(
                     { std::to_string(read_ids[j]), cell_ids[j], CharToInt[(uint8_t)bases[j]] });
         }
         result.push_back({ position, cells_data });
     }
-    return { result, all_cell_ids };
+
+    uint32_t max_length = 0;
+    for (const auto &[k, v] : id_stats) {
+        max_length = std::max(max_length, v.second - v.first);
+    }
+
+    logger()->trace("{}: found {} cell ids, {} reads. Longest read has {} bases", fname,
+                    all_cell_ids.size(), id_stats.size(), max_length);
+
+    return { result, all_cell_ids, max_length };
 }
 
-std::pair<std::vector<PosData>, std::unordered_set<uint32_t>> read_pileup(const std::string fname) {
+std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
+read_pileup(const std::string fname) {
     return fname.ends_with(".bin") ? read_pileup_bin(fname) : read_pileup_text(fname);
 }

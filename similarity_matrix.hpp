@@ -12,6 +12,8 @@
  * @param pos_data for each chromosome and each position, all the reads for that position (from all
  * cells)
  * @param num_cells number of cells that were sequenced
+ * @param max_read_length the maximum read length in the processed files (typically around 600
+ * bases). This value is used to figure out when reads have ended and can be processed.
  * @param cell_ids
  * @param cell_groups
  * @param mutation_rate estimated mutation rate
@@ -23,6 +25,7 @@
  */
 void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t num_cells,
+                             uint32_t max_read_length,
                              const std::vector<uint32_t> &cell_ids,
                              const std::vector<uint32_t> &cell_groups,
                              double mutation_rate,

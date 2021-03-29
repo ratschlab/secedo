@@ -11,24 +11,28 @@
 
 #include "similarity_matrix.hpp"
 
+#include "logger.hpp"
 #include "mat.hpp"
 #include "util.hpp"
 
 #include <omp.h>
 #include <progress_bar/progress_bar.hpp>
-#include <spdlog/spdlog.h>
 
 #include <deque>
 #include <limits>
 #include <numeric>
-#include <sstream>
 #include <unordered_map>
 #include <vector>
 
 #include <cassert>
 #include <cmath>
 
-constexpr uint32_t max_read_size = 1000;
+/**
+ * If set to true, it will emulate the behavior in the Python 02_similarity_matrix.py script, which
+ * in the case of overlapping paired end reads, it simply selects the first read, even if the reads
+ * are different. If false, overlapping paired end reads with mismatches are ignored.
+ */
+constexpr bool emulate_python = true;
 
 /** Caches a bunch of combinations and powers used again and again in the computation */
 struct Cache {
@@ -68,9 +72,12 @@ struct Cache {
      * @param heterozygous_rate estimated probability that a loci is heterozygous
      * @param seq_error_rate estimated error rate in the sequencing technology
      */
-    Cache(double mutation_rate, double heterozygous_rate, double seq_error_rate)
+    Cache(double mutation_rate,
+          double heterozygous_rate,
+          double seq_error_rate,
+          uint32_t max_read_size)
         : epsilon(mutation_rate), h(heterozygous_rate), theta(seq_error_rate) {
-        spdlog::trace("Pre-computing combinations and powers...");
+        logger()->trace("Pre-computing combinations and powers...");
         auto extend = [](std::vector<double> &a) { a.push_back(a.back() * a[1]); };
         for (uint32_t p = 2; p < max_read_size; ++p) {
             extend(pow_p_same_same);
@@ -107,12 +114,7 @@ struct Cache {
  * *different* for x_s and x_d; if the table is empty at the desired location, the value is computed
  * @param[in, out] combs_xs_xd number of times we have seen a combination of x_s and x_d
  */
-double log_prob_diff_genotype(uint32_t x_s,
-                              uint32_t x_d,
-                              const Cache &c,
-                              Matd &log_probs,
-                              Mat32u &combs_xs_xd) {
-    combs_xs_xd(x_s,x_d)++;
+double log_prob_diff_genotype(uint32_t x_s, uint32_t x_d, const Cache &c, Matd &log_probs) {
     if (log_probs(x_s, x_d) != std::numeric_limits<double>::max()) {
         return log_probs(x_s, x_d);
     }
@@ -147,14 +149,8 @@ double log_prob_diff_genotype(uint32_t x_s,
  * epsilon
  * @param[in, out] log_probs table containing the cached log probabilities of cells having the samge
  * genotype given x_s and x_d; if the table is empty at the desired location, the value is computed
- * @param[in, out] combs_xs_xd number of times we have seen a combination of x_s and x_d
  */
-double log_prob_same_genotype(uint32_t x_s,
-                              uint32_t x_d,
-                              const Cache &c,
-                              Matd &log_probs,
-                              Mat32u &combs_xs_xd) {
-    combs_xs_xd(x_s, x_d)++;
+double log_prob_same_genotype(uint32_t x_s, uint32_t x_d, const Cache &c, Matd &log_probs) {
     if (log_probs(x_s, x_d) != std::numeric_limits<double>::max()) {
         return log_probs(x_s, x_d);
     }
@@ -179,27 +175,6 @@ struct Read {
     std::vector<uint64_t> pos;
 };
 
-struct ParsedLine {
-    uint32_t pos; // 1-based position on the chromosome
-    std::string bases; // the bases read, one for each coverage
-    std::vector<uint32_t> cell_ids; // the cell that produced each read, one for each coverage
-    std::vector<std::string> read_ids; // long string identifying each read
-};
-
-// parses a line from the preprocessed file and returns the corresponding read
-ParsedLine parse_line(const std::string &line) {
-    assert(!line.empty());
-    std::stringstream stream(line);
-    uint32_t unused, position;
-    stream >> unused >> position >> unused;
-    std::string bases, cell_ids, read_ids;
-    stream.get(); // ignore next tab
-    std::getline(stream, bases, '\t');
-    std::getline(stream, cell_ids, '\t');
-    std::getline(stream, read_ids, '\t');
-    return { position, bases, int_split<uint32_t>(cell_ids, ','), split(read_ids, ',') };
-}
-
 /**
  * Compares the read at #start_idx with all the subsequent reads (as determined by #active_keys) and
  * updates mat_same and mat_diff accordingly. Well it doesn't update mat_same and mat_diff directly
@@ -221,7 +196,12 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
         const Read &read2 = active_reads.at(active_keys[idx]);
         uint32_t index1 = cell_groups[cell_ids[read1.cell_id]];
         uint32_t index2 = cell_groups[cell_ids[read2.cell_id]];
-        if (index1 == index2 || read2.pos.front() > read1.pos.back()) {
+
+        // if the removed paired reads that doesn't match happens to be the first read, then it's
+        // not anymore guaranteed that the active_reads are sorted by the first position
+        assert(!emulate_python || read1.pos.front() <= read2.pos.front());
+
+        if (index1 == index2 || read1.pos.back() < read2.pos.front()) {
             continue; // read intersection is void, or reads are from the same cell
         }
 
@@ -238,16 +218,16 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
         }
 
         if (x_s == 0 && x_d == 0) {
-            continue; // no overlapping positions, nothing to do
+            continue; // the 2 reads have no overlapping positions, nothing to do
         }
+
+        combs_xs_xd(x_s, x_d) += 2; // +2 just to emulate the Python version
 
         // update the distance matrices
         updates_same[omp_get_thread_num()].push_back(std::make_tuple(
-                index1, index2,
-                log_prob_same_genotype(x_s, x_d, cache, log_probs_same, combs_xs_xd)));
+                index1, index2, log_prob_same_genotype(x_s, x_d, cache, log_probs_same)));
         updates_diff[omp_get_thread_num()].push_back(std::make_tuple(
-                index1, index2,
-                log_prob_diff_genotype(x_s, x_d, cache, log_probs_diff, combs_xs_xd)));
+                index1, index2, log_prob_diff_genotype(x_s, x_d, cache, log_probs_diff)));
     }
 }
 
@@ -255,8 +235,8 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
 void apply_updates(Vec2<std::tuple<uint32_t, uint32_t, double>> &updates, Matd &mat) {
     for (auto &update : updates) {
         for (auto [i, j, v] : update) {
-            mat(i,j) += v;
-            mat(j,i) = mat(i,j);
+            mat(i, j) += v;
+            mat(j, i) = mat(i, j);
         }
         update.resize(0);
     }
@@ -268,6 +248,7 @@ void apply_updates(Vec2<std::tuple<uint32_t, uint32_t, double>> &updates, Matd &
  */
 void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t num_cells,
+                             uint32_t max_read_length,
                              const std::vector<uint32_t> &cell_ids,
                              const std::vector<uint32_t> &cell_groups,
                              double mutation_rate,
@@ -275,8 +256,6 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              double seq_error_rate,
                              const uint32_t num_threads,
                              const std::string &out_dir) {
-    constexpr uint32_t read_len = 200; // maximum read length
-
     // distance matrices - the desired result of the computation
     Matd mat_same = Matd::zeros(num_cells, num_cells);
     Matd mat_diff = Matd::zeros(num_cells, num_cells);
@@ -286,25 +265,27 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     Vec2<std::tuple<uint32_t, uint32_t, double>> updates_diff(num_threads);
 
     // arrays with values of already computed probabilities, max_double if not yet computed
-    Matd log_probs_same = Matd::fill(read_len, read_len, std::numeric_limits<double>::max());
-    Matd log_probs_diff = Matd::fill(read_len, read_len, std::numeric_limits<double>::max());
+    Matd log_probs_same
+            = Matd::fill(max_read_length, max_read_length, std::numeric_limits<double>::max());
+    Matd log_probs_diff
+            = Matd::fill(max_read_length, max_read_length, std::numeric_limits<double>::max());
 
-    // count how many times we have seen a given combination of x_s, x_d. x_s counts how many times
-    // we've seen the same base in other cells at a specific position, x_d how many times we've seen
-    // a different base
-    std::vector<Mat<std::atomic<uint32_t>>> combs_xs_xd(num_threads);
-    for (auto & c: combs_xs_xd) {
-        c = Mat32u::zeros(read_len, read_len);
+    // count how many times we have seen a given combination of identical (x_s) and different (x_d)
+    // bases in all pairs of overlapping reads
+    std::vector<Mat32u> combs_xs_xd(num_threads);
+    for (auto &c : combs_xs_xd) {
+        c = Mat32u::zeros(max_read_length, max_read_length);
     }
 
     // key: read id of an active read
     // value: A Read struct, containing: sequence, line number, cell_id and position in genome
     std::unordered_map<std::string, Read> active_reads;
 
-    Cache cache(mutation_rate, heterozygous_rate, seq_error_rate); // store intermediate values to avoid recomputation
+    Cache cache(mutation_rate, heterozygous_rate, seq_error_rate,
+                max_read_length); // store intermediate values to avoid recomputation
 
     uint64_t total_positions = 0;
-    for(const auto& v : pos_data) {
+    for (const auto &v : pos_data) {
         total_positions += v.size();
     }
 
@@ -314,12 +295,9 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     uint32_t completed = 0;
     for (const auto &chromosome_data : pos_data) {
         for (const PosData &pd : chromosome_data) {
-            // splits the line by tabs and fills in the relevant fields into parsed_line
-            // ParsedLine curr_read = parse_line(line);
-
             // update the number of complete reads
             for (uint32_t i = completed; i < active_keys.size()
-                 && active_reads[active_keys[i]].pos[0] + max_read_size <= pd.position;
+                 && active_reads[active_keys[i]].pos[0] + max_read_length <= pd.position;
                  ++i) {
                 ++completed;
             }
@@ -330,7 +308,7 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
 #pragma omp parallel for schedule(static, BATCH_SIZE) num_threads(num_threads)
                 for (uint32_t i = 0; i < completed; ++i) {
                     // compute its overlaps with all other active reads, i.e. all
-                    // reads that have some bases in the last FLAGS_max_read_size positions
+                    // reads that have some bases in the last max_read_length positions
                     compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, cache,
                                        updates_same, updates_diff, log_probs_same, log_probs_diff,
                                        combs_xs_xd[omp_get_thread_num()]);
@@ -345,11 +323,11 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                 completed = 0;
             }
 
-            // update active_reads with the reads from the current line
+            // update active_reads with the reads from the current position
             for (const CellData &cd : pd.cells_data) {
                 auto read_it = active_reads.find(cd.read_id);
                 const char curr_base = cd.base;
-                if (read_it == active_reads.end()) { // create a new read
+                if (read_it == active_reads.end()) { // a new read just started
                     Read read = { { curr_base }, cd.cell_id, { pd.position } };
                     active_reads[cd.read_id] = read;
                     active_keys.push_back(cd.read_id);
@@ -357,24 +335,26 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                     Read &read = read_it->second;
                     // if we have two reads at the same position (happens due to paired-end
                     // sequencing)
+
                     if (!read.pos.empty() && read.pos.back() == pd.position) {
                         // different reads at the same position, so we remove the existing read, as
                         // there's a 50% chance of error
-                        if (toupper(read.bases.back()) != toupper(curr_base)) {
+                        if (!emulate_python && toupper(read.bases.back()) != toupper(curr_base)) {
                             read.bases.pop_back();
                             read.pos.pop_back();
                         }
                         continue;
                     }
 
+                    // <= in case emulate_python is on, otherwise we could use <
+                    assert(read.pos.empty() || read.pos.back() <= pd.position);
                     // add a new base to an existing read
-                    assert(read.pos.empty() || read.pos.back() < pd.position);
                     read.bases.push_back(curr_base);
                     read.pos.push_back(pd.position);
                 }
             }
 
-            read_progress +=  1;
+            read_progress += 1;
         }
     }
 
@@ -383,13 +363,14 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     for (uint32_t i = 0; i < active_keys.size(); ++i) {
         // compare with all other reads in active_reads
         compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, cache, updates_same,
-                           updates_diff, log_probs_same, log_probs_diff, combs_xs_xd[omp_get_thread_num()]);
+                           updates_diff, log_probs_same, log_probs_diff,
+                           combs_xs_xd[omp_get_thread_num()]);
     }
 
     apply_updates(updates_same, mat_same);
     apply_updates(updates_diff, mat_diff);
-    Mat32u combs_all = Mat32u::zeros(read_len, read_len);
-    for (const auto& comb : combs_xs_xd) {
+    Mat32u combs_all = Mat32u::zeros(max_read_length, max_read_length);
+    for (const auto &comb : combs_xs_xd) {
         combs_all += comb;
     }
 
