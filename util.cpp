@@ -1,7 +1,5 @@
 #include "util.hpp"
 
-#include <sstream>
-
 std::string read_file(const std::string &fname) {
     std::ifstream f(fname);
     std::string str;
@@ -25,17 +23,6 @@ std::vector<std::string> split(const std::string &s, char c) {
     return result;
 }
 
-std::vector<uint32_t> int_split(const std::string &s, char c) {
-    std::string segment;
-    std::vector<uint32_t> result;
-    std::stringstream in(s);
-
-    while (std::getline(in, segment, c)) {
-        result.push_back(std::stoi(segment));
-    }
-    return result;
-}
-
 std::vector<double> double_split(const std::string &s, char c) {
     std::string segment;
     std::vector<double> result;
@@ -43,6 +30,18 @@ std::vector<double> double_split(const std::string &s, char c) {
 
     while (std::getline(in, segment, c)) {
         result.push_back(std::stod(segment));
+    }
+    return result;
+}
+
+std::vector<std::filesystem::path> get_files(const std::filesystem::path &path,
+                                             const std::string &extension) {
+    assert(extension[0] == '.');
+    std::vector<std::filesystem::path> result;
+    for (auto &p : std::filesystem::recursive_directory_iterator(path)) {
+        if (p.path().extension() == extension) {
+            result.push_back(p.path());
+        }
     }
     return result;
 }
