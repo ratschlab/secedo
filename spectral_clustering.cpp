@@ -1,5 +1,6 @@
 #include "spectral_clustering.hpp"
 
+#include "logger.hpp"
 #include "util.hpp"
 
 #include <armadillo>
@@ -20,7 +21,7 @@ Matd laplacian(const Matd &a) {
     Matd result = Matd::zeros(a.rows(), a.rows());
     for (uint32_t r = 0; r < a.rows(); ++r) {
         for (uint32_t c = 0; c < a.cols(); ++c) {
-            result(r,c) = (r == c ? 1 : 0) - diag[r] * diag[c] * a(r,c);
+            result(r, c) = (r == c ? 1 : 0) - diag[r] * diag[c] * a(r, c);
         }
     }
     return result;
@@ -100,7 +101,7 @@ bool spectral_clustering(const Matd &similarity,
     arma::mat lap(similarity.rows(), similarity.rows());
     for (uint32_t r = 0; r < similarity.rows(); ++r) {
         for (uint32_t c = 0; c < similarity.rows(); ++c) {
-            lap(r, c) = L(r,c);
+            lap(r, c) = L(r, c);
         }
     }
 
@@ -153,10 +154,8 @@ bool spectral_clustering(const Matd &similarity,
     double aic2 = aic(gmm2, cell_coord);
     double bic2 = bic(gmm2, cell_coord);
 
-    std::cout << "Avg log likelyhood for GMM 1/2 " << gmm1.avg_log_p(cell_coord) << "/"
-              << gmm2.avg_log_p(cell_coord) << "\t"
-              << "aic 1/2: " << aic1 << '/' << aic2 << " bic 1/2: " << bic1 << "/" << bic2
-              << std::endl;
+    logger()->trace("Avg log-likelihood for GMM 1/2 {}/{}\taic 1/2 {}/{}\tbic 1/2 {}/{}",
+                    gmm1.avg_log_p(cell_coord), gmm2.avg_log_p(cell_coord), aic1, aic2, bic1, bic2);
 
     // TODO: investigate using gmm with tied variances as in the Python version
 
@@ -189,5 +188,13 @@ bool spectral_clustering(const Matd &similarity,
     }
 
     // stop if either we couldn't fit the 2-component GMM or if the 1-component GMM fits better
-    return !status2 || termination == Termination::AIC ? aic1 < aic2 : bic1 < bic2;
+    bool is_done = !status2 || termination == Termination::AIC ? aic1 < aic2 : bic1 < bic2;
+    if (is_done) {
+        logger()->trace("Simple Gaussian Model matches data better - stopping the clustering");
+    } else {
+        uint32_t count = std::count(cluster->begin(), cluster->end(), 0);
+        logger()->trace("First cluster has {} elements, second cluster has {} elements", count,
+                        cluster->size() - count);
+    }
+    return is_done;
 }

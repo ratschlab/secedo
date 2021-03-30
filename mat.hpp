@@ -8,21 +8,21 @@
 
 /**
  * Stores a templatized 2-dimensional matrix, in row-major form.
- * In order to avoid unintentional copying, the class is not assignable or copy-constructable, but it is
- * copy-moveable and move-constructible. You can always make an explicit copy of the class by calling the #copy()
- * method.
+ * In order to avoid unintentional copying, the class is not assignable or copy-constructable, but
+ * it is copy-moveable and move-constructible. You can always make an explicit copy of the class by
+ * calling the #copy() method.
  * @tparam T the type of the matrix elements
  */
-template<typename T>
+template <typename T>
 class Mat {
-private:
+  private:
     /**
      * Pointer to a continuous space of memory storing the elements for the Matrix.
      */
     T *el;
     /**
-     * If the matrix allocated its own elements, this points to the allocated elements, if the matrix was constructed
-     * with an existing memory block, this is nullptr.
+     * If the matrix allocated its own elements, this points to the allocated elements, if the
+     * matrix was constructed with an existing memory block, this is nullptr.
      */
     std::unique_ptr<T[]> ownEl;
 
@@ -31,15 +31,36 @@ private:
      */
     uint32_t r, c;
 
-public:
+
+    uint32_t min_idx() const {
+        uint32_t result = 0;
+        for (uint32_t i = 1; i < r * c; ++i) {
+            if (el[i] < el[result]) {
+                result = i;
+            }
+        }
+        return result;
+    }
+
+    uint32_t max_idx() const {
+        uint32_t result = 0;
+        for (uint32_t i = 1; i < r * c; ++i) {
+            if (el[i] > el[result]) {
+                result = i;
+            }
+        }
+        return result;
+    }
+
+  public:
     /**
      * Default constructor, sets the matrix to its default state (0 size and null elements).
      */
     Mat() : el(nullptr), ownEl(nullptr), r(0), c(0) {}
 
     /*
-     * Creates a matrix with the given size and elements. The elements are not copied and ownership of the elements
-     * remains with the caller.
+     * Creates a matrix with the given size and elements. The elements are not copied and ownership
+     * of the elements remains with the caller.
      */
     Mat(const uint32_t r, const uint32_t c, T *const el) : el(el), ownEl(nullptr), r(r), c(c) {}
 
@@ -49,7 +70,8 @@ public:
      * @param c number of cols
      * @param initEl the elements to copy into the matrix, its size must be r*c
      */
-    Mat(const uint32_t r, const uint32_t c, const std::initializer_list<T> &initEl) : ownEl(nullptr), r(r), c(c) {
+    Mat(const uint32_t r, const uint32_t c, const std::initializer_list<T> &initEl)
+        : ownEl(nullptr), r(r), c(c) {
         assert(r * c == initEl.size());
         ownEl = std::unique_ptr<T[]>(new T[r * c]);
         el = ownEl.get();
@@ -66,12 +88,8 @@ public:
         el = ownEl.get();
     }
 
-    uint32_t rows() const {
-        return r;
-    }
-    uint32_t cols() const {
-        return c;
-    }
+    uint32_t rows() const { return r; }
+    uint32_t cols() const { return c; }
 
     /**
      * Delete the copy-constructor. Copy-ing needs to be done explicitly via #copy()
@@ -79,8 +97,8 @@ public:
     Mat(const Mat &rhs) = delete;
 
     /**
-     * Move constructor. The elements of the parameter are pilfered and the parameter matrix is set to its default
-     * state.
+     * Move constructor. The elements of the parameter are pilfered and the parameter matrix is set
+     * to its default state.
      */
     Mat(Mat &&rhs) : r(rhs.r), c(rhs.c) {
         ownEl = std::move(rhs.ownEl);
@@ -92,9 +110,7 @@ public:
     /**
      * Returns true if the matrix is empty.
      */
-    bool empty() const {
-        return r == 0 && c == 0;
-    }
+    bool empty() const { return r == 0 && c == 0; }
 
     /**
      * Returns the given element of the matrix.
@@ -146,9 +162,16 @@ public:
         return result;
     }
 
-    /**
-     * Multiplication by a scalar
-     */
+    /** Subtracts #other from the current matrix */
+    void operator-=(const Mat<T> &other) {
+        assert(r == other.r && c == other.c && "Incompatible matrix shapes for subtraction");
+        Mat<T> result(r, c);
+        for (uint32_t i = 0; i < r * c; ++i) {
+            el[i] -= other.el[i];
+        }
+    }
+
+    /** Multiply *this with a scalar and return the newly obtained matrix. */
     Mat<T> operator*(const T scalar) const {
         Mat<T> result(r, c);
         for (uint32_t i = 0; i < r * c; ++i) {
@@ -157,6 +180,7 @@ public:
         return result;
     }
 
+    /** Multiply with *scalar in-place */
     Mat<T> &operator*=(const T scalar) {
         for (uint32_t i = 0; i < r * c; ++i) {
             el[i] *= scalar;
@@ -164,19 +188,33 @@ public:
         return *this;
     }
 
-    /**
-     * Returns the element at the specified index, as stored internally. Eg mat[index] = mat(index/tCol, index%tCol)
-     */
-    const T &operator[](uint32_t index) const {
-        return el[index];
+    /** Add a scalar to *this and return the newly obtained matrix. */
+    Mat<T> operator+(const T scalar) const {
+        Mat<T> result(r, c);
+        for (uint32_t i = 0; i < r * c; ++i) {
+            result.el[i] = el[i] + scalar;
+        }
+        return result;
     }
-    /**
-     * Returns the modifiable element at the specified index, as stored internally. Eg mat[index] = mat(index/tCol,
-     * index%tCol)
-     */
-    T &operator[](uint32_t index) {
-        return el[index];
+
+    /** Add scalar in-place */
+    Mat<T> &operator+=(const T scalar) {
+        for (uint32_t i = 0; i < r * c; ++i) {
+            el[i] += scalar;
+        }
+        return *this;
     }
+
+    /**
+     * Returns the element at the specified index, as stored internally. Eg mat[index] =
+     * mat(index/tCol, index%tCol)
+     */
+    const T &operator[](uint32_t index) const { return el[index]; }
+    /**
+     * Returns the modifiable element at the specified index, as stored internally. Eg mat[index] =
+     * mat(index/tCol, index%tCol)
+     */
+    T &operator[](uint32_t index) { return el[index]; }
 
     /**
      * Returns a pointer to the given row of the matrix. Check for boundaries in debug mode.
@@ -197,19 +235,13 @@ public:
     /**
      * Returns a pointer to the matrix' data
      */
-    T *data() {
-        return el;
-    }
+    T *data() { return el; }
     /**
      * Returns a pointer to the matrix' data
      */
-    const T *data() const {
-        return el;
-    }
+    const T *data() const { return el; }
 
-    static uint32_t elemSize() {
-        return sizeof(T);
-    }
+    static uint32_t elemSize() { return sizeof(T); }
 
     /**
      * The default assign operator is deleted.
@@ -217,8 +249,8 @@ public:
     Mat &operator=(const Mat &rhs) = delete;
 
     /**
-     * Move-assign will pilfer the argument, reset it to its default state and copy its contents into the current
-     * matrix.
+     * Move-assign will pilfer the argument, reset it to its default state and copy its contents
+     * into the current matrix.
      */
     Mat &operator=(Mat &&rhs) {
         if (this != &rhs) {
@@ -250,11 +282,13 @@ public:
     }
 
     /**
-     * Gets a rectangular block from a matrix of size tRow1xtCol1, starting with point (startRow,startCol). The new
-     * matrix is a deep copy of the block in the old matrix.
+     * Gets a rectangular block from a matrix of size tRow1xtCol1, starting with point
+     * (startRow,startCol). The new matrix is a deep copy of the block in the old matrix.
      *
-     * @param startRow first row of the resulting block, such that 0 <= startRow and startRow + nRow <= rows()
-     * @param startCol first column of the resulting block, such that 0 <=startCol and startCol + nCol <= cols()
+     * @param startRow first row of the resulting block, such that 0 <= startRow and startRow + nRow
+     * <= rows()
+     * @param startCol first column of the resulting block, such that 0 <=startCol and startCol +
+     * nCol <= cols()
      * @param nr number of rows in the result
      * @param nc number of columns in the result
      */
@@ -272,7 +306,8 @@ public:
     }
 
     /**
-     * Gets a range of r from the given matrix, starting with startRow and ending with endRow (exclusive).
+     * Gets a range of r from the given matrix, starting with startRow and ending with endRow
+     * (exclusive).
      * @param startRow first row of the resulting block, such that 0 <= startRow  <= r
      * @param endRow last row of the resulting block, such that 0 <=startRow <= endRow <= r
      */
@@ -313,7 +348,8 @@ public:
     };
 
     /*
-     * Returns the squared Frobenius norm of the matrix (sum of elements squared), computed as a double.
+     * Returns the squared Frobenius norm of the matrix (sum of elements squared), computed as a
+     * double.
      */
     double norm2() const {
         double result = 0;
@@ -326,46 +362,60 @@ public:
     /*
      * Returns the Frobenius norm of the matrix (square root of sum of elements squared)
      */
-    double norm() const {
-        return std::sqrt(norm2());
+    double norm() const { return std::sqrt(norm2()); }
+
+    /**
+     * Returns the position of the largest element in the matrix. If the largest element appears
+     * multiple times, the first occurrence is returned.
+     */
+    std::pair<uint32_t, uint32_t> argMax() {
+        uint32_t result = max_idx();
+        return { result / c, result % c };
     }
 
     /**
-     * Returns the position of the largest element in the matrix. If the largest element appears multiple times, the
-     * first occurrence is returned.
+     * Returns the position of the smallest element in the matrix. If the largest element appears
+     * multiple times, the first occurrence is returned.
      */
-    void argMax(uint32_t *row, uint32_t *col) {
-        uint32_t result = 0;
-        for (uint32_t i = 1; i < r * c; ++i) {
-            if (el[i] > el[result]) {
-                result = i;
-            }
-        }
-        *row = result / c;
-        *col = result % c;
+    std::pair<uint32_t, uint32_t> argMin() const {
+        uint32_t result = min_idx();
+        return { result / c, result % c };
     }
 
     /**
-     * Returns the position of the smallest element in the matrix. If the largest element appears multiple times, the
-     * first occurrence is returned.
+     * Inverts each element of the matrix.
      */
-    void argMin(uint32_t *row, uint32_t *col) {
-        uint32_t result = 0;
-        for (uint32_t i = 1; i < r * c; ++i) {
-            if (el[i] < el[result]) {
-                result = i;
-            }
+    void inv() {
+        static_assert(std::is_floating_point_v<T>);
+        for (uint32_t i = 0; i < r * c; ++i) {
+            el[i] = 1. / el[i];
         }
-        *row = result / c;
-        *col = result % c;
     }
+
+    /**
+     * Exponentiates each element of the matrix.
+     */
+    void exp() {
+        static_assert(std::is_floating_point_v<T>);
+        for (uint32_t i = 0; i < r * c; ++i) {
+            el[i] = std::exp(el[i]);
+        }
+    }
+
+    /**
+     * Returns the smallest element of the matrix.
+     */
+    T min() const { return el[min_idx()]; }
+
+    /**
+     * Returns the largest element of the matrix.
+     */
+    T max() const { return el[max_idx()]; }
 
     /**
      * Set the given row in the matrix to the given value.
      */
-    void setRow(uint32_t row, T value) {
-        std::fill_n(el + row * c, c, value);
-    }
+    void setRow(uint32_t row, T value) { std::fill_n(el + row * c, c, value); }
 
     /**
      * Set the given column in the matrix to the given value.
@@ -424,15 +474,22 @@ public:
     };
 
     /**
-     * Return a matrix with all elements set to zero.
+     * Return a matrix with all elements set to value.
      */
-    static Mat<T> zeros(uint32_t r, uint32_t c) {
-        return Mat::fill(r, c, 0);
-    };
+    void fill_diagonal(const T &value) {
+        for (uint32_t i = 0; i < std::min(r, c); ++i) {
+            (*this)(i, i) = value;
+        }
+    }
 
     /**
-     * Returns the identity matrix. If the matrix is not square, it initializes the elements on the main diagonal with
-     * 1, the rest are zero
+     * Return a matrix with all elements set to zero.
+     */
+    static Mat<T> zeros(uint32_t r, uint32_t c) { return Mat::fill(r, c, 0); };
+
+    /**
+     * Returns the identity matrix. If the matrix is not square, it initializes the elements on the
+     * main diagonal with 1, the rest are zero
      * @return the created identity matrix
      */
     static Mat<T> identity(uint32_t r, uint32_t c) {

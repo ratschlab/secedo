@@ -77,7 +77,6 @@ struct Cache {
           double seq_error_rate,
           uint32_t max_read_size)
         : epsilon(mutation_rate), h(heterozygous_rate), theta(seq_error_rate) {
-        logger()->trace("Pre-computing combinations and powers...");
         auto extend = [](std::vector<double> &a) { a.push_back(a.back() * a[1]); };
         for (uint32_t p = 2; p < max_read_size; ++p) {
             extend(pow_p_same_same);
@@ -183,8 +182,7 @@ struct Read {
 void compare_with_reads(const std::unordered_map<std::string, Read> &active_reads,
                         const std::deque<std::string> &active_keys,
                         uint32_t start_idx,
-                        const std::vector<uint32_t> &cell_ids,
-                        const std::vector<uint32_t> &cell_groups,
+                        const std::vector<uint32_t> &cell_id_to_cell_idx,
                         const Cache &cache,
                         Vec2<std::tuple<uint32_t, uint32_t, double>> &updates_same,
                         Vec2<std::tuple<uint32_t, uint32_t, double>> &updates_diff,
@@ -194,8 +192,8 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
     const Read &read1 = active_reads.at(active_keys.at(start_idx));
     for (uint32_t idx = start_idx + 1; idx < active_keys.size(); ++idx) {
         const Read &read2 = active_reads.at(active_keys[idx]);
-        uint32_t index1 = cell_groups[cell_ids[read1.cell_id]];
-        uint32_t index2 = cell_groups[cell_ids[read2.cell_id]];
+        uint32_t index1 = cell_id_to_cell_idx[read1.cell_id];
+        uint32_t index2 = cell_id_to_cell_idx[read2.cell_id];
 
         // if the removed paired reads that doesn't match happens to be the first read, then it's
         // not anymore guaranteed that the active_reads are sorted by the first position
@@ -242,20 +240,58 @@ void apply_updates(Vec2<std::tuple<uint32_t, uint32_t, double>> &updates, Matd &
     }
 }
 
+Normalization to_enum(const std::string &normalization) {
+    if (normalization == "ADD_MIN") {
+        return Normalization::ADD_MIN;
+    } else if (normalization == "EXPONENTIATE") {
+        return Normalization::EXPONENTIATE;
+    } else if (normalization == "SCALE_MAX_1") {
+        return Normalization::SCALE_MAX_1;
+    } else {
+        throw std::logic_error("Invalid normalization: " + normalization);
+    }
+}
+
+/**
+ * Normalizes the similarity matrix according to the method specified in #normalization.
+ */
+void normalize(const std::string &normalization, Matd *similarity_matrix) {
+    logger()->trace("Normalizing similarity matrix...");
+    Matd &sim_mat = *similarity_matrix;
+    switch (to_enum(normalization)) {
+        case Normalization::ADD_MIN:
+            sim_mat *= -1;
+            sim_mat += std::abs(sim_mat.min());
+            break;
+        case Normalization::EXPONENTIATE:
+            // compute 1/(1+exp(mat))
+            sim_mat.exp();
+            sim_mat += 1;
+            sim_mat.inv();
+            break;
+        case Normalization::SCALE_MAX_1:
+            // scale the exponentiated version so that max. element (excluding diagonal) is 1
+            sim_mat.fill_diagonal(0);
+            sim_mat *= (1. / sim_mat.max());
+            break;
+    }
+    sim_mat.fill_diagonal(0);
+}
+
 /**
  * Compute mat_same (the matrix giving probabilities of cells i and j given they are in
  * the same cluster) and mat_diff (prob. of cells i and j given they are in different clusters)
  */
-void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
+Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t num_cells,
                              uint32_t max_read_length,
-                             const std::vector<uint32_t> &cell_ids,
-                             const std::vector<uint32_t> &cell_groups,
+                             const std::vector<uint32_t> &cell_id_to_cell_idx,
                              double mutation_rate,
                              double heterozygous_rate,
                              double seq_error_rate,
                              const uint32_t num_threads,
-                             const std::string &out_dir) {
+                             const std::string &out_dir,
+                             const std::string &normalization) {
     // distance matrices - the desired result of the computation
     Matd mat_same = Matd::zeros(num_cells, num_cells);
     Matd mat_diff = Matd::zeros(num_cells, num_cells);
@@ -309,7 +345,7 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                 for (uint32_t i = 0; i < completed; ++i) {
                     // compute its overlaps with all other active reads, i.e. all
                     // reads that have some bases in the last max_read_length positions
-                    compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, cache,
+                    compare_with_reads(active_reads, active_keys, i, cell_id_to_cell_idx, cache,
                                        updates_same, updates_diff, log_probs_same, log_probs_diff,
                                        combs_xs_xd[omp_get_thread_num()]);
                 }
@@ -362,7 +398,7 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
 #pragma omp parallel for num_threads(num_threads)
     for (uint32_t i = 0; i < active_keys.size(); ++i) {
         // compare with all other reads in active_reads
-        compare_with_reads(active_reads, active_keys, i, cell_ids, cell_groups, cache, updates_same,
+        compare_with_reads(active_reads, active_keys, i, cell_id_to_cell_idx, cache, updates_same,
                            updates_diff, log_probs_same, log_probs_diff,
                            combs_xs_xd[omp_get_thread_num()]);
     }
@@ -374,8 +410,18 @@ void computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
         combs_all += comb;
     }
 
-    // save mat_same and mat_diff into file
+    // write mat_same and mat_diff onto disk for inspection
     write_mat(out_dir + "mat_same.csv", mat_same);
     write_mat(out_dir + "mat_diff.csv", mat_diff);
     write_mat(out_dir + "combs_xs_xd.csv", combs_all);
+
+    // compute log(P(diff)/P(same))
+    // i.e., simMat_diff[i,j] = -w(i,j) for w(i,j) as defined in the draft:
+    // https://www.overleaf.com/3934821935gjttfmhfzkyf
+    mat_diff -= mat_same;
+
+    normalize(normalization, &mat_diff);
+    write_mat(out_dir + "sim_mat.csv", mat_diff);
+
+    return mat_diff;
 }
