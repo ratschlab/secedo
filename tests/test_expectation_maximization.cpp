@@ -14,7 +14,7 @@ constexpr double theta = 1e-3;
 TEST(EM, OneCell) {
     const std::vector<std::vector<PosData>> pos_data = { {} };
     std::vector<double> prob_cluster_b = { 1.0 };
-    expectation_maximization(pos_data, theta, &prob_cluster_b);
+    expectation_maximization(pos_data, {}, 1, theta, &prob_cluster_b);
     ASSERT_EQ(1, prob_cluster_b.size());
     ASSERT_EQ(1.0, prob_cluster_b[0]);
 }
@@ -31,7 +31,7 @@ TEST(EM, TwoCellsSame) {
     PosData one_pos = { 1234, { cell_data_a, cell_data_b } };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.3, 0.4 };
-    expectation_maximization(pos_data, theta, &prob_cluster_b);
+    expectation_maximization(pos_data, { 0, 1 }, 1, theta, &prob_cluster_b);
     ASSERT_NEAR(0, prob_cluster_b[1] - prob_cluster_b[0], 1e-3);
 }
 
@@ -46,7 +46,7 @@ TEST(EM, TwoCellsDifferent) {
     PosData one_pos = { 1234, { cell_data_a, cell_data_b } };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.01, 0.02 };
-    expectation_maximization(pos_data, theta, &prob_cluster_b);
+    expectation_maximization(pos_data, { 0, 1 }, 1, theta, &prob_cluster_b);
     ASSERT_NEAR(std::abs(prob_cluster_b[0] - prob_cluster_b[1]), 1.0, 1e-3);
 }
 
@@ -63,7 +63,7 @@ TEST(EM, FourCellsTwoGroups22) {
     PosData one_pos = { 1234, { cell_data_a, cell_data_b, cell_data_c, cell_data_d } };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.9, 0.02, 0.03, 0.9 };
-    expectation_maximization(pos_data, theta, &prob_cluster_b);
+    expectation_maximization(pos_data, { 0, 1, 2, 3 }, 1, theta, &prob_cluster_b);
     ASSERT_THAT(prob_cluster_b,
                 ElementsAre(DoubleNear(0, 1e-3), DoubleNear(0, 1e-3), DoubleNear(1, 1e-3),
                             DoubleNear(1, 1e-3)));
@@ -83,7 +83,7 @@ TEST(EM, FourCellsTwoGroups31) {
     PosData one_pos = { 1234, { cell_data_a, cell_data_b, cell_data_c, cell_data_d } };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.9, 0.9, 0.03, 0.1 };
-    expectation_maximization(pos_data, theta, &prob_cluster_b);
+    expectation_maximization(pos_data, { 0, 1, 2, 3 }, 1, theta, &prob_cluster_b);
     ASSERT_THAT(prob_cluster_b,
                 ElementsAre(DoubleNear(0, 1e-3), DoubleNear(1, 1e-3), DoubleNear(0, 1e-3),
                             DoubleNear(0, 1e-3)));

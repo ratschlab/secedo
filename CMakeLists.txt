@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # no warnings
-string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Wfatal-errors -msse4")
+string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Wfatal-errors -msse4 ${OpenMP_CXX_FLAGS}")
 
 find_package(OpenMP REQUIRED)
 
@@ -39,7 +39,7 @@ target_link_libraries(lib_util spdlog::spdlog)
 
 file(GLOB expectation_maximization_files expectation_maximization.cpp)
 add_library(lib_expectation_maximization ${expectation_maximization_files})
-target_link_libraries(lib_expectation_maximization lib_util)
+target_link_libraries(lib_expectation_maximization lib_util OpenMP::OpenMP_CXX)
 
 file(GLOB similarity_matrix_files similarity_matrix.cpp)
 add_library(lib_similarity_matrix ${similarity_matrix_files})
@@ -52,9 +52,6 @@ target_link_libraries(lib_spectral_clustering armadillo lib_util  OpenMP::OpenMP
 file(GLOB variant_calling_files variant_calling.cpp variant_calling.cpp)
 add_library(lib_variant_calling ${variant_calling_files})
 target_link_libraries(lib_variant_calling lib_util)
-
-add_executable(expectation_maximization expectation_maximization_main.cpp)
-target_link_libraries(expectation_maximization lib_expectation_maximization lib_util gflags OpenMP::OpenMP_CXX)
 
 add_executable(svc svc_main.cpp)
 target_link_libraries(svc lib_expectation_maximization lib_variant_calling lib_similarity_matrix

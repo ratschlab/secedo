@@ -25,5 +25,6 @@
  */
 void expectation_maximization(const std::vector<std::vector<PosData>> &pos_data,
                               const std::vector<uint32_t> &cell_id_to_cell_pos,
+                              uint32_t num_threads,
                               double theta,
                               std::vector<double> *prob_cluster_b);

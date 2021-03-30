@@ -125,13 +125,14 @@ bool expectation_step(const std::vector<double> &log_likelihood_a,
 
 void expectation_maximization(const std::vector<std::vector<PosData>> &pos_data,
                               const std::vector<uint32_t> &cell_id_to_cell_pos,
+                              uint32_t num_threads,
                               double theta,
                               std::vector<double> *prob_cluster_b) {
     std::vector<double> log_likelihood_a(prob_cluster_b->size(), 0);
     std::vector<double> log_likelihood_b(prob_cluster_b->size(), 0);
     do {
         // perform the maximization step for each chromosome in parallel
-#pragma omp parallel for num_threads(FLAGS_num_threads)
+#pragma omp parallel for num_threads(num_threads)
         for (uint32_t idx = 0; idx < pos_data.size(); ++idx) {
             std::vector<double> log_likelihood_a_chr;
             std::vector<double> log_likelihood_b_chr;

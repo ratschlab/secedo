@@ -11,7 +11,8 @@ using namespace ::testing;
 TEST(Reader, empty) {
     std::vector<PosData> data;
     std::unordered_set<uint32_t> read_ids;
-    std::tie(data, read_ids) = read_pileup("data/empty.pileup");
+    uint32_t max_len;
+    std::tie(data, read_ids, max_len) = read_pileup("data/empty.pileup");
     ASSERT_TRUE(data.empty());
     ASSERT_TRUE(read_ids.empty());
 }
@@ -19,7 +20,8 @@ TEST(Reader, empty) {
 TEST(Reader, one_row) {
     std::vector<PosData> data;
     std::unordered_set<uint32_t> read_ids;
-    std::tie(data, read_ids) = read_pileup("data/one_row.pileup");
+    uint32_t max_len;
+    std::tie(data, read_ids, max_len) = read_pileup("data/one_row.pileup");
     std::vector<uint16_t> expected_cell_ids
             = { 95, 437, 458, 695, 887, 1011, 1216, 1223, 1522, 1612, 1795, 1924, 2163, 2163 };
     std::vector<uint16_t> distinct_cell_ids
@@ -53,7 +55,8 @@ TEST(Reader, one_row) {
 TEST(Reader, three_rows) {
     std::vector<PosData> data;
     std::unordered_set<uint32_t> cell_ids;
-    std::tie(data, cell_ids) = read_pileup("data/three_rows.pileup");
+    uint32_t max_len;
+    std::tie(data, cell_ids, max_len) = read_pileup("data/three_rows.pileup");
     std::vector<uint16_t> all_cell_ids = { 1, 2, 3, 4, 9 };
     ASSERT_THAT(cell_ids, UnorderedElementsAreArray(all_cell_ids));
 
