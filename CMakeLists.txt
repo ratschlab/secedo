@@ -47,7 +47,7 @@ target_link_libraries(lib_similarity_matrix progress_bar lib_util OpenMP::OpenMP
 
 file(GLOB spectral_clustering_files spectral_clustering.cpp)
 add_library(lib_spectral_clustering ${spectral_clustering_files})
-target_link_libraries(lib_spectral_clustering armadillo lib_util)
+target_link_libraries(lib_spectral_clustering armadillo lib_util  OpenMP::OpenMP_CXX)
 
 file(GLOB variant_calling_files variant_calling.cpp variant_calling.cpp)
 add_library(lib_variant_calling ${variant_calling_files})
