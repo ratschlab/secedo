@@ -193,7 +193,7 @@ bool spectral_clustering(const Matd &similarity,
         logger()->trace("Simple Gaussian Model matches data better - stopping the clustering");
     } else {
         uint32_t count = std::count(cluster->begin(), cluster->end(), 0);
-        logger()->trace("First cluster has {} elements, second cluster has {} elements", count,
+        logger()->trace("First cluster has {} cells, second cluster has {} cells", count,
                         cluster->size() - count);
     }
     return is_done;

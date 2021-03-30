@@ -25,12 +25,12 @@ DEFINE_double(
         0,
         "The probability that a loci is homozygous, (not filtered correctly in the first step");
 
-DEFINE_string(mpileup_file,
+DEFINE_string(i,
               "",
-              "Input file containing 'pileup' textual format from an alignment, as written by "
-              "preprocessing.py");
+              "Input file or directory containing 'pileup' textual or binary format from"
+              " an alignment, as written by preprocessing.py");
 
-DEFINE_string(out_dir, "./", "Directory where the similarity matrices will be written to");
+DEFINE_string(o, "./", "Directory where the output will be written.");
 
 DEFINE_uint32(num_threads, 8, "Number of threads to use");
 
@@ -75,10 +75,10 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     }
 
     logger()->info("Computing similarity matrix...");
-    Matd sim_mat = computeSimilarityMatrix(pos_data, cell_pos_to_cell_id.size(), max_read_length,
-                                           cell_id_to_cell_pos, mutation_rate, heterozygous_rate,
-                                           seq_error_rate, num_threads, FLAGS_out_dir,
-                                           FLAGS_normalization);
+    Matd sim_mat
+            = computeSimilarityMatrix(pos_data, cell_pos_to_cell_id.size(), max_read_length,
+                                      cell_id_to_cell_pos, mutation_rate, heterozygous_rate,
+                                      seq_error_rate, num_threads, FLAGS_o, FLAGS_normalization);
 
     logger()->info("Performing spectral clustering...");
     std::vector<double> cluster;
@@ -153,8 +153,10 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     double coverage_b = total_positions_b == 0
             ? 0
             : static_cast<double>(total_coverage_b) / total_positions_b;
-    logger()->trace("Avg coverage for cluster {}: {}", marker + 'A', coverage_a);
-    logger()->trace("Avg coverage for cluster {}: {}", marker + 'B', coverage_b);
+    logger()->trace("Avg coverage for cluster {}: {}. Total positions: {}", marker + 'A',
+                    coverage_a, total_positions_a);
+    logger()->trace("Avg coverage for cluster {}: {}. Total positions: {}", marker + 'B',
+                    coverage_b, total_positions_b);
     // recursively try to further divide each of the new clusters
     if (coverage_a > 9) {
         divide(pos_data_a, max_read_length, cell_id_to_cell_pos_a, cell_pos_to_cell_id_a,
@@ -173,11 +175,11 @@ int main(int argc, char *argv[]) {
 
     spdlog::set_level(spdlog::level::from_str(FLAGS_log_level));
 
-    std::vector<std::filesystem::path> mpileup_files = { FLAGS_mpileup_file };
+    std::vector<std::filesystem::path> mpileup_files = { FLAGS_i };
     // if the input is a directory, get all pileup files in the directory
-    if (std::filesystem::is_directory(FLAGS_mpileup_file)) {
-        mpileup_files = get_files(FLAGS_mpileup_file, ".pileup");
-        spdlog::info("Found {} .pileup files in '{}'", mpileup_files.size(), FLAGS_mpileup_file);
+    if (std::filesystem::is_directory(FLAGS_i)) {
+        mpileup_files = get_files(FLAGS_i, ".pileup");
+        spdlog::info("Found {} .pileup files in '{}'", mpileup_files.size(), FLAGS_i);
     }
 
     logger()->info("Reading data...");
@@ -201,7 +203,7 @@ int main(int argc, char *argv[]) {
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 
     divide(pos_data, max_read_length, cell_id_map, cell_id_map, FLAGS_mutation_rate,
-           FLAGS_hzygous_prob, FLAGS_seq_error_rate, FLAGS_num_threads, FLAGS_out_dir,
+           FLAGS_hzygous_prob, FLAGS_seq_error_rate, FLAGS_num_threads, FLAGS_o,
            FLAGS_normalization, "");
 
 

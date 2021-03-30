@@ -154,7 +154,7 @@ void expectation_maximization(const std::vector<std::vector<PosData>> &pos_data,
     uint32_t count_b = std::count_if(prob_cluster_b->begin(), prob_cluster_b->end(),
                                      [](double v) { return v > 0.95; });
     logger()->trace(
-            "After refinement, first cluster has {} elements, second cluster has {} elements, {} "
-            "elements are undecided",
+            "After refinement, first cluster has {} cells, second cluster has {} cells, {} "
+            "cells are undecided",
             count_a, count_b, prob_cluster_b->size() - count_a - count_b);
 }
