@@ -1,5 +1,6 @@
 #include "expectation_maximization.hpp"
 
+#include "logger.hpp"
 #include "util.hpp"
 
 #include <algorithm>
@@ -52,10 +53,12 @@ cluster_center(const PosData &pos_data, const std::vector<double> &prob_cluster,
  * @return the log likelihood for each cell being in cluster a or b, i.e.
  * {ln P(reads from cell i | C_0), ln P(reads from cell i | C_1)}
  */
-std::pair<std::vector<double>, std::vector<double>>
-maximization_step(const std::vector<double> &prob_cluster_b,
-                  const std::vector<PosData> &pos_data,
-                  double theta) {
+void maximization_step(const std::vector<double> &prob_cluster_b,
+                       const std::vector<PosData> &pos_data,
+                       const std::vector<uint32_t> &cell_id_to_cell_pos,
+                       double theta,
+                       std::vector<double> *log_likelihood_a,
+                       std::vector<double> *log_likelihood_b) {
     uint32_t n_cells = prob_cluster_b.size();
 
     // probability of each cell being in clusters a or b
@@ -64,8 +67,8 @@ maximization_step(const std::vector<double> &prob_cluster_b,
         prob_cluster_a[i] = 1 - prob_cluster_b[i];
     }
 
-    std::vector<double> log_likelihood_a(n_cells);
-    std::vector<double> log_likelihood_b(n_cells);
+    log_likelihood_a->resize(n_cells);
+    log_likelihood_b->resize(n_cells);
 
     // process position by position
     for (const PosData &pd : pos_data) {
@@ -75,11 +78,10 @@ maximization_step(const std::vector<double> &prob_cluster_b,
 
         // compute the log likelihoods given the new cluster centers
         for (const CellData &cd : pd.cells_data) {
-            log_likelihood_a[cd.cell_id] += center_a[cd.base];
-            log_likelihood_b[cd.cell_id] += center_b[cd.base];
+            log_likelihood_a->at(cell_id_to_cell_pos[cd.cell_id]) += center_a[cd.base];
+            log_likelihood_b->at(cell_id_to_cell_pos[cd.cell_id]) += center_b[cd.base];
         }
     }
-    return { log_likelihood_a, log_likelihood_b };
 }
 
 /**
@@ -122,6 +124,7 @@ bool expectation_step(const std::vector<double> &log_likelihood_a,
 }
 
 void expectation_maximization(const std::vector<std::vector<PosData>> &pos_data,
+                              const std::vector<uint32_t> &cell_id_to_cell_pos,
                               double theta,
                               std::vector<double> *prob_cluster_b) {
     std::vector<double> log_likelihood_a(prob_cluster_b->size(), 0);
@@ -130,8 +133,10 @@ void expectation_maximization(const std::vector<std::vector<PosData>> &pos_data,
         // perform the maximization step for each chromosome in parallel
 #pragma omp parallel for num_threads(FLAGS_num_threads)
         for (uint32_t idx = 0; idx < pos_data.size(); ++idx) {
-            auto [log_likelihood_a_chr, log_likelihood_b_chr]
-                    = maximization_step(*prob_cluster_b, pos_data[idx], theta);
+            std::vector<double> log_likelihood_a_chr;
+            std::vector<double> log_likelihood_b_chr;
+            maximization_step(*prob_cluster_b, pos_data[idx], cell_id_to_cell_pos, theta,
+                              &log_likelihood_a_chr, &log_likelihood_b_chr);
 #pragma omp critical
             {
                 for (uint32_t i = 0; i < log_likelihood_a.size(); ++i) {
@@ -143,4 +148,13 @@ void expectation_maximization(const std::vector<std::vector<PosData>> &pos_data,
 
         // perform the expectation step and stop if the probabilities didn't change much
     } while (!expectation_step(log_likelihood_a, log_likelihood_b, prob_cluster_b));
+
+    uint32_t count_a = std::count_if(prob_cluster_b->begin(), prob_cluster_b->end(),
+                                     [](double v) { return v < 0.05; });
+    uint32_t count_b = std::count_if(prob_cluster_b->begin(), prob_cluster_b->end(),
+                                     [](double v) { return v > 0.95; });
+    logger()->trace(
+            "After refinement, first cluster has {} elements, second cluster has {} elements, {} "
+            "elements are undecided",
+            count_a, count_b, prob_cluster_b->size() - count_a - count_b);
 }

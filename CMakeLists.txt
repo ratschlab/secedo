@@ -36,7 +36,7 @@ target_link_libraries(lib_util spdlog::spdlog)
 
 file(GLOB expectation_maximization_files expectation_maximization.cpp)
 add_library(lib_expectation_maximization ${expectation_maximization_files})
-target_link_libraries(lib_expectation_maximization util)
+target_link_libraries(lib_expectation_maximization lib_util)
 
 file(GLOB similarity_matrix_files similarity_matrix.cpp)
 add_library(lib_similarity_matrix ${similarity_matrix_files})
@@ -54,8 +54,8 @@ add_executable(expectation_maximization expectation_maximization_main.cpp)
 target_link_libraries(expectation_maximization lib_expectation_maximization lib_util gflags OpenMP::OpenMP_CXX)
 
 add_executable(svc svc_main.cpp)
-target_link_libraries(svc lib_expectation_maximization lib_variant_calling lib_similarity_matrix lib_util gflags
-    spdlog::spdlog)
+target_link_libraries(svc lib_expectation_maximization lib_variant_calling lib_similarity_matrix
+    lib_spectral_clustering lib_util gflags spdlog::spdlog)
 
 # TESTS
 enable_testing()
