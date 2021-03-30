@@ -73,7 +73,7 @@ read_pileup_text(const std::string fname) {
             }
             out << std::endl;
 
-            uint8_t chromosome = std::stoi(splitLine[0]);
+            uint8_t chromosome = splitLine[0] == "X" ? 23 : std::stoi(splitLine[0]);
             out_bin.write(reinterpret_cast<char *>(&chromosome), 1);
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             uint16_t coverage = bases.size();
