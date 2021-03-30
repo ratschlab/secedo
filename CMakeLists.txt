@@ -21,6 +21,11 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 add_library(progress_bar third_party/progress_bar/progress_bar.cpp)
 
 # Google Flags Library
+set_source_files_properties(
+    ${PROJECT_SOURCE_DIR}/third_party/gflags
+    PROPERTIES
+    COMPILE_FLAGS "-w"
+)
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 
 # Armadillo Linear algebra library
