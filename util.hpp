@@ -4,6 +4,7 @@
 #include <spdlog/spdlog.h>
 
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <numeric>
 #include <sstream>

@@ -24,7 +24,7 @@ add_library(progress_bar third_party/progress_bar/progress_bar.cpp)
 set_source_files_properties(
     ${PROJECT_SOURCE_DIR}/third_party/gflags
     PROPERTIES
-    COMPILE_FLAGS "-w"
+    COMPILE_FLAGS "-w -Wnoerror=cast-function-type"
 )
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 
