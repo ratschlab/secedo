@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # no warnings
-string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Werror -Wfatal-errors -msse4")
+string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Wfatal-errors -msse4")
 
 find_package(OpenMP REQUIRED)
 
@@ -21,12 +21,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 add_library(progress_bar third_party/progress_bar/progress_bar.cpp)
 
 # Google Flags Library
-set_source_files_properties(
-    ${PROJECT_SOURCE_DIR}/third_party/gflags
-    PROPERTIES
-    COMPILE_FLAGS "-w -Wnoerror=cast-function-type"
-)
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
+
+# added later because glags has errors on GCC
+string(APPEND CMAKE_CXX_FLAGS " -Werror")
 
 # Armadillo Linear algebra library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/armadillo-10.3.0 EXCLUDE_FROM_ALL)
