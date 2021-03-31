@@ -19,6 +19,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 #Progress Bar library
 add_library(progress_bar third_party/progress_bar/progress_bar.cpp)
+target_compile_options(progress_bar PUBLIC -fPIC)
 
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
