@@ -159,5 +159,5 @@ read_pileup_bin(const std::string fname) {
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup(const std::string fname) {
-    return fname.ends_with(".bin") ? read_pileup_bin(fname) : read_pileup_text(fname);
+    return ends_with(fname, ".bin") ? read_pileup_bin(fname) : read_pileup_text(fname);
 }
