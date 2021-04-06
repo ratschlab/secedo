@@ -184,7 +184,9 @@ bool spectral_clustering(const Matd &similarity,
         // https://people.eecs.berkeley.edu/~jrs/189s17/lec/22.pdf rather than the 0 cut
         for (uint32_t i = 0; i < similarity.rows(); ++i) {
             cluster->at(i) = eigenvectors(i, 1) >= 0;
+            std::cout << eigenvectors(i, 1) << " ";
         }
+        std::cout << std::endl;
     }
 
     // stop if either we couldn't fit the 2-component GMM or if the 1-component GMM fits better
