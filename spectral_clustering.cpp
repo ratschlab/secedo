@@ -190,9 +190,7 @@ bool spectral_clustering(const Matd &similarity,
         double threshold = fiedler[0] == 0 ? std::numeric_limits<double>::min() : 0;
         for (uint32_t i = 0; i < similarity.rows(); ++i) {
             cluster->at(i) = eigenvectors(i, 1) >= threshold;
-            std::cout << eigenvectors(i, 1) << " ";
         }
-        std::cout << std::endl;
     }
 
     // stop if either we couldn't fit the 2-component GMM or if the 1-component GMM fits better
