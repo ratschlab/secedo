@@ -54,13 +54,13 @@ TEST_P(SpectralClustering, OneCluster) {
 TEST_P(SpectralClustering, TwoClusters) {
     auto [clustering, termination] = GetParam();
 
-    std::default_random_engine generator(1243);
+    std::default_random_engine generator;
     std::uniform_real_distribution<double> noise(-1e-1, 1e-1);
 
     constexpr uint32_t num_cells = 100;
 
     std::vector<double> cluster;
-    // we have 100 cells, with the first 50 and last 50 being identical (module some nosie) to each
+    // we have 100 cells, with the first 50 and last 50 being identical (modulo some noise) to each
     // other
     Matd similarity = Matd::zeros(num_cells, num_cells);
     const uint32_t half = num_cells / 2;
