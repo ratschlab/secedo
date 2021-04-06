@@ -75,10 +75,10 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     }
 
     logger()->info("Computing similarity matrix...");
-    Matd sim_mat
-            = computeSimilarityMatrix(pos_data, cell_pos_to_cell_id.size(), max_read_length,
-                                      cell_id_to_cell_pos, mutation_rate, heterozygous_rate,
-                                      seq_error_rate, num_threads, FLAGS_o, FLAGS_normalization);
+    Matd sim_mat = computeSimilarityMatrix(pos_data, cell_pos_to_cell_id.size(), max_read_length,
+                                           cell_id_to_cell_pos, mutation_rate, heterozygous_rate,
+                                           seq_error_rate, num_threads, FLAGS_o, marker,
+                                           FLAGS_normalization);
 
     logger()->info("Performing spectral clustering...");
     std::vector<double> cluster;
