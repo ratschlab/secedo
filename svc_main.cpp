@@ -183,8 +183,17 @@ int main(int argc, char *argv[]) {
     std::vector<std::filesystem::path> mpileup_files = { FLAGS_i };
     // if the input is a directory, get all pileup files in the directory
     if (std::filesystem::is_directory(FLAGS_i)) {
-        mpileup_files = get_files(FLAGS_i, ".pileup");
+        mpileup_files = get_files(FLAGS_i, ".pileup.bin");
+        if (mpileup_files.empty()) {
+            logger()->info("No binary pileup files found. Looking for textual pileup files...");
+            mpileup_files = get_files(FLAGS_i, ".pileup");
+        }
         spdlog::info("Found {} .pileup files in '{}'", mpileup_files.size(), FLAGS_i);
+    }
+
+    if (mpileup_files.empty()) {
+        spdlog::info("No pileup files found in {}. Bailing out.", FLAGS_i);
+        std::exit(0);
     }
 
     logger()->info("Reading data...");
