@@ -87,10 +87,12 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     if (is_done) {
         return;
     }
+    write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), cluster);
 
     logger()->info("Performing clustering refinement via expectation maximization...");
     expectation_maximization(pos_data, cell_id_to_cell_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
                              &cluster);
+    write_vec(std::filesystem::path(out_dir) / ("expectation_maximization" + marker), cluster);
 
     std::vector<std::vector<PosData>> pos_data_a;
     std::vector<std::vector<PosData>> pos_data_b;

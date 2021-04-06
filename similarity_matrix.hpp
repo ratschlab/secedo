@@ -31,6 +31,8 @@ enum class Normalization {
  * @param num_threads number of threads to use for parallelizing the computation
  * @param mpileup_file a file that contains all the reads from all the cells at a
  * @param out_dir directory where the output files (mat_same, mat_diff, combs_xs_xd) will be written
+ * @param marker string that marks the subset that is currently being processed, e.g. "AAB"
+ * @param normalization the type of normalization to perform on the similarity matrix
  *
  * @return a pair containing the
  */
@@ -43,4 +45,5 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              double seq_error_rate,
                              const uint32_t num_threads,
                              const std::string &out_dir,
+                             const std::string &marker,
                              const std::string &normalization);

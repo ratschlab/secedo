@@ -197,7 +197,8 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
 
         if (emulate_python && read1.pos.front() > read2.pos.front()) {
             logger()->trace("Read 1 pos {}, Read 2 pos {}", read1.pos.front(), read2.pos.front());
-            logger()->trace("Read 1 id: {} Read 2 id: {}", active_keys[start_idx], active_keys[idx]);
+            logger()->trace("Read 1 id: {} Read 2 id: {}", active_keys[start_idx],
+                            active_keys[idx]);
         }
         // if a removed paired read that doesn't match happens to be the first read, then it's
         // not anymore guaranteed that the active_reads are sorted by the first position
@@ -295,10 +296,19 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              double seq_error_rate,
                              const uint32_t num_threads,
                              const std::string &out_dir,
+                             const std::string &marker,
                              const std::string &normalization) {
     // distance matrices - the desired result of the computation
     Matd mat_same = Matd::zeros(num_cells, num_cells);
     Matd mat_diff = Matd::zeros(num_cells, num_cells);
+
+    std::string sim_mat_fname = out_dir + "sim_mat" + marker + ".csv";
+    if (std::filesystem::exists(sim_mat_fname)) {
+        logger()->info("Using existing similarity matrix: {}", sim_mat_fname);
+        mat_diff = read_mat(sim_mat_fname);
+        return mat_diff;
+    }
+
 
     // stores temp updates to mat_same and mat_diff in order to avoid a critical section
     Vec2<std::tuple<uint32_t, uint32_t, double>> updates_same(num_threads);
@@ -417,9 +427,9 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     }
 
     // write mat_same and mat_diff onto disk for inspection
-    write_mat(out_dir + "mat_same.csv", mat_same);
-    write_mat(out_dir + "mat_diff.csv", mat_diff);
-    write_mat(out_dir + "combs_xs_xd.csv", combs_all);
+    write_mat(out_dir + "mat_same" + marker + ".csv", mat_same);
+    write_mat(out_dir + "mat_diff" + marker + ".csv", mat_diff);
+    write_mat(out_dir + "combs_xs_xd" + marker + ".csv", combs_all);
 
     // compute log(P(diff)/P(same))
     // i.e., simMat_diff[i,j] = -w(i,j) for w(i,j) as defined in the draft:
@@ -427,7 +437,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     mat_diff -= mat_same;
 
     normalize(normalization, &mat_diff);
-    write_mat(out_dir + "sim_mat.csv", mat_diff);
+    write_mat(sim_mat_fname, mat_diff);
 
     return mat_diff;
 }
