@@ -46,7 +46,7 @@ read_pileup_text(const std::string fname) {
         std::vector<uint32_t> read_ids_int(read_ids.size());
         if (simplify) {
             for (uint32_t j = 0; j < read_ids.size(); ++j) {
-                if (!id_map.contains(read_ids[j])) {
+                if (id_map.find(read_ids[j]) == id_map.end()) {
                     id_map[read_ids[j]] = id_count++;
                     id_stats[read_ids[j]] = { position, position };
                 }
@@ -135,7 +135,7 @@ read_pileup_bin(const std::string fname) {
 
         std::vector<CellData> cells_data;
         for (uint32_t j = 0; j < bases.size(); ++j) {
-            if (id_stats.contains(read_ids[j])) {
+            if (id_stats.find(read_ids[j]) != id_stats.end()) {
                 id_stats[read_ids[j]] = { id_stats[read_ids[j]].first, position };
             } else {
                 id_stats[read_ids[j]] = { position, position };
@@ -159,5 +159,5 @@ read_pileup_bin(const std::string fname) {
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup(const std::string fname) {
-    return fname.ends_with(".bin") ? read_pileup_bin(fname) : read_pileup_text(fname);
+    return ends_with(fname, ".bin") ? read_pileup_bin(fname) : read_pileup_text(fname);
 }

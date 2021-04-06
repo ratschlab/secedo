@@ -163,3 +163,5 @@ inline std::ostream &operator<<(std::ostream &os, const std::array<T, N> &v) {
  */
 std::vector<std::filesystem::path> get_files(const std::filesystem::path &path,
                                              const std::string &extension);
+
+bool ends_with(std::string const &value, std::string const &ending);
