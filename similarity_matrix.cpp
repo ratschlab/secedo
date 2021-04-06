@@ -195,6 +195,10 @@ void compare_with_reads(const std::unordered_map<std::string, Read> &active_read
         uint32_t index1 = cell_id_to_cell_idx[read1.cell_id];
         uint32_t index2 = cell_id_to_cell_idx[read2.cell_id];
 
+        if (emulate_python && read1.pos.front() > read2.pos.front()) {
+            logger()->trace("Read 1 pos {}, Read 2 pos {}", read1.pos.front(), read2.pos.front());
+            logger()->trace("Read 1 id: {} Read 2 id: {}", active_keys[start_idx], active_keys[idx]);
+        }
         // if a removed paired read that doesn't match happens to be the first read, then it's
         // not anymore guaranteed that the active_reads are sorted by the first position
         assert(!emulate_python || read1.pos.front() <= read2.pos.front());
