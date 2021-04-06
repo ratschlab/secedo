@@ -62,16 +62,16 @@ read_pileup_text(const std::string fname) {
         result.push_back({ position, cells_data });
 
         if (simplify) {
-            for (uint32_t i = 0; i < splitLine.size(); ++i) {
-                if (i == 5) {
-                    std::string str_ids = to_string(read_ids);
-                    out << str_ids.substr(1, str_ids.size() - 2);
-                } else {
-                    out << splitLine[i];
-                }
-                out << '\t';
-            }
-            out << std::endl;
+//            for (uint32_t i = 0; i < splitLine.size(); ++i) {
+//                if (i == 5) {
+//                    std::string str_ids = to_string(read_ids);
+//                    out << str_ids.substr(1, str_ids.size() - 2);
+//                } else {
+//                    out << splitLine[i];
+//                }
+//                out << '\t';
+//            }
+//            out << std::endl;
 
             uint8_t chromosome = splitLine[0] == "X" ? 23 : std::stoi(splitLine[0]);
             out_bin.write(reinterpret_cast<char *>(&chromosome), 1);
