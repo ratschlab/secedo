@@ -36,6 +36,7 @@ TEST_P(SpectralClustering, OneCluster) {
         constexpr uint32_t num_cells = 100;
         Matd similarity(num_cells, num_cells);
         for (uint32_t i = 0; i < num_cells; ++i) {
+            similarity(i,i) = 0;
             for (uint32_t j = 0; j < i; ++j) {
                 similarity(i, j) = 1 + noise(generator);
                 similarity(j, i) = similarity(i, j);
