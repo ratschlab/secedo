@@ -182,8 +182,14 @@ bool spectral_clustering(const Matd &similarity,
     } else if (clustering == ClusteringType::FIEDLER) {
         // TODO: use the min-sparsity cut described in
         // https://people.eecs.berkeley.edu/~jrs/189s17/lec/22.pdf rather than the 0 cut
+        arma::vec fiedler = eigenvectors.col(1);
+        std::sort(fiedler.begin(), fiedler.end());
+
+        // corner case: if the smallest value is zero, treat all zero values as negative, and all
+        // positive values as port of the other cluster
+        double threshold = fiedler[0] == 0 ? std::numeric_limits<double>::min() : 0;
         for (uint32_t i = 0; i < similarity.rows(); ++i) {
-            cluster->at(i) = eigenvectors(i, 1) >= 0;
+            cluster->at(i) = eigenvectors(i, 1) >= threshold;
             std::cout << eigenvectors(i, 1) << " ";
         }
         std::cout << std::endl;
