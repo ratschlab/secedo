@@ -19,6 +19,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 #Progress Bar library
 add_library(progress_bar third_party/progress_bar/progress_bar.cpp)
+target_compile_options(progress_bar PUBLIC -fPIC)
 
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
@@ -36,6 +37,10 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/spdlog EXCLUDE_FROM_ALL)
 file(GLOB util_files util.cpp pileup_reader.cpp logger.cpp)
 add_library(lib_util ${util_files})
 target_link_libraries(lib_util spdlog::spdlog)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_link_libraries(lib_util stdc++fs)
+endif()
+
 
 file(GLOB expectation_maximization_files expectation_maximization.cpp)
 add_library(lib_expectation_maximization ${expectation_maximization_files})
@@ -56,6 +61,9 @@ target_link_libraries(lib_variant_calling lib_util)
 add_executable(svc svc_main.cpp)
 target_link_libraries(svc lib_expectation_maximization lib_variant_calling lib_similarity_matrix
     lib_spectral_clustering lib_util gflags spdlog::spdlog)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_link_libraries(svc stdc++fs)
+endif()
 
 # TESTS
 enable_testing()

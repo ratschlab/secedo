@@ -36,6 +36,7 @@ TEST_P(SpectralClustering, OneCluster) {
         constexpr uint32_t num_cells = 100;
         Matd similarity(num_cells, num_cells);
         for (uint32_t i = 0; i < num_cells; ++i) {
+            similarity(i,i) = 0;
             for (uint32_t j = 0; j < i; ++j) {
                 similarity(i, j) = 1 + noise(generator);
                 similarity(j, i) = similarity(i, j);
@@ -53,13 +54,13 @@ TEST_P(SpectralClustering, OneCluster) {
 TEST_P(SpectralClustering, TwoClusters) {
     auto [clustering, termination] = GetParam();
 
-    std::default_random_engine generator(1243);
+    std::default_random_engine generator;
     std::uniform_real_distribution<double> noise(-1e-1, 1e-1);
 
     constexpr uint32_t num_cells = 100;
 
     std::vector<double> cluster;
-    // we have 100 cells, with the first 50 and last 50 being identical (module some nosie) to each
+    // we have 100 cells, with the first 50 and last 50 being identical (modulo some noise) to each
     // other
     Matd similarity = Matd::zeros(num_cells, num_cells);
     const uint32_t half = num_cells / 2;
@@ -79,12 +80,12 @@ TEST_P(SpectralClustering, TwoClusters) {
 
     ASSERT_FALSE(done); // the split should be successful
     for (uint32_t i = 0; i < half - 1; ++i) {
-        ASSERT_EQ(cluster[i], cluster[i + 1]) << i;
+        ASSERT_EQ(cluster[i], cluster[i + 1]);
     }
     for (uint32_t i = half; i < num_cells - 1; ++i) {
-        ASSERT_EQ(cluster[i], cluster[i + 1]) << i;
+        ASSERT_EQ(cluster[i], cluster[i + 1]);
     }
-    ASSERT_EQ(1., std::abs(cluster[0] - cluster[99]));
+    ASSERT_EQ(1., std::abs(cluster.front() - cluster.back()));
 }
 
 TEST_P(SpectralClustering, ThreeClusters) {
@@ -94,9 +95,9 @@ TEST_P(SpectralClustering, ThreeClusters) {
     }
 
     std::vector<double> cluster;
-    // we have 90 cells, with the first 30, next 30 and last 30 being identical, and the first 30
-    // and next 30 being slightly more similar to each other than to the last 30 the clustering
-    // should thus group the first 60 cells and last 30 cells together
+    // we have 6 cells, with the first 2, next 2 and last 2 being identical, and the first 2
+    // and next 2 being slightly more similar to each other than to the last 2. The clustering
+    // should thus group the first 4 cells and last 2 cells together.
     Matd similarity(6, 6,
                     { 0.,  1,   0.1, 0.1, 0, 0, 1., 0, 0.1, 0.1, 0, 0, 0.1, 0.1, 0, 1, 0, 0,
                       0.1, 0.1, 1,   0,   0, 0, 0,  0, 0,   0,   0, 1, 0,   0,   0, 0, 1, 0 });
