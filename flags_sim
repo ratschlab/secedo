@@ -1,0 +1,7 @@
+# parameters for spectral clustering
+--hzygous_prob 0.5
+--seq_error_rate 0.01
+--mutation_rate 0.001
+
+# logging
+--log_level trace

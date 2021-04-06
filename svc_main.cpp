@@ -14,16 +14,16 @@
 #include <unordered_set>
 #include <vector>
 
-DEFINE_double(seq_error_rate, 0.001, "Sequencing errors rate, denoted by theta");
+DEFINE_double(seq_error_rate, 0.01, "Sequencing errors rate, denoted by theta");
 DEFINE_double(mutation_rate,
-              0,
+              0.01,
               "epsilon, estimated frequency of mutated loci in the pre-processed data set");
 // estimate of how many positions are actually homozygous germline, were only included because of
 // sequencing (or alignment!) errors
 DEFINE_double(
-        hzygous_prob,
-        0,
-        "The probability that a loci is homozygous, (not filtered correctly in the first step");
+        homozygous_prob,
+        0.15,
+        "The probability that a locus is homozygous, (not filtered correctly in the first step");
 
 DEFINE_string(i,
               "",
@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 
     divide(pos_data, max_read_length, cell_id_map, cell_id_map, FLAGS_mutation_rate,
-           FLAGS_hzygous_prob, FLAGS_seq_error_rate, FLAGS_num_threads, FLAGS_o,
+           FLAGS_homozygous_prob, FLAGS_seq_error_rate, FLAGS_num_threads, FLAGS_o,
            FLAGS_normalization, "");
 
 
