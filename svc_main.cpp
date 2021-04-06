@@ -196,6 +196,7 @@ int main(int argc, char *argv[]) {
         std::exit(0);
     }
 
+    // read input files in parallel
     logger()->info("Reading data...");
     std::vector<std::vector<PosData>> pos_data(mpileup_files.size());
     std::vector<std::unordered_set<uint32_t>> cell_ids(mpileup_files.size());

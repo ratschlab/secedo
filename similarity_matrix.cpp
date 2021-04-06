@@ -396,6 +396,8 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
 
             read_progress += 1;
         }
+        active_reads.clear();
+        active_keys.clear();
     }
 
     // in the end, process all the leftover active reads
