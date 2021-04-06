@@ -110,6 +110,11 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
         }
     }
 
+    if (cell_pos_to_cell_id_a.size() < 30 || cell_pos_to_cell_id_b.size() < 30) {
+        logger()->trace("Cluster size is too small. Stopping.");
+        return; // TODO: hack - figure it out
+    }
+
     uint32_t total_coverage_a = 0;
     uint32_t total_coverage_b = 0;
     uint32_t total_positions_a = 0;
@@ -159,16 +164,15 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     logger()->trace("Avg coverage for cluster {}: {}. Total positions: {}", marker + 'B',
                     coverage_b, total_positions_b);
     // recursively try to further divide each of the new clusters
-    if (coverage_a > 9) {
-        divide(pos_data_a, max_read_length, cell_id_to_cell_pos_a, cell_pos_to_cell_id_a,
-               mutation_rate, heterozygous_rate, seq_error_rate, num_threads, out_dir,
-               normalization, marker + 'A');
+    if (coverage_a < 9 || coverage_b < 9) {
+        logger()->trace("Coverage for at least one cluster is lower than 9. Stopping.");
+        return;
     }
-    if (coverage_b > 9) {
-        divide(pos_data_b, max_read_length, cell_id_to_cell_pos_b, cell_pos_to_cell_id_b,
-               mutation_rate, heterozygous_rate, seq_error_rate, num_threads, out_dir,
-               normalization, marker + 'B');
-    }
+
+    divide(pos_data_a, max_read_length, cell_id_to_cell_pos_a, cell_pos_to_cell_id_a, mutation_rate,
+           heterozygous_rate, seq_error_rate, num_threads, out_dir, normalization, marker + 'A');
+    divide(pos_data_b, max_read_length, cell_id_to_cell_pos_b, cell_pos_to_cell_id_b, mutation_rate,
+           heterozygous_rate, seq_error_rate, num_threads, out_dir, normalization, marker + 'B');
 }
 
 int main(int argc, char *argv[]) {
