@@ -75,10 +75,10 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     }
 
     logger()->info("Computing similarity matrix...");
-    Matd sim_mat
-            = computeSimilarityMatrix(pos_data, cell_pos_to_cell_id.size(), max_read_length,
-                                      cell_id_to_cell_pos, mutation_rate, heterozygous_rate,
-                                      seq_error_rate, num_threads, FLAGS_o, FLAGS_normalization);
+    Matd sim_mat = computeSimilarityMatrix(pos_data, cell_pos_to_cell_id.size(), max_read_length,
+                                           cell_id_to_cell_pos, mutation_rate, heterozygous_rate,
+                                           seq_error_rate, num_threads, FLAGS_o, marker,
+                                           FLAGS_normalization);
 
     logger()->info("Performing spectral clustering...");
     std::vector<double> cluster;
@@ -87,10 +87,12 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     if (is_done) {
         return;
     }
+    write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), cluster);
 
     logger()->info("Performing clustering refinement via expectation maximization...");
     expectation_maximization(pos_data, cell_id_to_cell_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
                              &cluster);
+    write_vec(std::filesystem::path(out_dir) / ("expectation_maximization" + marker), cluster);
 
     std::vector<std::vector<PosData>> pos_data_a;
     std::vector<std::vector<PosData>> pos_data_b;
@@ -196,6 +198,7 @@ int main(int argc, char *argv[]) {
         std::exit(0);
     }
 
+    // read input files in parallel
     logger()->info("Reading data...");
     std::vector<std::vector<PosData>> pos_data(mpileup_files.size());
     std::vector<std::unordered_set<uint32_t>> cell_ids(mpileup_files.size());

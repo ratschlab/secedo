@@ -55,3 +55,31 @@ bool ends_with(std::string const &value, std::string const &ending)
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 
+Matd read_mat(const std::string &name) {
+    if (!std::filesystem::exists(name)) {
+        logger()->error("File {} does not exist.", name);
+        std::exit(1);
+    }
+    std::ifstream in(name);
+    std::string line;
+    std::vector<std::vector<double>> values;
+
+    while (std::getline(in, line)) {
+        values.push_back(double_split(line, ','));
+        if (values.size() > 1 && values.back().size() != values[values.size() - 2].size()) {
+            logger()->error("Invalid input file: {}. Line {} has size {}, line {} has size {}",
+                            name, values.size() - 2, values[values.size() - 2].size(),
+                            values.size() - 1, values.back().size());
+            std::exit(1);
+        }
+    }
+    if (values.empty()) {
+        return Matd();
+    }
+    Matd result(values.size(), values[0].size());
+    for(uint32_t r = 0; r < values.size(); ++r) {
+        std::copy(values[r].begin(), values[r].end(), result.row(r));
+    }
+    return result;
+}
+

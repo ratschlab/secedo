@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "logger.hpp"
 #include "mat.hpp"
 
 constexpr uint8_t CharToInt[128]
@@ -65,23 +66,6 @@ std::string to_string(const std::vector<T> &vec) {
 }
 
 /**
- * Write a matrix line by line to a file, with elements separated by comma.
- */
-template <typename T>
-void write_mat(const std::string &name, const Mat<T> &mat) {
-    std::ofstream out(name);
-    if (mat.empty()) {
-        return;
-    }
-    for (uint32_t r = 0; r < mat.rows(); ++r) {
-        for (uint32_t i = 0; i < mat.cols() - 1; ++i) {
-            out << mat(r, i) << ",";
-        }
-        out << mat(r, mat.cols() - 1) << std::endl;
-    }
-}
-
-/**
  * Split a string by character c.
  */
 std::vector<std::string> split(const std::string &s, char c);
@@ -105,6 +89,28 @@ std::vector<T> int_split(const std::string &s, char c) {
  * Split a string by character c into integer components.
  */
 std::vector<double> double_split(const std::string &s, char c);
+
+/**
+ * Write a matrix line by line to a file, with elements separated by comma.
+ */
+template <typename T>
+void write_mat(const std::string &name, const Mat<T> &mat) {
+    std::ofstream out(name);
+    if (mat.empty()) {
+        return;
+    }
+    for (uint32_t r = 0; r < mat.rows(); ++r) {
+        for (uint32_t i = 0; i < mat.cols() - 1; ++i) {
+            out << mat(r, i) << ",";
+        }
+        out << mat(r, mat.cols() - 1) << std::endl;
+    }
+}
+
+/**
+ * Read a double matrix written with #write_mat.
+ */
+Matd read_mat(const std::string &name);
 
 template <typename T>
 T sum(const std::vector<T> &vec) {
