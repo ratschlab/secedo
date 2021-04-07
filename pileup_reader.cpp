@@ -10,7 +10,7 @@
 constexpr bool simplify = true;
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup_text(const std::string fname) {
+read_pileup_text(const std::string fname, uint16_t coverage_factor) {
     std::vector<PosData> result;
 
     std::ofstream out_bin(fname + ".bin", std::ios::binary);
@@ -56,7 +56,9 @@ read_pileup_text(const std::string fname) {
 
         std::vector<CellData> cells_data;
         for (uint32_t j = 0; j < bases.size(); ++j) {
-            cells_data.push_back({ read_ids[j], cell_ids[j], CharToInt[(uint8_t)bases[j]] });
+            cells_data.push_back({ read_ids[j],
+                                   static_cast<uint16_t>(cell_ids[j] / coverage_factor),
+                                   CharToInt[(uint8_t)bases[j]] });
         }
         result.push_back({ position, cells_data });
 
@@ -85,7 +87,7 @@ read_pileup_text(const std::string fname) {
 }
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup_bin(const std::string fname) {
+read_pileup_bin(const std::string fname, uint16_t coverage_factor) {
     std::vector<PosData> result;
 
     if (!std::filesystem::exists(fname)) {
@@ -128,8 +130,9 @@ read_pileup_bin(const std::string fname) {
             } else {
                 id_stats[read_ids[j]] = { position, position };
             }
-            cells_data.push_back(
-                    { std::to_string(read_ids[j]), cell_ids[j], CharToInt[(uint8_t)bases[j]] });
+            cells_data.push_back({ std::to_string(read_ids[j]),
+                                   static_cast<uint16_t>(cell_ids[j] / coverage_factor),
+                                   CharToInt[(uint8_t)bases[j]] });
         }
         result.push_back({ position, cells_data });
     }
@@ -146,6 +149,7 @@ read_pileup_bin(const std::string fname) {
 }
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup(const std::string fname) {
-    return ends_with(fname, ".bin") ? read_pileup_bin(fname) : read_pileup_text(fname);
+read_pileup(const std::string fname, uint16_t coverage_factor) {
+    return ends_with(fname, ".bin") ? read_pileup_bin(fname, coverage_factor)
+                                    : read_pileup_text(fname, coverage_factor);
 }

@@ -44,6 +44,12 @@ DEFINE_string(log_level,
               "trace",
               "The log verbosity: debug, trace, info, warn, error, critical, off");
 
+DEFINE_uint32(coverage_factor,
+              1,
+              "Group coverage_factor consecutive cells as if they were a single cell, in order to "
+              "artificially increase coverage. Only work on synthetic data where we know "
+              "consecutive cells are part of the same cluster!");
+
 static bool ValidateNormalization(const char *flagname, const std::string &value) {
     if (value != "ADD_MIN" && value != "EXPONENTIATE" && value != "SCALE_MAX_1") {
         printf("Invalid value for --%s: %s.\nShould be one of ADD_MIN, EXPONENTIATE, SCALE_MAX_1\n",
@@ -205,7 +211,8 @@ int main(int argc, char *argv[]) {
     std::vector<uint32_t> max_read_lengths(mpileup_files.size());
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
-        std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(mpileup_files[i]);
+        std::tie(pos_data[i], cell_ids[i], max_read_lengths[i])
+                = read_pileup(mpileup_files[i], FLAGS_coverage_factor);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
 
@@ -214,7 +221,8 @@ int main(int argc, char *argv[]) {
         std::copy(cell_ids[i].begin(), cell_ids[i].end(),
                   std::inserter(all_cell_ids, all_cell_ids.end()));
     }
-    uint32_t num_cells = *std::max_element(all_cell_ids.begin(), all_cell_ids.end()) + 1;
+    uint32_t num_cells = (*std::max_element(all_cell_ids.begin(), all_cell_ids.end()) + 1)
+            / FLAGS_coverage_factor;
 
     std::vector<uint32_t> cell_id_map(num_cells);
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
