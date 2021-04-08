@@ -44,6 +44,17 @@ DEFINE_string(log_level,
               "trace",
               "The log verbosity: debug, trace, info, warn, error, critical, off");
 
+DEFINE_uint32(merge_count,
+              1,
+              "Pool data from  merge_count consecutive cells as if they were a single cell, in"
+              "  order to artificially increase coverage. Only work on synthetic data where we know"
+              " consecutive cells are part of the same cluster!");
+
+DEFINE_string(merge_file,
+              "",
+              "File containing cell grouping. Cells in the same group are treated as if they were "
+              "a single cell. Useful for artificially increasing coverage for testing.");
+
 static bool ValidateNormalization(const char *flagname, const std::string &value) {
     if (value != "ADD_MIN" && value != "EXPONENTIATE" && value != "SCALE_MAX_1") {
         printf("Invalid value for --%s: %s.\nShould be one of ADD_MIN, EXPONENTIATE, SCALE_MAX_1\n",
@@ -205,7 +216,8 @@ int main(int argc, char *argv[]) {
     std::vector<uint32_t> max_read_lengths(mpileup_files.size());
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
-        std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(mpileup_files[i]);
+        std::tie(pos_data[i], cell_ids[i], max_read_lengths[i])
+                = read_pileup(mpileup_files[i], FLAGS_merge_count, FLAGS_merge_file);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
 
