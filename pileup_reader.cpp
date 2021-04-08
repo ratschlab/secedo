@@ -9,8 +9,13 @@
 
 constexpr bool simplify = true;
 
+/**
+ * Maximum expected cell count, used to initialize the cell grouping.
+ */
+constexpr uint16_t MAX_CELL_COUNT = 10'000;
+
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup_text(const std::string fname, uint16_t coverage_factor) {
+read_pileup_text(const std::string fname, const std::vector<uint16_t> &cellid_to_group) {
     std::vector<PosData> result;
 
     std::ofstream out_bin(fname + ".bin", std::ios::binary);
@@ -37,8 +42,10 @@ read_pileup_text(const std::string fname, uint16_t coverage_factor) {
         std::string bases = splitLine[3];
         // 5th column: cell ids the cell from which the reads are coming, comma separated
         std::vector<uint16_t> cell_ids = int_split<uint16_t>(splitLine[4], ',');
-        std::copy(cell_ids.begin(), cell_ids.end(),
-                  std::inserter(all_cell_ids, all_cell_ids.end()));
+
+        for (const uint16_t id : cell_ids) {
+            all_cell_ids.insert(cellid_to_group[id]);
+        }
 
         // 6th column: read ids, comma separated. Each single cell sequence has its own read id
         std::vector<std::string> read_ids = split(splitLine[5], ',');
@@ -56,9 +63,15 @@ read_pileup_text(const std::string fname, uint16_t coverage_factor) {
 
         std::vector<CellData> cells_data;
         for (uint32_t j = 0; j < bases.size(); ++j) {
-            cells_data.push_back({ read_ids[j],
-                                   static_cast<uint16_t>(cell_ids[j] / coverage_factor),
-                                   CharToInt[(uint8_t)bases[j]] });
+            if (cell_ids[j] > MAX_CELL_COUNT) {
+                logger()->error(
+                        "A maximum of {} cells is supported. Increase MAX_CELL_COUNT in "
+                        "pileup_reader.cpp if you'd like to support more cells",
+                        MAX_CELL_COUNT);
+                std::exit(1);
+            }
+            cells_data.push_back(
+                    { read_ids[j], cellid_to_group.at(cell_ids[j]), CharToInt[(uint8_t)bases[j]] });
         }
         result.push_back({ position, cells_data });
 
@@ -87,7 +100,7 @@ read_pileup_text(const std::string fname, uint16_t coverage_factor) {
 }
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup_bin(const std::string fname, uint16_t coverage_factor) {
+read_pileup_bin(const std::string fname, const std::vector<uint16_t> &cellid_to_group) {
     std::vector<PosData> result;
 
     if (!std::filesystem::exists(fname)) {
@@ -120,18 +133,26 @@ read_pileup_bin(const std::string fname, uint16_t coverage_factor) {
         f.read(reinterpret_cast<char *>(cell_ids.data()), cell_ids.size() * sizeof(cell_ids[0]));
         f.read(reinterpret_cast<char *>(read_ids.data()), read_ids.size() * sizeof(read_ids[0]));
 
-        std::copy(cell_ids.begin(), cell_ids.end(),
-                  std::inserter(all_cell_ids, all_cell_ids.end()));
+        for (const uint16_t id : cell_ids) {
+            all_cell_ids.insert(cellid_to_group[id]);
+        }
 
         std::vector<CellData> cells_data;
         for (uint32_t j = 0; j < bases.size(); ++j) {
+            if (cell_ids[j] > MAX_CELL_COUNT) {
+                logger()->error(
+                        "A maximum of {} cells is supported. Increase MAX_CELL_COUNT in "
+                        "pileup_reader.cpp if you'd like to support more cells",
+                        MAX_CELL_COUNT);
+                std::exit(1);
+            }
+
             if (id_stats.find(read_ids[j]) != id_stats.end()) {
                 id_stats[read_ids[j]] = { id_stats[read_ids[j]].first, position };
             } else {
                 id_stats[read_ids[j]] = { position, position };
             }
-            cells_data.push_back({ std::to_string(read_ids[j]),
-                                   static_cast<uint16_t>(cell_ids[j] / coverage_factor),
+            cells_data.push_back({ std::to_string(read_ids[j]), cellid_to_group.at(cell_ids[j]),
                                    CharToInt[(uint8_t)bases[j]] });
         }
         result.push_back({ position, cells_data });
@@ -142,14 +163,29 @@ read_pileup_bin(const std::string fname, uint16_t coverage_factor) {
         max_length = std::max(max_length, v.second - v.first);
     }
 
-    logger()->trace("{}: found {} cell ids, {} reads. Longest read has {} bases", fname,
-                    all_cell_ids.size(), id_stats.size(), max_length);
+    logger()->trace("{}: found {} cell ids (after grouping), {} reads. Longest read has {} bases",
+                    fname, all_cell_ids.size(), id_stats.size(), max_length);
 
     return { result, all_cell_ids, max_length };
 }
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup(const std::string fname, uint16_t coverage_factor) {
-    return ends_with(fname, ".bin") ? read_pileup_bin(fname, coverage_factor)
-                                    : read_pileup_text(fname, coverage_factor);
+read_pileup(const std::string fname, uint16_t merge_count, const std::string &merge_file) {
+    assert(merge_count == 1 || merge_file.empty());
+
+    std::vector<uint16_t> cellid_to_group;
+    if (!merge_file.empty()) {
+        if (!std::filesystem::exists(merge_file)) {
+            logger()->error("Cannot find merge file: {}", merge_file);
+            std::exit(1);
+        }
+        cellid_to_group = int_split<uint16_t>(read_file(merge_file), ',');
+    } else {
+        for (uint16_t i = 0; i < MAX_CELL_COUNT; ++i) {
+            cellid_to_group.push_back(i / merge_count);
+        }
+    }
+
+    return ends_with(fname, ".bin") ? read_pileup_bin(fname, cellid_to_group)
+                                    : read_pileup_text(fname, cellid_to_group);
 }

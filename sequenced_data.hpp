@@ -9,7 +9,7 @@
  * One read for a given cell at a given (unknown) position.
  */
 struct CellData {
-    std::string read_id; //TODO: huge waste of memory, hash these in the preprocessing
+    std::string read_id;
     uint16_t cell_id;
     uint8_t base;
 };
