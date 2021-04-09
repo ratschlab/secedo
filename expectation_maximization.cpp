@@ -55,7 +55,7 @@ cluster_center(const PosData &pos_data, const std::vector<double> &prob_cluster,
  */
 void maximization_step(const std::vector<double> &prob_cluster_b,
                        const std::vector<PosData> &pos_data,
-                       const std::vector<uint32_t> &cell_id_to_cell_pos,
+                       const std::vector<uint32_t> &id_to_pos,
                        double theta,
                        std::vector<double> *log_likelihood_a,
                        std::vector<double> *log_likelihood_b) {
@@ -78,8 +78,8 @@ void maximization_step(const std::vector<double> &prob_cluster_b,
 
         // compute the log likelihoods given the new cluster centers
         for (const CellData &cd : pd.cells_data) {
-            log_likelihood_a->at(cell_id_to_cell_pos[cd.cell_id]) += center_a[cd.base];
-            log_likelihood_b->at(cell_id_to_cell_pos[cd.cell_id]) += center_b[cd.base];
+            log_likelihood_a->at(id_to_pos[cd.cell_id]) += center_a[cd.base];
+            log_likelihood_b->at(id_to_pos[cd.cell_id]) += center_b[cd.base];
         }
     }
 }
@@ -124,19 +124,19 @@ bool expectation_step(const std::vector<double> &log_likelihood_a,
 }
 
 void expectation_maximization(const std::vector<std::vector<PosData>> &pos_data,
-                              const std::vector<uint32_t> &cell_id_to_cell_pos,
-                              uint32_t num_threads,
+                              const std::vector<uint32_t> &id_to_pos,
+                              uint32_t, // num_threads,
                               double theta,
                               std::vector<double> *prob_cluster_b) {
     std::vector<double> log_likelihood_a(prob_cluster_b->size(), 0);
     std::vector<double> log_likelihood_b(prob_cluster_b->size(), 0);
     do {
         // perform the maximization step for each chromosome in parallel
-#pragma omp parallel for num_threads(num_threads)
+        // #pragma omp parallel for num_threads(num_threads)
         for (uint32_t idx = 0; idx < pos_data.size(); ++idx) {
             std::vector<double> log_likelihood_a_chr;
             std::vector<double> log_likelihood_b_chr;
-            maximization_step(*prob_cluster_b, pos_data[idx], cell_id_to_cell_pos, theta,
+            maximization_step(*prob_cluster_b, pos_data[idx], id_to_pos, theta,
                               &log_likelihood_a_chr, &log_likelihood_b_chr);
 #pragma omp critical
             {

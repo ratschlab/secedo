@@ -68,10 +68,17 @@ DEFINE_string(normalization,
               "How to normalize the similarity matrix. One of ADD_MIN, EXPONENTIATE, SCALE_MAX_1");
 DEFINE_validator(normalization, &ValidateNormalization);
 
+DEFINE_uint32(max_cell_count,
+              10'000,
+              "Maximum expected cell count, used to initialize the cell grouping");
+
+constexpr uint16_t NO_POS = std::numeric_limits<uint16_t>::max();
+
 void divide(const std::vector<std::vector<PosData>> &pos_data,
             uint32_t max_read_length,
-            const std::vector<uint32_t> &cell_id_to_cell_pos,
-            const std::vector<uint32_t> &cell_pos_to_cell_id,
+            const std::vector<uint16_t> &id_to_group,
+            const std::vector<uint32_t> &id_to_pos,
+            const std::vector<uint32_t> &pos_to_id,
             double mutation_rate,
             double heterozygous_rate,
             double seq_error_rate,
@@ -82,14 +89,13 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     std::cout << std::endl << std::endl;
     if (!marker.empty()) {
         logger()->info("Performing clustering of sub-cluster {} with {} elements", marker,
-                       cell_pos_to_cell_id.size());
+                       pos_to_id.size());
     }
 
     logger()->info("Computing similarity matrix...");
-    Matd sim_mat = computeSimilarityMatrix(pos_data, cell_pos_to_cell_id.size(), max_read_length,
-                                           cell_id_to_cell_pos, mutation_rate, heterozygous_rate,
-                                           seq_error_rate, num_threads, FLAGS_o, marker,
-                                           FLAGS_normalization);
+    Matd sim_mat = computeSimilarityMatrix(pos_data, pos_to_id.size(), max_read_length, id_to_pos,
+                                           mutation_rate, heterozygous_rate, seq_error_rate,
+                                           num_threads, FLAGS_o, marker, FLAGS_normalization);
 
     logger()->info("Performing spectral clustering...");
     std::vector<double> cluster;
@@ -98,32 +104,44 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     if (is_done) {
         return;
     }
-    write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), cluster);
+
+    std::vector<uint16_t> id_to_cluster(id_to_group.size());
+    for (uint16_t i = 0; i < id_to_group.size(); ++i) {
+        uint16_t pos = id_to_pos[id_to_group[i]];
+        id_to_cluster[i] = pos == NO_POS ? NO_POS : cluster[pos];
+    }
+    write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), id_to_cluster);
 
     logger()->info("Performing clustering refinement via expectation maximization...");
-    expectation_maximization(pos_data, cell_id_to_cell_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
+    expectation_maximization(pos_data, id_to_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
                              &cluster);
-    write_vec(std::filesystem::path(out_dir) / ("expectation_maximization" + marker), cluster);
+
+    for (uint16_t i = 0; i < id_to_group.size(); ++i) {
+        uint32_t pos = id_to_pos[id_to_group[i]];
+        id_to_cluster[i] = pos == NO_POS ? NO_POS : cluster[pos];
+    }
+    write_vec(std::filesystem::path(out_dir) / ("expectation_maximization" + marker),
+              id_to_cluster);
 
     std::vector<std::vector<PosData>> pos_data_a;
     std::vector<std::vector<PosData>> pos_data_b;
-    std::vector<uint32_t> cell_pos_to_cell_id_a;
-    std::vector<uint32_t> cell_pos_to_cell_id_b;
-    std::vector<uint32_t> cell_id_to_cell_pos_a(cell_id_to_cell_pos.size());
-    std::vector<uint32_t> cell_id_to_cell_pos_b(cell_id_to_cell_pos.size());
+    std::vector<uint32_t> pos_to_id_a;
+    std::vector<uint32_t> pos_to_id_b;
+    std::vector<uint32_t> id_to_pos_a(id_to_pos.size(), NO_POS);
+    std::vector<uint32_t> id_to_pos_b(id_to_pos.size(), NO_POS);
 
     for (uint32_t cell_idx = 0; cell_idx < cluster.size(); ++cell_idx) {
-        uint32_t cell_id = cell_pos_to_cell_id[cell_idx];
+        uint32_t cell_id = pos_to_id[cell_idx];
         if (cluster[cell_idx] < 0.05) {
-            cell_id_to_cell_pos_a[cell_id] = cell_pos_to_cell_id_a.size();
-            cell_pos_to_cell_id_a.push_back(cell_id);
+            id_to_pos_a[cell_id] = pos_to_id_a.size();
+            pos_to_id_a.push_back(cell_id);
         } else if (cluster[cell_idx] > 0.95) {
-            cell_id_to_cell_pos_b[cell_id] = cell_pos_to_cell_id_b.size();
-            cell_pos_to_cell_id_b.push_back(cell_id);
+            id_to_pos_b[cell_id] = pos_to_id_b.size();
+            pos_to_id_b.push_back(cell_id);
         }
     }
 
-    if (cell_pos_to_cell_id_a.size() < 30 || cell_pos_to_cell_id_b.size() < 30) {
+    if (pos_to_id_a.size() < 30 || pos_to_id_b.size() < 30) {
         logger()->trace("Cluster size is too small. Stopping.");
         return; // TODO: hack - figure it out
     }
@@ -142,9 +160,9 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
             for (uint32_t cell_idx = 0; cell_idx < pos_data[chr_idx][pos_idx].cells_data.size();
                  ++cell_idx) {
                 uint16_t cell_id = pos_data[chr_idx][pos_idx].cells_data[cell_idx].cell_id;
-                if (cluster[cell_id_to_cell_pos[cell_id]] < 0.05) {
+                if (cluster[id_to_pos[cell_id]] < 0.05) {
                     cd_a.push_back(pos_data[chr_idx][pos_idx].cells_data[cell_idx]);
-                } else if (cluster[cell_id_to_cell_pos[cell_id]] > 0.95) {
+                } else if (cluster[id_to_pos[cell_id]] > 0.95) {
                     cd_b.push_back(pos_data[chr_idx][pos_idx].cells_data[cell_idx]);
                 }
             }
@@ -182,9 +200,9 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
         return;
     }
 
-    divide(pos_data_a, max_read_length, cell_id_to_cell_pos_a, cell_pos_to_cell_id_a, mutation_rate,
+    divide(pos_data_a, max_read_length, id_to_group, id_to_pos_a, pos_to_id_a, mutation_rate,
            heterozygous_rate, seq_error_rate, num_threads, out_dir, normalization, marker + 'A');
-    divide(pos_data_b, max_read_length, cell_id_to_cell_pos_b, cell_pos_to_cell_id_b, mutation_rate,
+    divide(pos_data_b, max_read_length, id_to_group, id_to_pos_b, pos_to_id_b, mutation_rate,
            heterozygous_rate, seq_error_rate, num_threads, out_dir, normalization, marker + 'B');
 }
 
@@ -209,6 +227,9 @@ int main(int argc, char *argv[]) {
         std::exit(0);
     }
 
+    std::vector<uint16_t> id_to_group
+            = get_grouping(FLAGS_merge_count, FLAGS_merge_file, FLAGS_max_cell_count);
+
     // read input files in parallel
     logger()->info("Reading data...");
     std::vector<std::vector<PosData>> pos_data(mpileup_files.size());
@@ -217,7 +238,7 @@ int main(int argc, char *argv[]) {
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i])
-                = read_pileup(mpileup_files[i], FLAGS_merge_count, FLAGS_merge_file);
+                = read_pileup(mpileup_files[i], id_to_group);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
 
@@ -228,10 +249,23 @@ int main(int argc, char *argv[]) {
     }
     uint32_t num_cells = *std::max_element(all_cell_ids.begin(), all_cell_ids.end()) + 1;
 
-    std::vector<uint32_t> cell_id_map(num_cells);
+    if (FLAGS_merge_file.empty()) {
+        // now that we know the actual number of cells, resize the mapping
+        id_to_group.resize(num_cells);
+    } else if (num_cells != id_to_group.size()) {
+        logger()->error(
+                "Invalid merge file {}. Merge files contains {} cell ids, data has {} cell ids",
+                FLAGS_merge_file, id_to_group.size(), num_cells);
+    }
+
+    uint32_t num_groups = *std::max_element(id_to_group.begin(), id_to_group.end()) + 1;
+
+    // this will maps the cell id to its actual position and vice-versa, as we divide cells into
+    // smaller and smaller clusters
+    std::vector<uint32_t> cell_id_map(num_groups);
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 
-    divide(pos_data, max_read_length, cell_id_map, cell_id_map, FLAGS_mutation_rate,
+    divide(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map, FLAGS_mutation_rate,
            FLAGS_homozygous_prob, FLAGS_seq_error_rate, FLAGS_num_threads, FLAGS_o,
            FLAGS_normalization, "");
 

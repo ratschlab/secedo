@@ -9,13 +9,8 @@
 
 constexpr bool simplify = true;
 
-/**
- * Maximum expected cell count, used to initialize the cell grouping.
- */
-constexpr uint16_t MAX_CELL_COUNT = 10'000;
-
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup_text(const std::string fname, const std::vector<uint16_t> &cellid_to_group) {
+read_pileup_text(const std::string fname, const std::vector<uint16_t> &id_to_group) {
     std::vector<PosData> result;
 
     std::ofstream out_bin(fname + ".bin", std::ios::binary);
@@ -28,6 +23,8 @@ read_pileup_text(const std::string fname, const std::vector<uint16_t> &cellid_to
     std::ifstream f(fname);
     std::string line;
     std::unordered_set<uint32_t> all_cell_ids;
+    std::unordered_set<uint32_t> all_cell_ids_grouped;
+
     std::unordered_map<std::string, uint32_t> id_map;
     std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> id_stats;
     uint32_t id_count = 0;
@@ -44,7 +41,8 @@ read_pileup_text(const std::string fname, const std::vector<uint16_t> &cellid_to
         std::vector<uint16_t> cell_ids = int_split<uint16_t>(splitLine[4], ',');
 
         for (const uint16_t id : cell_ids) {
-            all_cell_ids.insert(cellid_to_group[id]);
+            all_cell_ids.insert(id);
+            all_cell_ids_grouped.insert(id_to_group[id]);
         }
 
         // 6th column: read ids, comma separated. Each single cell sequence has its own read id
@@ -63,15 +61,16 @@ read_pileup_text(const std::string fname, const std::vector<uint16_t> &cellid_to
 
         std::vector<CellData> cells_data;
         for (uint32_t j = 0; j < bases.size(); ++j) {
-            if (cell_ids[j] > MAX_CELL_COUNT) {
+            if (cell_ids[j] > id_to_group.size()) {
                 logger()->error(
-                        "A maximum of {} cells is supported. Increase MAX_CELL_COUNT in "
-                        "pileup_reader.cpp if you'd like to support more cells",
-                        MAX_CELL_COUNT);
+                        "Cell id {} is too large. Increase --max_cell_count if using the default "
+                        "mapping, or fix the mapping in --merge_file",
+                        id_to_group.size());
                 std::exit(1);
             }
+
             cells_data.push_back(
-                    { read_ids[j], cellid_to_group.at(cell_ids[j]), CharToInt[(uint8_t)bases[j]] });
+                    { read_ids[j], id_to_group.at(cell_ids[j]), CharToInt[(uint8_t)bases[j]] });
         }
         result.push_back({ position, cells_data });
 
@@ -100,7 +99,7 @@ read_pileup_text(const std::string fname, const std::vector<uint16_t> &cellid_to
 }
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup_bin(const std::string fname, const std::vector<uint16_t> &cellid_to_group) {
+read_pileup_bin(const std::string fname, const std::vector<uint16_t> &id_to_group) {
     std::vector<PosData> result;
 
     if (!std::filesystem::exists(fname)) {
@@ -111,6 +110,7 @@ read_pileup_bin(const std::string fname, const std::vector<uint16_t> &cellid_to_
     std::ifstream f(fname, std::ios::binary);
     std::string line;
     std::unordered_set<uint32_t> all_cell_ids;
+    std::unordered_set<uint32_t> all_cell_ids_grouped;
 
     std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> id_stats;
 
@@ -134,16 +134,17 @@ read_pileup_bin(const std::string fname, const std::vector<uint16_t> &cellid_to_
         f.read(reinterpret_cast<char *>(read_ids.data()), read_ids.size() * sizeof(read_ids[0]));
 
         for (const uint16_t id : cell_ids) {
-            all_cell_ids.insert(cellid_to_group[id]);
+            all_cell_ids.insert(id);
+            all_cell_ids_grouped.insert(id_to_group[id]);
         }
 
         std::vector<CellData> cells_data;
         for (uint32_t j = 0; j < bases.size(); ++j) {
-            if (cell_ids[j] > MAX_CELL_COUNT) {
+            if (cell_ids[j] > id_to_group.size()) {
                 logger()->error(
-                        "A maximum of {} cells is supported. Increase MAX_CELL_COUNT in "
-                        "pileup_reader.cpp if you'd like to support more cells",
-                        MAX_CELL_COUNT);
+                        "Cell id {} is too large. Increase --max_cell_count if using the default "
+                        "mapping, or fix the mapping in --merge_file",
+                        id_to_group.size());
                 std::exit(1);
             }
 
@@ -152,7 +153,7 @@ read_pileup_bin(const std::string fname, const std::vector<uint16_t> &cellid_to_
             } else {
                 id_stats[read_ids[j]] = { position, position };
             }
-            cells_data.push_back({ std::to_string(read_ids[j]), cellid_to_group.at(cell_ids[j]),
+            cells_data.push_back({ std::to_string(read_ids[j]), id_to_group.at(cell_ids[j]),
                                    CharToInt[(uint8_t)bases[j]] });
         }
         result.push_back({ position, cells_data });
@@ -163,14 +164,22 @@ read_pileup_bin(const std::string fname, const std::vector<uint16_t> &cellid_to_
         max_length = std::max(max_length, v.second - v.first);
     }
 
-    logger()->trace("{}: found {} cell ids (after grouping), {} reads. Longest read has {} bases",
-                    fname, all_cell_ids.size(), id_stats.size(), max_length);
+    logger()->trace("{}: found {} cell ids, {} after grouping, {} reads. Longest read has {} bases",
+                    fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(),
+                    max_length);
 
     return { result, all_cell_ids, max_length };
 }
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup(const std::string fname, uint16_t merge_count, const std::string &merge_file) {
+read_pileup(const std::string fname, const std::vector<uint16_t> &id_to_group) {
+    return ends_with(fname, ".bin") ? read_pileup_bin(fname, id_to_group)
+                                    : read_pileup_text(fname, id_to_group);
+}
+
+
+std::vector<uint16_t>
+get_grouping(uint16_t merge_count, const std::string &merge_file, uint16_t max_cell_count) {
     assert(merge_count == 1 || merge_file.empty());
 
     std::vector<uint16_t> cellid_to_group;
@@ -181,11 +190,10 @@ read_pileup(const std::string fname, uint16_t merge_count, const std::string &me
         }
         cellid_to_group = int_split<uint16_t>(read_file(merge_file), ',');
     } else {
-        for (uint16_t i = 0; i < MAX_CELL_COUNT; ++i) {
+        for (uint16_t i = 0; i < max_cell_count; ++i) {
             cellid_to_group.push_back(i / merge_count);
         }
     }
 
-    return ends_with(fname, ".bin") ? read_pileup_bin(fname, cellid_to_group)
-                                    : read_pileup_text(fname, cellid_to_group);
+    return cellid_to_group;
 }

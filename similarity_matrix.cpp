@@ -306,7 +306,12 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     if (std::filesystem::exists(sim_mat_fname)) {
         logger()->info("Using existing similarity matrix: {}", sim_mat_fname);
         mat_diff = read_mat(sim_mat_fname);
-        return mat_diff;
+        if (mat_diff.rows() == num_cells) {
+            return mat_diff;
+        }
+        std::filesystem::remove(sim_mat_fname);
+        logger()->warn("{} is invalid. Removing and re-computing similarity matrix", sim_mat_fname);
+        mat_diff = Matd::zeros(num_cells, num_cells);
     }
 
 

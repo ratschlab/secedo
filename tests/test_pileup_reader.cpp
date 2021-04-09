@@ -20,7 +20,8 @@ void check_binary(const std::string &fname,
     std::vector<PosData> data2;
     std::unordered_set<uint32_t> cell_ids2;
     uint32_t max_len2;
-    std::tie(data2, cell_ids2, max_len2) = read_pileup(fname, merge_count, group_fname);
+    std::tie(data2, cell_ids2, max_len2)
+            = read_pileup(fname, get_grouping(merge_count, group_fname));
 
     ASSERT_EQ(max_len2, max_len);
     ASSERT_THAT(cell_ids2, UnorderedElementsAreArray(cell_ids));
@@ -40,7 +41,7 @@ TEST(Reader, empty) {
     std::vector<PosData> data;
     std::unordered_set<uint32_t> read_ids;
     uint32_t max_len;
-    std::tie(data, read_ids, max_len) = read_pileup("data/empty.pileup");
+    std::tie(data, read_ids, max_len) = read_pileup("data/empty.pileup", get_grouping());
     ASSERT_TRUE(data.empty());
     ASSERT_TRUE(read_ids.empty());
 }
@@ -49,7 +50,7 @@ TEST(Reader, one_row) {
     std::vector<PosData> data;
     std::unordered_set<uint32_t> cell_ids;
     uint32_t max_len;
-    std::tie(data, cell_ids, max_len) = read_pileup("data/one_row.pileup");
+    std::tie(data, cell_ids, max_len) = read_pileup("data/one_row.pileup", get_grouping());
     std::vector<uint16_t> expected_cell_ids
             = { 95, 437, 458, 695, 887, 1011, 1216, 1223, 1522, 1612, 1795, 1924, 2163, 2163 };
     std::vector<uint16_t> distinct_cell_ids
@@ -86,7 +87,7 @@ TEST(Reader, three_rows) {
     std::vector<PosData> data;
     std::unordered_set<uint32_t> cell_ids;
     uint32_t max_len;
-    std::tie(data, cell_ids, max_len) = read_pileup("data/three_rows.pileup");
+    std::tie(data, cell_ids, max_len) = read_pileup("data/three_rows.pileup", get_grouping());
     std::vector<uint16_t> all_cell_ids = { 1, 2, 3, 4, 9 };
     ASSERT_THAT(cell_ids, UnorderedElementsAreArray(all_cell_ids));
 
@@ -123,8 +124,8 @@ TEST(Reader, group_by_two) {
     std::vector<PosData> data;
     std::unordered_set<uint32_t> cell_ids;
     uint32_t max_len;
-    std::tie(data, cell_ids, max_len) = read_pileup("data/six_cells.pileup", 2);
-    std::vector<uint16_t> all_cell_ids = { 0, 1, 2 };
+    std::tie(data, cell_ids, max_len) = read_pileup("data/six_cells.pileup", get_grouping(2));
+    std::vector<uint16_t> all_cell_ids = { 0, 1, 2, 3, 4, 5 };
     ASSERT_THAT(cell_ids, UnorderedElementsAreArray(all_cell_ids));
 
     ASSERT_EQ(3, data.size());
@@ -164,8 +165,8 @@ TEST(Reader, group_using_file) {
     std::unordered_set<uint32_t> cell_ids;
     uint32_t max_len;
     std::tie(data, cell_ids, max_len)
-            = read_pileup("data/six_cells.pileup", 1, "data/six_cells.pileup.group");
-    std::vector<uint16_t> all_cell_ids = { 0, 1 };
+            = read_pileup("data/six_cells.pileup", get_grouping(1, "data/six_cells.pileup.group"));
+    std::vector<uint16_t> all_cell_ids = { 0, 1, 2, 3, 4, 5 };
     ASSERT_THAT(cell_ids, UnorderedElementsAreArray(all_cell_ids));
 
     ASSERT_EQ(3, data.size());
@@ -193,7 +194,8 @@ TEST(Reader, group_using_file) {
         }
     }
 
-    check_binary("data/six_cells.pileup.bin", 1, "data/six_cells.pileup.group", data, cell_ids, max_len);
+    check_binary("data/six_cells.pileup.bin", 1, "data/six_cells.pileup.group", data, cell_ids,
+                 max_len);
 }
 
 } // namespace
