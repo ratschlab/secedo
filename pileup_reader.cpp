@@ -10,7 +10,9 @@
 constexpr bool simplify = true;
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup_text(const std::string fname, const std::vector<uint16_t> &id_to_group) {
+read_pileup_text(const std::string fname,
+                 const std::vector<uint16_t> &id_to_group,
+                 const std::function<void(uint64_t)> &progress) {
     std::vector<PosData> result;
 
     std::ofstream out_bin(fname + ".bin", std::ios::binary);
@@ -28,8 +30,12 @@ read_pileup_text(const std::string fname, const std::vector<uint16_t> &id_to_gro
     std::unordered_map<std::string, uint32_t> id_map;
     std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> id_stats;
     uint32_t id_count = 0;
+    uint64_t read_bytes = 0;
     // process position by position
     while (std::getline(f, line)) {
+        read_bytes = (line.size() + 1);
+        progress(read_bytes);
+
         // parse the data, split by tabs
         std::vector<std::string> splitLine = split(line, '\t');
 
@@ -92,14 +98,17 @@ read_pileup_text(const std::string fname, const std::vector<uint16_t> &id_to_gro
     for (const auto &[k, v] : id_stats) {
         max_length = std::max(max_length, v.second - v.first);
     }
-    logger()->trace("{}: found {} cell ids, {} reads. Longest read has {} bases", fname,
-                    all_cell_ids.size(), id_stats.size(), max_length);
+    logger()->trace("{}: found {} cell ids, {} after grouping, {} reads. Longest read has {} bases",
+                    fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(),
+                    max_length);
 
     return { result, all_cell_ids, max_length };
 }
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup_bin(const std::string fname, const std::vector<uint16_t> &id_to_group) {
+read_pileup_bin(const std::string fname,
+                const std::vector<uint16_t> &id_to_group,
+                const std::function<void(uint64_t)> &progress) {
     std::vector<PosData> result;
 
     if (!std::filesystem::exists(fname)) {
@@ -113,6 +122,9 @@ read_pileup_bin(const std::string fname, const std::vector<uint16_t> &id_to_grou
     std::unordered_set<uint32_t> all_cell_ids_grouped;
 
     std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> id_stats;
+
+    uint64_t read_bytes = 0;
+    uint64_t reported_bytes = 0;
 
     while (f.good()) {
         uint8_t chromosome;
@@ -132,6 +144,14 @@ read_pileup_bin(const std::string fname, const std::vector<uint16_t> &id_to_grou
         f.read(bases.data(), bases.size());
         f.read(reinterpret_cast<char *>(cell_ids.data()), cell_ids.size() * sizeof(cell_ids[0]));
         f.read(reinterpret_cast<char *>(read_ids.data()), read_ids.size() * sizeof(read_ids[0]));
+
+        // report progress
+        read_bytes = f.tellg();
+        if ((int64_t )read_bytes == -1 ) { // end of file
+            read_bytes = std::filesystem::file_size(fname);
+        }
+        progress(read_bytes - reported_bytes);
+        reported_bytes = read_bytes;
 
         for (const uint16_t id : cell_ids) {
             all_cell_ids.insert(id);
@@ -172,9 +192,11 @@ read_pileup_bin(const std::string fname, const std::vector<uint16_t> &id_to_grou
 }
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
-read_pileup(const std::string fname, const std::vector<uint16_t> &id_to_group) {
-    return ends_with(fname, ".bin") ? read_pileup_bin(fname, id_to_group)
-                                    : read_pileup_text(fname, id_to_group);
+read_pileup(const std::string fname,
+            const std::vector<uint16_t> &id_to_group,
+            const std::function<void(uint64_t)> &progress) {
+    return ends_with(fname, ".bin") ? read_pileup_bin(fname, id_to_group, progress)
+                                    : read_pileup_text(fname, id_to_group, progress);
 }
 
 
