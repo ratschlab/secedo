@@ -32,7 +32,7 @@
  * in the case of overlapping paired end reads, it simply selects the first read, even if the reads
  * are different. If false, overlapping paired end reads with mismatches are ignored.
  */
-constexpr bool emulate_python = true;
+constexpr bool emulate_python = false;
 
 /** Caches a bunch of combinations and powers used again and again in the computation */
 struct Cache {
