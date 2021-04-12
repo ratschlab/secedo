@@ -2,6 +2,7 @@
 
 #include "sequenced_data.hpp"
 
+#include <functional>
 #include <string>
 #include <unordered_set>
 

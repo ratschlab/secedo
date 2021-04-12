@@ -4,7 +4,6 @@
 #include "util.hpp"
 
 #include <filesystem>
-#include <functional>
 #include <iostream>
 #include <vector>
 
