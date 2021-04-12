@@ -112,7 +112,7 @@ bool spectral_clustering(const Matd &similarity,
 
     // save the first 20 eigenvalues
     std::ofstream f("laplacian_eigenvalues");
-    f << eigenvalues(0ull, std::min(20ull, eigenvalues.n_cols - 1));
+    f << eigenvalues(0ull, std::min(20ull, eigenvalues.n_cols - 1ull));
     f.close();
 
     // print the second and third smallest eigenVectors
@@ -164,7 +164,7 @@ bool spectral_clustering(const Matd &similarity,
         *cluster = get_probabilities(gmm2, cell_coord, 0);
     } else if (clustering == "SPECTRAL2" || clustering == "SPECTRAL6") {
         uint64_t col_idx = clustering == "SPECTRAL2" ? 1 : 5;
-        arma::mat ev = eigenvectors.cols(0, std::min(col_idx, eigenvectors.n_cols - 1));
+        arma::mat ev = eigenvectors.cols(0, std::min(col_idx, static_cast<uint64_t>(eigenvectors.n_cols - 1)));
         // normalize each row
         for (uint32_t i = 0; i < ev.n_rows; ++i) {
             double norm = arma::norm(ev.row(i));
