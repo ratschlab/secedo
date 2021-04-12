@@ -244,10 +244,8 @@ int main(int argc, char *argv[]) {
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i])
-                = read_pileup(mpileup_files[i], id_to_group, [&read_progress](uint32_t progress) {
-#pragma omp critical
-                      { read_progress += progress; }
-                  });
+                = read_pileup(mpileup_files[i], id_to_group,
+                              [&read_progress](uint32_t progress) { read_progress += progress; });
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
 
