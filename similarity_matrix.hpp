@@ -22,9 +22,18 @@ enum class Normalization {
  *
  * @param pos_data for each chromosome and each position, all the reads for that position (from all
  * cells)
- * @param max_read_length the maximum read length in the processed files (typically around 600
- * bases). This value is used to figure out when reads have ended and can be processed.
- * @param cell_id_to_cell_idx
+ * @param max_fragment_length the maximum DNA fragment length in the processed files (typically
+ * around 600 bases). This value is used to figure out when reads have ended and can be processed. A
+ * note on terminology: Illumina sequencing involves chopping the DNA into *fragments*, which vary
+ * in size from ~50 to ~600. Each fragment is then being read from both ends (that's called a paired
+ * end read). The machine reads 100 base paires from each end (so 200 total). If the DNA fragment
+ * happens to be shorter than 200, then some reads will overlap. If the DAN fragment happens to be
+ * longer than 200, then the middle of the fragment won't be processed. This unprocessed part is
+ * called the "insert" and its length the "insert length".
+ * @param cell_id_to_cell_idx re-maps the original cell ids (as they appear in #pos_data) so that
+ * they form a continuous sequence starting with 0. At the first clustering step, this mapping is
+ * simply the identity. At subsequent clustering steps, it maps the cells in the cluster to
+ * 0..cell_count.
  * @param mutation_rate estimated mutation rate
  * @param heterozygous_rate estimated probability that a loci is heterozygous
  * @param seq_error_rate estimated error rate in the sequencing technology
@@ -38,7 +47,7 @@ enum class Normalization {
  */
 Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t num_cells,
-                             uint32_t max_read_length,
+                             uint32_t max_fragment_length,
                              const std::vector<uint32_t> &cell_id_to_cell_idx,
                              double mutation_rate,
                              double heterozygous_rate,

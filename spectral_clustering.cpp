@@ -147,7 +147,6 @@ bool spectral_clustering(const Matd &similarity,
     // GMM with 2 components
     arma::gmm_full gmm2;
 
-    // Using Mahalanobis distance here, but worth trying Euclidean on real data
     bool status2 = gmm2.learn(cell_coord, 2 /* components */, arma::maha_dist, arma::random_subset,
                               10, 5, 1e-10, false);
 

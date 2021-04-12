@@ -289,7 +289,7 @@ void normalize(const std::string &normalization, Matd *similarity_matrix) {
  */
 Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t num_cells,
-                             uint32_t max_read_length,
+                             uint32_t max_fragment_length,
                              const std::vector<uint32_t> &cell_id_to_cell_idx,
                              double mutation_rate,
                              double heterozygous_rate,
@@ -321,15 +321,15 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
 
     // arrays with values of already computed probabilities, max_double if not yet computed
     Matd log_probs_same
-            = Matd::fill(max_read_length, max_read_length, std::numeric_limits<double>::max());
+            = Matd::fill(max_fragment_length, max_fragment_length, std::numeric_limits<double>::max());
     Matd log_probs_diff
-            = Matd::fill(max_read_length, max_read_length, std::numeric_limits<double>::max());
+            = Matd::fill(max_fragment_length, max_fragment_length, std::numeric_limits<double>::max());
 
     // count how many times we have seen a given combination of identical (x_s) and different (x_d)
     // bases in all pairs of overlapping reads
     std::vector<Mat32u> combs_xs_xd(num_threads);
     for (auto &c : combs_xs_xd) {
-        c = Mat32u::zeros(max_read_length, max_read_length);
+        c = Mat32u::zeros(max_fragment_length, max_fragment_length);
     }
 
     // key: read id of an active read
@@ -337,7 +337,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     std::unordered_map<std::string, Read> active_reads;
 
     Cache cache(mutation_rate, heterozygous_rate, seq_error_rate,
-                max_read_length); // store intermediate values to avoid recomputation
+                max_fragment_length); // store intermediate values to avoid recomputation
 
     uint64_t total_positions = 0;
     for (const auto &v : pos_data) {
@@ -346,13 +346,13 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
 
     ProgressBar read_progress(total_positions, "Processed;", std::cout);
     std::deque<std::string> active_keys;
-    // the number of completed reads, i.e. reads that started FLAGS_max_read_size ago
+    // the number of completed DNA fragments, i.e. reads that started max_fragment_length ago
     uint32_t completed = 0;
     for (const auto &chromosome_data : pos_data) {
         for (const PosData &pd : chromosome_data) {
             // update the number of complete reads
             for (uint32_t i = completed; i < active_keys.size()
-                 && active_reads[active_keys[i]].pos[0] + max_read_length <= pd.position;
+                 && active_reads[active_keys[i]].pos[0] + max_fragment_length <= pd.position;
                  ++i) {
                 ++completed;
             }
@@ -363,7 +363,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
 #pragma omp parallel for schedule(static, BATCH_SIZE) num_threads(num_threads)
                 for (uint32_t i = 0; i < completed; ++i) {
                     // compute its overlaps with all other active reads, i.e. all
-                    // reads that have some bases in the last max_read_length positions
+                    // reads that have some bases in the last max_fragment_length positions
                     compare_with_reads(active_reads, active_keys, i, cell_id_to_cell_idx, cache,
                                        updates_same, updates_diff, log_probs_same, log_probs_diff,
                                        combs_xs_xd[omp_get_thread_num()]);
@@ -426,7 +426,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
 
     apply_updates(updates_same, mat_same);
     apply_updates(updates_diff, mat_diff);
-    Mat32u combs_all = Mat32u::zeros(max_read_length, max_read_length);
+    Mat32u combs_all = Mat32u::zeros(max_fragment_length, max_fragment_length);
     for (const auto &comb : combs_xs_xd) {
         combs_all += comb;
     }

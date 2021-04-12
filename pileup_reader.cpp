@@ -121,6 +121,7 @@ read_pileup_bin(const std::string fname,
     std::unordered_set<uint32_t> all_cell_ids;
     std::unordered_set<uint32_t> all_cell_ids_grouped;
 
+    // maps read ids to a (first,last) pair (in order to find the longest DNA fragment)
     std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> id_stats;
 
     uint64_t read_bytes = 0;

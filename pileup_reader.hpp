@@ -14,8 +14,11 @@
  * consecutive cells together (this assumes that consecutive cell ids are part of the same cluster)
  * @param progress callback that is invoked to report the number of bytes processed (e.g. for
  * reporting progress in the caller)
- * @return a tuple containing a vector with the reads at each position, all the cell ids and the
- * maximum read length
+ * @return a tuple containing:
+ *    1. a vector with the reads at each position
+ *    2. all the cell ids
+ *    3. the longest DNA fragment length (this will help us later decide when a fragment is fully
+ * processed)
  */
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t> read_pileup(
         const std::string fname,
