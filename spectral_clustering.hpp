@@ -27,6 +27,10 @@ enum class ClusteringType {
      */
     SPECTRAL2,
     /**
+     * Spectral clustering with the first 6 eigenvectors
+     */
+    SPECTRAL6,
+    /**
      * Use the probabilities given by the Gaussian Mixture Model
      */
     GMM_PROB,
@@ -57,6 +61,6 @@ Matd laplacian(const Matd &a);
  * @return true if clustering into 2 groups explains the data better, false otherwise
  */
 bool spectral_clustering(const Matd &similarity,
-                         const ClusteringType &clustering,
+                         const std::string &clustering,
                          const Termination &termination,
                          std::vector<double> *cluster);

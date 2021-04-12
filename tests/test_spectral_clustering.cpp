@@ -9,7 +9,7 @@
 namespace {
 using namespace testing;
 
-class SpectralClustering : public testing::TestWithParam<std::pair<ClusteringType, Termination>> {};
+class SpectralClustering : public testing::TestWithParam<std::pair<std::string, Termination>> {};
 
 TEST(Laplacian, SomeMatrix) {
     Matd a(3, 3, { 0, .5, .2, .5, 0, .5, .2, .5, 0 });
@@ -90,7 +90,7 @@ TEST_P(SpectralClustering, TwoClusters) {
 
 TEST_P(SpectralClustering, ThreeClusters) {
     auto [clustering, termination] = GetParam();
-    if (clustering == ClusteringType::GMM_ASSIGN || clustering == ClusteringType::GMM_PROB) {
+    if (clustering == "GMM_ASSIGN" || clustering == "GMM_PROB") {
         return; // GMM doesn't work well on this data
     }
 
@@ -113,13 +113,13 @@ TEST_P(SpectralClustering, ThreeClusters) {
 INSTANTIATE_TEST_SUITE_P(
         Method,
         SpectralClustering,
-        ::testing::Values(std::make_pair(ClusteringType::SPECTRAL2, Termination::AIC),
-                          std::make_pair(ClusteringType::FIEDLER, Termination::AIC),
-                          std::make_pair(ClusteringType::GMM_ASSIGN, Termination::AIC),
-                          std::make_pair(ClusteringType::GMM_PROB, Termination::AIC),
-                          std::make_pair(ClusteringType::SPECTRAL2, Termination::BIC),
-                          std::make_pair(ClusteringType::FIEDLER, Termination::BIC),
-                          std::make_pair(ClusteringType::GMM_PROB, Termination::BIC),
-                          std::make_pair(ClusteringType::GMM_ASSIGN, Termination::BIC)));
+        ::testing::Values(std::make_pair("SPECTRAL2", Termination::AIC),
+                          std::make_pair("FIEDLER", Termination::AIC),
+                          std::make_pair("GMM_ASSIGN", Termination::AIC),
+                          std::make_pair("GMM_PROB", Termination::AIC),
+                          std::make_pair("SPECTRAL2", Termination::BIC),
+                          std::make_pair("FIEDLER", Termination::BIC),
+                          std::make_pair("GMM_PROB", Termination::BIC),
+                          std::make_pair("GMM_ASSIGN", Termination::BIC)));
 
 } // namespace

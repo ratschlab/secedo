@@ -56,6 +56,24 @@ DEFINE_string(merge_file,
               "File containing cell grouping. Cells in the same group are treated as if they were "
               "a single cell. Useful for artificially increasing coverage for testing.");
 
+DEFINE_string(clustering_type,
+              "SPECTRAL6",
+              "How to perform spectral clustering. One of FIEDLER, SPECTRAL2, SPECTRAL6, "
+              "GMM_ASSIGN, GMM_PROB. See spectral_clustering.hpp for details.");
+
+static bool ValidateClusteringType(const char *flagname, const std::string &value) {
+    if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6" && value != "GMM_PROB"
+        && value != "GMM_ASSIGN") {
+        printf("Invalid value for --%s: %s.\nShould be one of FIEDLER, SPECTRAL2, SPECTRAL6, "
+               "GMM_ASSIGN, GMM_PROB\n",
+               flagname, value.c_str());
+        return false;
+    }
+    return true;
+}
+
+DEFINE_validator(clustering_type, ValidateClusteringType);
+
 static bool ValidateNormalization(const char *flagname, const std::string &value) {
     if (value != "ADD_MIN" && value != "EXPONENTIATE" && value != "SCALE_MAX_1") {
         printf("Invalid value for --%s: %s.\nShould be one of ADD_MIN, EXPONENTIATE, SCALE_MAX_1\n",
@@ -100,8 +118,7 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
 
     logger()->info("Performing spectral clustering...");
     std::vector<double> cluster;
-    bool is_done
-            = spectral_clustering(sim_mat, ClusteringType::SPECTRAL2, Termination::AIC, &cluster);
+    bool is_done = spectral_clustering(sim_mat, FLAGS_clustering_type, Termination::AIC, &cluster);
     if (is_done) {
         return;
     }

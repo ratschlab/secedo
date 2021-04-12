@@ -91,7 +91,7 @@ double bic(const arma::gmm_full &gmm, const arma::mat &data) {
 }
 
 bool spectral_clustering(const Matd &similarity,
-                         const ClusteringType &clustering,
+                         const std::string &clustering,
                          const Termination &termination,
                          std::vector<double> *cluster) {
     cluster->resize(similarity.rows());
@@ -158,12 +158,13 @@ bool spectral_clustering(const Matd &similarity,
 
     // TODO: investigate using gmm with tied variances as in the Python version
 
-    if (clustering == ClusteringType::GMM_ASSIGN) {
+    if (clustering == "GMM_ASSIGN") {
         *cluster = get_assignments(gmm2, cell_coord, 0);
-    } else if (clustering == ClusteringType::GMM_PROB) {
+    } else if (clustering == "GMM_PROB") {
         *cluster = get_probabilities(gmm2, cell_coord, 0);
-    } else if (clustering == ClusteringType::SPECTRAL2) {
-        arma::mat ev = eigenvectors.cols(0, std::min(1ull, eigenvectors.n_cols - 1));
+    } else if (clustering == "SPECTRAL2" || clustering == "SPECTRAL6") {
+        uint64_t col_idx = clustering == "SPECTRAL2" ? 1 : 5;
+        arma::mat ev = eigenvectors.cols(0, std::min(col_idx, eigenvectors.n_cols - 1));
         // normalize each row
         for (uint32_t i = 0; i < ev.n_rows; ++i) {
             double norm = arma::norm(ev.row(i));
@@ -178,7 +179,7 @@ bool spectral_clustering(const Matd &similarity,
             (*cluster)[i]
                     = arma::norm(means.col(0) - ev.col(i)) > arma::norm(means.col(1) - ev.col(i));
         }
-    } else if (clustering == ClusteringType::FIEDLER) {
+    } else if (clustering == "FIEDLER") {
         // TODO: use the min-sparsity cut described in
         // https://people.eecs.berkeley.edu/~jrs/189s17/lec/22.pdf rather than the 0 cut
         arma::vec fiedler = eigenvectors.col(1);
