@@ -302,16 +302,27 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     Matd mat_same = Matd::zeros(num_cells, num_cells);
     Matd mat_diff = Matd::zeros(num_cells, num_cells);
 
+    std::string mat_same_fname = out_dir + "mat_same" + marker + ".csv";
+    std::string mat_diff_fname = out_dir + "mat_diff" + marker + ".csv";
     std::string sim_mat_fname = out_dir + "sim_mat" + marker + ".csv";
-    if (std::filesystem::exists(sim_mat_fname)) {
-        logger()->info("Using existing similarity matrix: {}", sim_mat_fname);
-        mat_diff = read_mat(sim_mat_fname);
-        if (mat_diff.rows() == num_cells) {
-            return mat_diff;
+
+    if (std::filesystem::exists(mat_same_fname) && std::filesystem::exists(mat_diff_fname)) {
+        logger()->info("Using existing similarity matrix: {}/{}", mat_same_fname, mat_diff_fname);
+        mat_diff = read_mat(mat_diff_fname);
+        mat_same = read_mat(mat_same_fname);
+        if (mat_diff.rows() != num_cells || mat_same.rows() != num_cells) {
+            std::filesystem::remove(mat_diff_fname);
+            std::filesystem::remove(mat_same_fname);
+            logger()->warn(
+                    "Existing mat_diff/mat_same are invalid. Removing and re-computing similarity "
+                    "matrix");
+            mat_diff = Matd::zeros(num_cells, num_cells);
+            mat_same = Matd::zeros(num_cells, num_cells);
         }
-        std::filesystem::remove(sim_mat_fname);
-        logger()->warn("{} is invalid. Removing and re-computing similarity matrix", sim_mat_fname);
-        mat_diff = Matd::zeros(num_cells, num_cells);
+        mat_diff -= mat_same;
+        normalize(normalization, &mat_diff);
+        write_mat(sim_mat_fname, mat_diff);
+        return mat_diff;
     }
 
 
@@ -320,10 +331,10 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     Vec2<std::tuple<uint32_t, uint32_t, double>> updates_diff(num_threads);
 
     // arrays with values of already computed probabilities, max_double if not yet computed
-    Matd log_probs_same
-            = Matd::fill(max_fragment_length, max_fragment_length, std::numeric_limits<double>::max());
-    Matd log_probs_diff
-            = Matd::fill(max_fragment_length, max_fragment_length, std::numeric_limits<double>::max());
+    Matd log_probs_same = Matd::fill(max_fragment_length, max_fragment_length,
+                                     std::numeric_limits<double>::max());
+    Matd log_probs_diff = Matd::fill(max_fragment_length, max_fragment_length,
+                                     std::numeric_limits<double>::max());
 
     // count how many times we have seen a given combination of identical (x_s) and different (x_d)
     // bases in all pairs of overlapping reads
@@ -432,8 +443,8 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     }
 
     // write mat_same and mat_diff onto disk for inspection
-    write_mat(out_dir + "mat_same" + marker + ".csv", mat_same);
-    write_mat(out_dir + "mat_diff" + marker + ".csv", mat_diff);
+    write_mat(mat_same_fname, mat_same);
+    write_mat(mat_diff_fname, mat_diff);
     write_mat(out_dir + "combs_xs_xd" + marker + ".csv", combs_all);
 
     // compute log(P(diff)/P(same))
