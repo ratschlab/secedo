@@ -163,7 +163,7 @@ bool spectral_clustering(const Matd &similarity,
     } else if (clustering == "GMM_PROB") {
         *cluster = get_probabilities(gmm2, cell_coord, 0);
     } else if (clustering == "SPECTRAL2" || clustering == "SPECTRAL6") {
-        uint64_t col_idx = clustering == "SPECTRAL2" ? 1 : 5;
+        uint64_t col_idx = clustering == "SPECTRAL2" ? 1 : 4;
         arma::mat ev = eigenvectors.cols(0, std::min(col_idx, static_cast<uint64_t>(eigenvectors.n_cols - 1)));
         // normalize each row
         for (uint32_t i = 0; i < ev.n_rows; ++i) {
