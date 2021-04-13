@@ -93,6 +93,8 @@ double bic(const arma::gmm_full &gmm, const arma::mat &data) {
 bool spectral_clustering(const Matd &similarity,
                          const std::string &clustering,
                          const Termination &termination,
+                         const std::string &out_dir,
+                         const std::string &marker,
                          std::vector<double> *cluster) {
     cluster->resize(similarity.rows());
 
@@ -111,14 +113,14 @@ bool spectral_clustering(const Matd &similarity,
     arma::eig_sym(eigenvalues, eigenvectors, lap);
 
     // save the first 20 eigenvalues
-    std::ofstream f("laplacian_eigenvalues");
+    std::ofstream f(out_dir + "sim_mat_eigenvalues" + marker + ".csv");
     f << eigenvalues(0ull, std::min(20ull, eigenvalues.n_cols - 1ull));
     f.close();
 
     // print the second and third smallest eigenVectors
     if (eigenvectors.n_cols > 2) {
-        f.open("laplacian_eigenvectors");
-        f << eigenvectors.cols(0, 2) << std::endl;
+        f.open(out_dir + "sim_mat_eigenvectors" + marker + ".csv");
+        f << eigenvectors << std::endl;
         f.close();
     }
 
