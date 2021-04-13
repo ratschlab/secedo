@@ -63,4 +63,6 @@ Matd laplacian(const Matd &a);
 bool spectral_clustering(const Matd &similarity,
                          const std::string &clustering,
                          const Termination &termination,
+                         const std::string &out_dir,
+                         const std::string &marker,
                          std::vector<double> *cluster);

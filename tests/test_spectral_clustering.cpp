@@ -43,7 +43,7 @@ TEST_P(SpectralClustering, OneCluster) {
             }
         }
 
-        if (spectral_clustering(similarity, clustering, termination, &cluster)) {
+        if (spectral_clustering(similarity, clustering, termination, "./", "", &cluster)) {
             count_done++;
         }
     }
@@ -76,7 +76,7 @@ TEST_P(SpectralClustering, TwoClusters) {
         }
     }
 
-    bool done = spectral_clustering(similarity, clustering, termination, &cluster);
+    bool done = spectral_clustering(similarity, clustering, termination, "./", "", &cluster);
 
     ASSERT_FALSE(done); // the split should be successful
     for (uint32_t i = 0; i < half - 1; ++i) {
@@ -102,7 +102,7 @@ TEST_P(SpectralClustering, ThreeClusters) {
                     { 0.,  1,   0.1, 0.1, 0, 0, 1., 0, 0.1, 0.1, 0, 0, 0.1, 0.1, 0, 1, 0, 0,
                       0.1, 0.1, 1,   0,   0, 0, 0,  0, 0,   0,   0, 1, 0,   0,   0, 0, 1, 0 });
 
-    bool done = spectral_clustering(similarity, clustering, termination, &cluster);
+    bool done = spectral_clustering(similarity, clustering, termination, "./", "", &cluster);
 
     ASSERT_FALSE(done); // we clearly have 2 clusters
     ASSERT_THAT(std::vector(cluster.begin(), cluster.begin() + 4), Each(cluster[0]));

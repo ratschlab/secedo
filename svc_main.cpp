@@ -118,7 +118,8 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
 
     logger()->info("Performing spectral clustering...");
     std::vector<double> cluster;
-    bool is_done = spectral_clustering(sim_mat, FLAGS_clustering_type, Termination::AIC, &cluster);
+    bool is_done = spectral_clustering(sim_mat, FLAGS_clustering_type, Termination::AIC, FLAGS_o,
+                                       marker, &cluster);
     if (is_done) {
         return;
     }
