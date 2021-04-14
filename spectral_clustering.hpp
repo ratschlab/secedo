@@ -45,7 +45,8 @@ enum class ClusteringType {
 /**
  * Computes the symmetric normalized Laplacian of matrix a
  * @param a input matrix
- * @return the symmetric normalized Laplacian
+ * @return the symmetric normalized Laplacian, I - D^0.5 * a * D^0.5, where D is the diagonal degree
+ * matrix. The returned matrix is guaranteed to be symmetrical.
  */
 Matd laplacian(const Matd &a);
 

@@ -273,6 +273,7 @@ void normalize(const std::string &normalization, Matd *similarity_matrix) {
             sim_mat.exp();
             sim_mat += 1;
             sim_mat.inv();
+            sim_mat.fill_diagonal(0);
             break;
         case Normalization::SCALE_MAX_1:
             // scale the exponentiated version so that max. element (excluding diagonal) is 1

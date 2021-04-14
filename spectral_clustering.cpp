@@ -13,6 +13,7 @@ Matd laplacian(const Matd &a) {
     for (uint32_t r = 0; r < a.rows(); ++r) {
         assert(a(r, r) == 0); // diagonal elements MUST be zero
         for (uint32_t c = 0; c < a.cols(); ++c) {
+            assert(a(r,c) == a(c,r));
             diag[r] += a(r, c);
         }
     }
@@ -20,8 +21,9 @@ Matd laplacian(const Matd &a) {
                    [](double v) { return 1 / std::sqrt(v); });
     Matd result = Matd::zeros(a.rows(), a.rows());
     for (uint32_t r = 0; r < a.rows(); ++r) {
-        for (uint32_t c = 0; c < a.cols(); ++c) {
+        for (uint32_t c = 0; c <= r; ++c) {
             result(r, c) = (r == c ? 1 : 0) - diag[r] * diag[c] * a(r, c);
+            result(c, r) = result(r,c);
         }
     }
     return result;
@@ -149,7 +151,7 @@ bool spectral_clustering(const Matd &similarity,
     // GMM with 2 components
     arma::gmm_full gmm2;
 
-    bool status2 = gmm2.learn(cell_coord, 2 /* components */, arma::maha_dist, arma::random_subset,
+    bool status2 = gmm2.learn(cell_coord, 2 /* components */, arma::eucl_dist, arma::random_subset,
                               10, 5, 1e-10, false);
 
     double aic2 = aic(gmm2, cell_coord);
