@@ -12,7 +12,8 @@ constexpr bool simplify = true;
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup_text(const std::string fname,
                  const std::vector<uint16_t> &id_to_group,
-                 const std::function<void(uint64_t)> &progress) {
+                 const std::function<void(uint64_t)> &progress,
+                 uint32_t max_coverage) {
     std::vector<PosData> result;
 
     std::ofstream out_bin(fname + ".bin", std::ios::binary);
@@ -45,6 +46,10 @@ read_pileup_text(const std::string fname,
         std::string bases = splitLine[3];
         // 5th column: cell ids the cell from which the reads are coming, comma separated
         std::vector<uint16_t> cell_ids = int_split<uint16_t>(splitLine[4], ',');
+
+        if (cell_ids.size() > max_coverage) {
+            continue;
+        }
 
         for (const uint16_t id : cell_ids) {
             all_cell_ids.insert(id);
@@ -108,7 +113,8 @@ read_pileup_text(const std::string fname,
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup_bin(const std::string fname,
                 const std::vector<uint16_t> &id_to_group,
-                const std::function<void(uint64_t)> &progress) {
+                const std::function<void(uint64_t)> &progress,
+                uint32_t max_coverage) {
     std::vector<PosData> result;
 
     if (!std::filesystem::exists(fname)) {
@@ -154,6 +160,10 @@ read_pileup_bin(const std::string fname,
         progress(read_bytes - reported_bytes);
         reported_bytes = read_bytes;
 
+        if (coverage > max_coverage) {
+            continue;
+        }
+
         for (const uint16_t id : cell_ids) {
             all_cell_ids.insert(id);
             all_cell_ids_grouped.insert(id_to_group[id]);
@@ -195,9 +205,10 @@ read_pileup_bin(const std::string fname,
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup(const std::string fname,
             const std::vector<uint16_t> &id_to_group,
-            const std::function<void(uint64_t)> &progress) {
-    return ends_with(fname, ".bin") ? read_pileup_bin(fname, id_to_group, progress)
-                                    : read_pileup_text(fname, id_to_group, progress);
+            const std::function<void(uint64_t)> &progress,
+            uint32_t max_coverage) {
+    return ends_with(fname, ".bin") ? read_pileup_bin(fname, id_to_group, progress, max_coverage)
+                                    : read_pileup_text(fname, id_to_group, progress, max_coverage);
 }
 
 

@@ -23,7 +23,8 @@
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t> read_pileup(
         const std::string fname,
         const std::vector<uint16_t> &id_to_group,
-        const std::function<void(uint64_t)> &progress = [](uint32_t) {});
+        const std::function<void(uint64_t)> &progress = [](uint32_t) {},
+        uint32_t max_coverage = 100);
 
 
 /**

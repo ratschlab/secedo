@@ -91,6 +91,10 @@ DEFINE_uint32(max_cell_count,
               10'000,
               "Maximum expected cell count, used to initialize the cell grouping");
 
+DEFINE_uint32(max_coverage,
+              100,
+              "Positions with higher coverage are considered anomalies and discarded");
+
 constexpr uint16_t NO_POS = std::numeric_limits<uint16_t>::max();
 
 void divide(const std::vector<std::vector<PosData>> &pos_data,
@@ -263,7 +267,7 @@ int main(int argc, char *argv[]) {
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i])
                 = read_pileup(mpileup_files[i], id_to_group,
-                              [&read_progress](uint32_t progress) { read_progress += progress; });
+                              [&read_progress](uint32_t progress) { read_progress += progress; }, FLAGS_max_coverage);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
 
