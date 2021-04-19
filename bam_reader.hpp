@@ -53,8 +53,8 @@ bool read_thread(const std::unordered_map<std::string, uint16_t> &fname_to_id,
         al.BuildCharData();
         auto read_id_iter = read_name_to_id.find(al.Name);
         uint64_t read_id;
-        read_id = (read_id_iter == read_name_to_id.end()) ? read_id = (*last_read_id)++
-                                                          : read_id = read_id_iter->second;
+        read_id = (read_id_iter == read_name_to_id.end()) ? (*last_read_id)++
+                                                          : read_id_iter->second;
         for (uint32_t i = 0; i < al.AlignedBases.size(); ++i) {
             uint8_t base = CharToInt[(uint8_t)al.AlignedBases[al.Position + i]];
             if (base == 5) {
@@ -75,7 +75,7 @@ bool read_thread(const std::unordered_map<std::string, uint16_t> &fname_to_id,
 }
 
 std::vector<PosData> read_bams(const std::vector<std::filesystem::path> &inputFilenames,
-                               const std::filesystem::path& outfile,
+                               const std::filesystem::path &outfile,
                                uint32_t chromosome_id,
                                uint32_t max_coverage,
                                uint32_t num_threads,
@@ -149,12 +149,12 @@ std::vector<PosData> read_bams(const std::vector<std::filesystem::path> &inputFi
                 continue;
             }
             fout << start_pos + pos << "\t";
-            for (const CellData& cd : data[pos]) {
+            for (const CellData &cd : data[pos]) {
                 fout << cd.cell_id << ",";
             }
             fout << "\t";
 
-            for (const CellData& cd : data[pos]) {
+            for (const CellData &cd : data[pos]) {
                 fout << IntToChar[cd.base] << ",";
             }
             fout << std::endl;
