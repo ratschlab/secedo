@@ -622,8 +622,8 @@ bool BamMultiReaderPrivate::PopNextCachedAlignment(BamAlignment& al, const bool 
     // set char data if requested
     if (needCharData) {
         alignment->BuildCharData();
-        alignment->Filename = reader->GetFilename();
     }
+    alignment->Filename = reader->GetFilename();
 
     // store cached alignment into destination parameter (by copy)
     al = *alignment;
