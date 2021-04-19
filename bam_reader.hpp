@@ -145,9 +145,7 @@ std::vector<PosData> read_bams(const std::vector<std::filesystem::path> &inputFi
             for (const auto &cell_data : data[pos]) {
                 base_count[cell_data.base]++;
             }
-            if (!is_significant(base_count, sequencing_error_rate)) {
-                continue;
-            }
+
             fout << start_pos + pos << "\t";
             for (const CellData &cd : data[pos]) {
                 fout << cd.cell_id << ",";
@@ -158,6 +156,10 @@ std::vector<PosData> read_bams(const std::vector<std::filesystem::path> &inputFi
                 fout << IntToChar[cd.base] << ",";
             }
             fout << std::endl;
+
+            if (!is_significant(base_count, sequencing_error_rate)) {
+                continue;
+            }
 
             result.push_back({ start_pos + pos, std::move(data[pos]) });
         }
