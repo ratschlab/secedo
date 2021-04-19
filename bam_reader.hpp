@@ -101,6 +101,8 @@ std::vector<PosData> read_bams(const std::vector<std::filesystem::path> &inputFi
 
     size_t batch_size = std::max(1UL, inputFilenames.size() / num_threads);
 
+    logger()->trace("Reading {} files on {} threads", batch_size, num_threads);
+
     uint32_t cell_id = 0;
     std::unordered_map<std::string, uint16_t> fname_to_id;
     for (const auto &fname : inputFilenames) {
