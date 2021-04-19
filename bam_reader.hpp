@@ -101,7 +101,7 @@ std::vector<PosData> read_bams(const std::vector<std::filesystem::path> &inputFi
 
     size_t batch_size = std::max(1UL, inputFilenames.size() / num_threads);
 
-    logger()->trace("Reading {} files on {} threads", batch_size, num_threads);
+    logger()->trace("Reading chunks of ~{} files on {} threads", batch_size, num_threads);
 
     uint32_t cell_id = 0;
     std::unordered_map<std::string, uint16_t> fname_to_id;
@@ -122,6 +122,7 @@ std::vector<PosData> read_bams(const std::vector<std::filesystem::path> &inputFi
             logger()->error("Could not open input BAM files.");
             std::exit(1);
         }
+        std::cout << "." << std::flush;
         assert(reader->GetMergeOrder() == BamTools::BamMultiReader::MergeOrder::MergeByCoordinate);
 
         std::vector<std::string> index_fnames;
