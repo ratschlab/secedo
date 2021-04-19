@@ -42,9 +42,10 @@ double log_fact(uint32_t n) {
 
 /** Decides if a given position is worth keeping, i.e. it will be useful in distinguishing cells.
  * @param base_count counts of A,C,G, and T in the pooled data at a fixed position
+ * @param theta sequencing error rate (e.g. ~0.01 on Illumina machines)
  * @return True if the position is kept
  */
-bool is_significant(std::array<uint32_t, 4> &base_count, double theta) {
+bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
     static double log_theta = std::log(theta / 3);
     static double log_one_minus_theta = std::log(1 - theta);
 
@@ -78,7 +79,7 @@ bool is_significant(std::array<uint32_t, 4> &base_count, double theta) {
 }
 
 bool is_significant(const PosData &pos_data, double theta, uint32_t *coverage) {
-    std::array<uint32_t, 4> base_count = { 0, 0, 0, 0 };
+    std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
     for (const auto &cd : pos_data.cells_data) {
         base_count[cd.base]++;
     }

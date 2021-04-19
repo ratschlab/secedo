@@ -21,6 +21,8 @@ constexpr uint8_t CharToInt[128]
             5, 5, 5, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 5, 1, 5, 5, 5, 2,
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 };
 
+constexpr char IntToChar[4] = {'A', 'C', 'G', 'T'};
+
 template <typename T>
 using Vec2 = std::vector<std::vector<T>>;
 using Vec2d = Vec2<double>;

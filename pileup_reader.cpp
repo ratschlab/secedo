@@ -103,7 +103,7 @@ read_pileup_text(const std::string fname,
     for (const auto &[k, v] : id_stats) {
         max_length = std::max(max_length, v.second - v.first);
     }
-    logger()->trace("{}: found {} cell ids, {} after grouping, {} reads. Longest read has {} bases",
+    logger()->trace("{}: found {} cell ids, {} after grouping, {} reads. Longest fragment is {} bases",
                     fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(),
                     max_length);
 
@@ -195,7 +195,7 @@ read_pileup_bin(const std::string fname,
         max_length = std::max(max_length, v.second - v.first);
     }
 
-    logger()->trace("{}: found {} cell ids, {} after grouping, {} reads. Longest read has {} bases",
+    logger()->trace("{}: found {} cell ids, {} after grouping, {} reads. Longest fragment is {} bases",
                     fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(),
                     max_length);
 
