@@ -132,6 +132,7 @@ std::vector<PosData> read_bams(const std::vector<std::filesystem::path> &inputFi
     }
     std::vector<PosData> result;
     while (true) {
+        logger()->trace("Next chunk");
         bool is_done = true;
         // #pragma omp parallel for num_threads(num_threads)
         for (uint32_t i = 0; i < readers.size(); ++i) {
@@ -149,10 +150,6 @@ std::vector<PosData> read_bams(const std::vector<std::filesystem::path> &inputFi
                 base_count[data[pos][i].base]++;
             }
 
-            if (!is_significant(base_count, sequencing_error_rate)) {
-                continue;
-            }
-
             fout << "Size: " << data_size[pos] << "\t Start pos: " << start_pos + pos
                  << "\tCell ids: ";
             for (uint32_t i = 0; i < data_size[pos]; ++i) {
@@ -164,6 +161,10 @@ std::vector<PosData> read_bams(const std::vector<std::filesystem::path> &inputFi
                 fout << IntToChar[data[pos][i].base];
             }
             fout << std::endl;
+
+            if (!is_significant(base_count, sequencing_error_rate)) {
+                continue;
+            }
 
             result.push_back({ start_pos + pos, data[pos] });
         }
