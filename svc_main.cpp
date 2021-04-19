@@ -244,7 +244,6 @@ int main(int argc, char *argv[]) {
         input_files = get_files(FLAGS_i, ".bam");
         if (input_files.empty()) {
             logger()->info("No BAM files found. Looking for binary pileup files...");
-        } else {
             input_files = get_files(FLAGS_i, ".bin");
             if (input_files.empty()) {
                 logger()->info("No binary pileup files found. Looking for textual pileup files...");
