@@ -148,7 +148,7 @@ std::vector<PosData> read_bam_chunk(const std::vector<std::filesystem::path> &in
     std::vector<PosData> result;
     while (true) {
         bool is_done = true;
-//#pragma omp parallel for num_threads(num_threads)
+#pragma omp parallel for num_threads(num_threads)
         for (uint32_t i = 0; i < readers.size(); ++i) {
             is_done &= read_thread(fname_to_id, max_coverage, chromosome_id, start_pos,
                                    start_pos + CHUNK_SIZE, *readers[i], &data, &data_size,
