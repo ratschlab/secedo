@@ -8,6 +8,8 @@
 
 #include <api/BamMultiReader.h>
 #include <api/BamWriter.h>
+#include <progress_bar/progress_bar.hpp>
+
 
 #include <array>
 #include <atomic>
@@ -115,6 +117,9 @@ std::vector<PosData> read_bam_chunk(const std::vector<std::filesystem::path> &in
 
     std::vector<std::unique_ptr<BamTools::BamMultiReader>> readers;
 
+    size_t curr_pos = 0; // current position in the input files (for measuring progress)
+    size_t end_pos = 0; // end position in the input files
+
     auto beg = input_files.begin();
     while (beg != input_files.end()) {
         auto end = beg + std::min(batch_size, static_cast<size_t>(input_files.end() - beg));
@@ -126,7 +131,6 @@ std::vector<PosData> read_bam_chunk(const std::vector<std::filesystem::path> &in
             logger()->error("Could not open input BAM files.");
             std::exit(1);
         }
-        std::cout << "." << std::flush;
         assert(reader->GetMergeOrder() == BamTools::BamMultiReader::MergeOrder::MergeByCoordinate);
 
         std::vector<std::string> index_fnames;
@@ -134,14 +138,18 @@ std::vector<PosData> read_bam_chunk(const std::vector<std::filesystem::path> &in
             index_fnames.push_back(fname + ".bai");
         }
         reader->OpenIndexes(index_fnames);
+        // jump to the beginning of next chromosome to figure out how much data we need to read
+        reader->Jump(chromosome_id + 1);
+        end_pos += reader->GetPosInFile();
+        // jump back to the current chromosome
         reader->Jump(chromosome_id);
+        curr_pos += reader->GetPosInFile();
         readers.push_back(std::move(reader));
     }
+
+    ProgressBar read_progress(end_pos - curr_pos, "Reading progress", std::cout);
+
     std::vector<PosData> result;
-    size_t file_pos = 0;
-    for (const auto &r : readers) {
-        file_pos += r->GetPosInFile();
-    }
     while (true) {
         bool is_done = true;
         // #pragma omp parallel for num_threads(num_threads)
@@ -195,8 +203,8 @@ std::vector<PosData> read_bam_chunk(const std::vector<std::filesystem::path> &in
         for (const auto &r : readers) {
             new_file_pos += r->GetPosInFile();
         }
-        progress(new_file_pos - file_pos);
-        file_pos = new_file_pos;
+        read_progress += (new_file_pos - curr_pos);
+        curr_pos = new_file_pos;
     }
     return result;
 }
@@ -256,7 +264,8 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
     auto beg = input_files.begin();
     uint32_t batch_count = 0;
     while (beg != input_files.end()) {
-        logger()->info("Reading batch {}", batch_count);
+        logger()->info("Reading batch {}/{}", batch_count + 1,
+                       std::max(1UL, input_files.size() / MAX_OPEN_FILES));
         auto end = beg + std::min(MAX_OPEN_FILES, static_cast<uint32_t>(input_files.end() - beg));
         std::vector<std::filesystem::path> filenames(beg, end);
         std::vector<PosData> pos_data

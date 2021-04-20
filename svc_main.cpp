@@ -262,17 +262,16 @@ int main(int argc, char *argv[]) {
     for (const auto &f : input_files) {
         total_size += std::filesystem::file_size(f);
     }
-    ProgressBar read_progress(total_size, "Reading progress", std::cout);
-
     std::filesystem::path output_file = std::filesystem::path(FLAGS_o) / "somatic.mpileup";
     std::vector<PosData> pos_data2
-            = read_bam(input_files, output_file, 1, FLAGS_max_coverage, FLAGS_num_threads,
-                       FLAGS_seq_error_rate, [&read_progress](uint32_t v) { read_progress += v; });
+            = read_bam(input_files, output_file, 24, FLAGS_max_coverage, FLAGS_num_threads,
+                       FLAGS_seq_error_rate, [](uint32_t v) {});
 
     // read input files in parallel
     std::vector<std::vector<PosData>> pos_data(input_files.size());
     std::vector<std::unordered_set<uint32_t>> cell_ids(input_files.size());
     std::vector<uint32_t> max_read_lengths(input_files.size());
+    ProgressBar read_progress(total_size, "Reading progress", std::cout);
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(
