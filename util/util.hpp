@@ -11,8 +11,8 @@
 #include <string>
 #include <vector>
 
-#include "logger.hpp"
-#include "mat.hpp"
+#include "util/logger.hpp"
+#include "util/mat.hpp"
 
 constexpr uint8_t CharToInt[128]
         = { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,

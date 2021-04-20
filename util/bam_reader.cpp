@@ -1,10 +1,10 @@
-#pragma once
+#include "bam_reader.hpp"
 
-#include "logger.hpp"
-#include "merger.hpp"
+#include "heap.hpp"
+#include "util/logger.hpp"
 #include "preprocess.hpp"
 #include "sequenced_data.hpp"
-#include "util.hpp"
+#include "util/util.hpp"
 
 #include <api/BamMultiReader.h>
 #include <api/BamWriter.h>
@@ -47,12 +47,7 @@ bool read_thread(const std::unordered_map<std::string, uint16_t> &fname_to_id,
             return true; // all data for the given chromosome was processed
         }
         if (static_cast<uint32_t>(al.Position) >= end_pos) {
-            // TODO: this may not be necessary
-            if (reader.GetNextAlignmentCore(al)) { // check if we exhausted the content
-                reader.Jump(al.RefID, al.Position); // unread the last read
-                return false; // this chunk is finished
-            }
-            return true; // all done
+            return false; // current chunk was processed
         }
 
         assert(al.IsProperPair());
@@ -61,10 +56,10 @@ bool read_thread(const std::unordered_map<std::string, uint16_t> &fname_to_id,
         assert(al.Position >= static_cast<int32_t>(start_pos));
 
         // TODO: figure this out
-
         //        if (al.MapQuality < 90) {
         //            continue;
         //        }
+
         al.BuildCharData();
         auto read_id_iter = read_name_to_id.find(al.Name);
         uint64_t read_id;
@@ -97,8 +92,7 @@ std::vector<PosData> read_bam_chunk(const std::vector<std::filesystem::path> &in
                                     uint32_t chromosome_id,
                                     uint32_t max_coverage,
                                     uint32_t num_threads,
-                                    double sequencing_error_rate,
-                                    const std::function<void(uint32_t v)> &progress) {
+                                    double sequencing_error_rate) {
     uint32_t start_pos = 0;
 
     std::ofstream fout(outfile);
@@ -141,9 +135,11 @@ std::vector<PosData> read_bam_chunk(const std::vector<std::filesystem::path> &in
         // jump to the beginning of next chromosome to figure out how much data we need to read
         reader->Jump(chromosome_id + 1);
         end_pos += reader->GetPosInFile();
+        logger()->debug("End of next chromosome: {}", end_pos);
         // jump back to the current chromosome
         reader->Jump(chromosome_id);
         curr_pos += reader->GetPosInFile();
+        logger()->debug("End of current chromosome: {}", curr_pos);
         readers.push_back(std::move(reader));
     }
 
@@ -152,7 +148,7 @@ std::vector<PosData> read_bam_chunk(const std::vector<std::filesystem::path> &in
     std::vector<PosData> result;
     while (true) {
         bool is_done = true;
-        // #pragma omp parallel for num_threads(num_threads)
+//#pragma omp parallel for num_threads(num_threads)
         for (uint32_t i = 0; i < readers.size(); ++i) {
             is_done &= read_thread(fname_to_id, max_coverage, chromosome_id, start_pos,
                                    start_pos + CHUNK_SIZE, *readers[i], &data, &data_size,
@@ -249,8 +245,7 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                               uint32_t chromosome_id,
                               uint32_t max_coverage,
                               uint32_t num_threads,
-                              double sequencing_error_rate,
-                              const std::function<void(uint32_t v)> &progress) {
+                              double sequencing_error_rate) {
     uint32_t cell_id = 0;
     std::unordered_map<std::string, uint16_t> fname_to_id;
     for (const auto &fname : input_files) {
@@ -270,7 +265,7 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
         std::vector<std::filesystem::path> filenames(beg, end);
         std::vector<PosData> pos_data
                 = read_bam_chunk(filenames, fname_to_id, outfile, chromosome_id, max_coverage,
-                                 num_threads, sequencing_error_rate, progress);
+                                 num_threads, sequencing_error_rate);
         pos_batches.push_back(pos_data);
         batch_count++;
         beg = end;

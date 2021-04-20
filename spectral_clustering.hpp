@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util.hpp"
+#include "util/util.hpp"
 
 /**
  * Whether to use the Akaike Information Criterion or the Bayesian Information criterion to decide

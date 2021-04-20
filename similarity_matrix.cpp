@@ -11,9 +11,9 @@
 
 #include "similarity_matrix.hpp"
 
-#include "logger.hpp"
-#include "mat.hpp"
-#include "util.hpp"
+#include "util/logger.hpp"
+#include "util/mat.hpp"
+#include "util/util.hpp"
 
 #include <omp.h>
 #include <progress_bar/progress_bar.hpp>

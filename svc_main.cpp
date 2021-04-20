@@ -1,11 +1,11 @@
-#include "bam_reader.hpp" // TODO: remove?
-#include "logger.hpp"
-#include "pileup_reader.hpp"
 #include "preprocess.hpp"
 #include "sequenced_data.hpp"
 #include "similarity_matrix.hpp"
 #include "spectral_clustering.hpp"
-#include "util.hpp"
+#include "util/bam_reader.hpp" // TODO: remove?
+#include "util/logger.hpp"
+#include "util/pileup_reader.hpp"
+#include "util/util.hpp"
 #include "variant_calling.hpp"
 
 #include <gflags/gflags.h>
@@ -250,11 +250,11 @@ int main(int argc, char *argv[]) {
                 input_files = get_files(FLAGS_i, ".pileup");
             }
         }
-        spdlog::info("Found {} input files in '{}'", input_files.size(), FLAGS_i);
+        logger()->info("Found {} input files in '{}'", input_files.size(), FLAGS_i);
     }
 
     if (input_files.empty()) {
-        spdlog::info("No input files found in {}. Bailing out.", FLAGS_i);
+        logger()->info("No input files found in {}. Bailing out.", FLAGS_i);
         std::exit(0);
     }
 
@@ -263,14 +263,14 @@ int main(int argc, char *argv[]) {
         total_size += std::filesystem::file_size(f);
     }
     std::filesystem::path output_file = std::filesystem::path(FLAGS_o) / "somatic.mpileup";
-    std::vector<PosData> pos_data2
-            = read_bam(input_files, output_file, 24, FLAGS_max_coverage, FLAGS_num_threads,
-                       FLAGS_seq_error_rate, [](uint32_t v) {});
+    std::vector<PosData> pos_data2 = read_bam(input_files, output_file, 23, FLAGS_max_coverage,
+                                              FLAGS_num_threads, FLAGS_seq_error_rate);
 
     // read input files in parallel
     std::vector<std::vector<PosData>> pos_data(input_files.size());
     std::vector<std::unordered_set<uint32_t>> cell_ids(input_files.size());
     std::vector<uint32_t> max_read_lengths(input_files.size());
+    std::exit(0);
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {

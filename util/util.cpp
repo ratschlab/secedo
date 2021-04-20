@@ -1,4 +1,4 @@
-#include "util.hpp"
+#include "util/util.hpp"
 
 std::string read_file(const std::string &fname) {
     std::ifstream f(fname);

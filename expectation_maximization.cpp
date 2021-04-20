@@ -1,7 +1,7 @@
 #include "expectation_maximization.hpp"
 
-#include "logger.hpp"
-#include "util.hpp"
+#include "util/logger.hpp"
+#include "util/util.hpp"
 
 #include <algorithm>
 #include <array>

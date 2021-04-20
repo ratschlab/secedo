@@ -1,6 +1,6 @@
-#include "pileup_reader.hpp"
+#include "util/pileup_reader.hpp"
 
-#include "util.hpp"
+#include "util/util.hpp"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

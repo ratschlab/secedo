@@ -39,13 +39,12 @@ include_directories(${PROJECT_SOURCE_DIR}/third_party/bamtools/src)
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/bamtools EXCLUDE_FROM_ALL)
 
 
-file(GLOB util_files util.cpp pileup_reader.cpp logger.cpp)
+file(GLOB util_files util/*.cpp)
 add_library(lib_util ${util_files})
-target_link_libraries(lib_util spdlog::spdlog)
+target_link_libraries(lib_util spdlog::spdlog BamTools progress_bar OpenMP::OpenMP_CXX)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(lib_util stdc++fs)
 endif()
-
 
 file(GLOB expectation_maximization_files expectation_maximization.cpp)
 add_library(lib_expectation_maximization ${expectation_maximization_files})
