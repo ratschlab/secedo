@@ -80,10 +80,10 @@ TEST_P(SpectralClustering, TwoClusters) {
 
     ASSERT_FALSE(done); // the split should be successful
     for (uint32_t i = 0; i < half - 1; ++i) {
-        ASSERT_NEAR(0, std::abs(cluster[i] - cluster[i + 1]), 1e-10);
+        ASSERT_NEAR(0, std::abs(cluster[i] - cluster[i + 1]), 1e-3);
     }
     for (uint32_t i = half; i < num_cells - 1; ++i) {
-        ASSERT_NEAR(0, std::abs(cluster[i] - cluster[i + 1]), 1e-10);
+        ASSERT_NEAR(0, std::abs(cluster[i] - cluster[i + 1]), 1e-3);
     }
     ASSERT_EQ(1., std::abs(cluster.front() - cluster.back()));
 }
