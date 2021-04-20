@@ -55,7 +55,7 @@ TEST_P(SpectralClustering, TwoClusters) {
     auto [clustering, termination] = GetParam();
 
     std::default_random_engine generator;
-    std::uniform_real_distribution<double> noise(-1e-1, 1e-1);
+    std::uniform_real_distribution<double> noise(-1e-2, 1e-2);
 
     constexpr uint32_t num_cells = 100;
 
@@ -80,7 +80,7 @@ TEST_P(SpectralClustering, TwoClusters) {
 
     ASSERT_FALSE(done); // the split should be successful
     for (uint32_t i = 0; i < half - 1; ++i) {
-        ASSERT_EQ(cluster[i], cluster[i + 1]);
+        ASSERT_NEAR(0, std::abs(cluster[i] - cluster[i + 1]), 1e-10);
     }
     for (uint32_t i = half; i < num_cells - 1; ++i) {
         ASSERT_NEAR(0, std::abs(cluster[i] - cluster[i + 1]), 1e-10);
