@@ -400,3 +400,8 @@ bool BamReader::SetRegion(const int& leftRefID, const int& leftBound, const int&
 {
     return d->SetRegion(BamRegion(leftRefID, leftBound, rightRefID, rightBound));
 }
+
+
+size_t BamReader::GetPosInFile() {
+  return d->m_stream.GetPosInFile();
+}

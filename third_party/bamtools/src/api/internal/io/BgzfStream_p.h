@@ -57,6 +57,8 @@ public:
     void SetWriteCompressed(bool ok);
     // get file position in BGZF file
     int64_t Tell() const;
+    // actual file offset
+    int64_t GetPosInFile() const;
     // writes the supplied data into the BGZF buffer
     std::size_t Write(const char* data, const std::size_t dataLength);
 

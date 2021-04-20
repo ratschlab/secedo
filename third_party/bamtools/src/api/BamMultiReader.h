@@ -117,6 +117,8 @@ public:
     // returns a human-readable description of the last error that occurred
     std::string GetErrorString() const;
 
+    size_t GetPosInFile();
+
     // private implementation
 private:
     Internal::BamMultiReaderPrivate* d;

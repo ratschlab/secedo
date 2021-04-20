@@ -258,18 +258,16 @@ int main(int argc, char *argv[]) {
         std::exit(0);
     }
 
-    ProgressBar bam_progress(1497618, "Reading progress", std::cout);
-
-    std::filesystem::path output_file = std::filesystem::path(FLAGS_o) / "somatic.mpileup";
-    std::vector<PosData> pos_data2
-            = read_bams(input_files, output_file, 1, FLAGS_max_coverage, FLAGS_num_threads, FLAGS_seq_error_rate,
-                        [&bam_progress]() { bam_progress += 1; });
-
     uint64_t total_size = 0;
     for (const auto &f : input_files) {
         total_size += std::filesystem::file_size(f);
     }
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
+
+    std::filesystem::path output_file = std::filesystem::path(FLAGS_o) / "somatic.mpileup";
+    std::vector<PosData> pos_data2
+            = read_bam(input_files, output_file, 1, FLAGS_max_coverage, FLAGS_num_threads,
+                       FLAGS_seq_error_rate, [&read_progress](uint32_t v) { read_progress += v; });
 
     // read input files in parallel
     std::vector<std::vector<PosData>> pos_data(input_files.size());

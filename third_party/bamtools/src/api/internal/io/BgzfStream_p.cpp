@@ -467,3 +467,7 @@ std::size_t BgzfStream::Write(const char* data, const std::size_t dataLength)
     // return actual number of bytes written
     return numBytesWritten;
 }
+
+int64_t BgzfStream::GetPosInFile() const {
+ return m_device->Tell();
+}

@@ -13,6 +13,7 @@
 // ***************************************************************************
 
 #include "api/BamMultiReader.h"
+
 #include "api/internal/bam/BamMultiReader_p.h"
 using namespace BamTools;
 
@@ -439,4 +440,13 @@ bool BamMultiReader::SetRegion(const int& leftRefID, const int& leftPosition, co
                                const int& rightPosition)
 {
     return d->SetRegion(BamRegion(leftRefID, leftPosition, rightRefID, rightPosition));
+}
+
+size_t BamMultiReader::GetPosInFile()
+{
+    size_t result = 0;
+    for (const auto& mi : d->m_readers) {
+        result += mi.Reader->GetPosInFile();
+    }
+    return result;
 }
