@@ -64,7 +64,8 @@ bool read_bam_file(const uint16_t cell_id,
         assert(al.IsPaired());
         assert(!al.IsFailedQC());
         if (al.Position < static_cast<int32_t>(start_pos)) {
-            assert(static_cast<uint32_t>(al.GetEndPosition()) >= start_pos);;
+            assert(static_cast<uint32_t>(al.GetEndPosition()) >= start_pos);
+            ;
             continue;
         }
 
@@ -90,8 +91,7 @@ bool read_bam_file(const uint16_t cell_id,
                 continue; // this position has suspiciously high coverage, treating as noise
             }
             // TODO: use integer ids
-            cell_datas[current_coverage]
-                    = { std::to_string(read_id), cell_id, cell_datas[current_coverage].base };
+            cell_datas[current_coverage] = { std::to_string(read_id), cell_id, base };
         }
     }
 
@@ -233,7 +233,9 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                 base_count[data[pos][i].base]++;
             }
 
-            if (sum(base_count.begin(), base_count.end()) < 10) { //!is_significant(base_count, sequencing_error_rate)) {
+            std::ignore = sequencing_error_rate;
+            if (sum(base_count.begin(), base_count.end())
+                < 10) { //! is_significant(base_count, sequencing_error_rate)) {
                 continue;
             }
 
