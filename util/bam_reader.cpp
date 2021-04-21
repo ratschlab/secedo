@@ -233,7 +233,7 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                 base_count[data[pos][i].base]++;
             }
 
-            if (!is_significant(base_count, sequencing_error_rate)) {
+            if (sum(base_count.begin(), base_count.end()) < 10) { //!is_significant(base_count, sequencing_error_rate)) {
                 continue;
             }
 
