@@ -250,6 +250,7 @@ int main(int argc, char *argv[]) {
                 input_files = get_files(FLAGS_i, ".pileup");
             }
         }
+        std::sort(input_files.begin(), input_files.end());
         logger()->info("Found {} input files in '{}'", input_files.size(), FLAGS_i);
     }
 
