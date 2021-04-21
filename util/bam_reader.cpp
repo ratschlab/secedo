@@ -29,6 +29,10 @@ constexpr uint32_t CHUNK_SIZE = 100'000;
 constexpr uint32_t MAX_OPEN_FILES = 100;
 
 
+/**
+ * Reads data between start_pos and end_pos from the specified BAM reader and places the result in #data.
+ * @return true if there is no more data available in this reader, false otherwise
+ */
 bool read_thread(const std::unordered_map<std::string, uint16_t> &fname_to_id,
                  uint32_t max_coverage,
                  uint32_t chromosome,
@@ -86,6 +90,10 @@ bool read_thread(const std::unordered_map<std::string, uint16_t> &fname_to_id,
     return true; // input was exhausted
 }
 
+/**
+ * Reads and merges data from the given input files.
+ * @return the read and merged data
+ */
 std::vector<PosData> read_bam_chunk(const std::vector<std::filesystem::path> &input_files,
                                     const std::unordered_map<std::string, uint16_t> &fname_to_id,
                                     const std::filesystem::path &outfile,
