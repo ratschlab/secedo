@@ -263,8 +263,9 @@ int main(int argc, char *argv[]) {
         total_size += std::filesystem::file_size(f);
     }
     std::filesystem::path output_file = std::filesystem::path(FLAGS_o) / "somatic.mpileup";
-    std::vector<PosData> pos_data2 = read_bam(input_files, output_file, 23, FLAGS_max_coverage,
+    std::vector<PosData> pos_data2 = read_bam(input_files, output_file, 1, FLAGS_max_coverage,
                                               FLAGS_num_threads, FLAGS_seq_error_rate);
+    logger()->trace("Done reading");
 
     // read input files in parallel
     std::vector<std::vector<PosData>> pos_data(input_files.size());
