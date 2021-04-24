@@ -77,7 +77,7 @@ bool read_bam_file(const uint16_t cell_id,
                                                            : read_id_iter->second;
         for (uint32_t i = 0; i < al.AlignedBases.size(); ++i) {
             uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i]];
-            if ((uint8_t)al.Qualities[i] - 33 < min_base_quality) {
+            if (static_cast<uint32_t>(al.Qualities[i] - 33U) < min_base_quality) {
                 continue;
             }
             if (base == 5) {
