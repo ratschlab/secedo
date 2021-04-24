@@ -66,15 +66,15 @@ bool read_bam_file(const uint16_t cell_id,
         assert(!al.IsFailedQC());
         if (al.Position < static_cast<int32_t>(start_pos)) {
             assert(static_cast<uint32_t>(al.GetEndPosition()) >= start_pos);
-            ;
             continue;
         }
+
+        al.BuildCharData();
 
         if (al.MapQuality < min_base_quality) {
             continue;
         }
 
-        al.BuildCharData();
         auto read_id_iter = read_name_to_id->find(al.Name);
         uint64_t read_id;
         read_id = (read_id_iter == read_name_to_id->end()) ? (*last_read_id)++

@@ -278,7 +278,7 @@ int main(int argc, char *argv[]) {
     std::vector<std::vector<PosData>> pos_data(input_files.size());
     std::vector<std::unordered_set<uint32_t>> cell_ids(input_files.size());
     std::vector<uint32_t> max_read_lengths(input_files.size());
-    std::exit(0);
+
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
