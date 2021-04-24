@@ -40,8 +40,9 @@ constexpr uint32_t chromosome_lengths[]
  * @return true if there is no more data available in this reader, false otherwise
  */
 bool read_bam_file(const uint16_t cell_id,
-                   uint32_t max_coverage,
                    uint32_t chromosome,
+                   uint32_t max_coverage,
+                   uint32_t min_base_quality,
                    uint32_t start_pos,
                    uint32_t end_pos,
                    BamTools::BamReader &reader,
@@ -69,10 +70,9 @@ bool read_bam_file(const uint16_t cell_id,
             continue;
         }
 
-        // TODO: figure this out
-        //        if (al.MapQuality < 90) {
-        //            continue;
-        //        }
+        if (al.MapQuality < min_base_quality) {
+            continue;
+        }
 
         al.BuildCharData();
         auto read_id_iter = read_name_to_id->find(al.Name);
@@ -106,6 +106,7 @@ bool read_bam_chunk(const std::vector<std::filesystem::path> &input_files,
                     uint16_t batch_start,
                     uint32_t chromosome_id,
                     uint32_t max_coverage,
+                    uint32_t min_base_quality,
                     uint32_t num_threads,
                     uint32_t start_pos,
                     uint32_t end_pos,
@@ -129,46 +130,12 @@ bool read_bam_chunk(const std::vector<std::filesystem::path> &input_files,
                            start_pos, input_files[i]);
             continue;
         }
-        is_done &= read_bam_file(batch_start + i, max_coverage, chromosome_id, start_pos, end_pos,
-                                 *reader, data, data_size, &(read_name_to_id->at(i)), last_read_id);
+        is_done &= read_bam_file(batch_start + i, chromosome_id, max_coverage, min_base_quality,
+                                 start_pos, end_pos, *reader, data, data_size,
+                                 &(read_name_to_id->at(i)), last_read_id);
     }
 
     return is_done;
-}
-
-struct Cmp {
-    int operator()(const PosData &a, const PosData &b) { return a.position < b.position; }
-};
-
-std::vector<PosData> merge(const std::vector<std::vector<PosData>> &sources) {
-    MergeHeap<PosData, Cmp> heap;
-    size_t total_size = 0;
-    std::vector<size_t> source_idxs(sources.size(), 0);
-    for (uint32_t i = 0; i < sources.size(); ++i) {
-        total_size += sources[i].size();
-        if (!sources[i].empty()) {
-            heap.emplace(sources[i][0], i);
-            source_idxs[i] = 1;
-        }
-    }
-    std::vector<PosData> result;
-    result.resize(total_size / 20); // because we expect a 0.05 coverage
-
-    while (!heap.empty()) {
-        auto [el, source_index] = heap.pop();
-
-        if (result.empty() || result.back().position != el.position) {
-            result.push_back(el);
-        } else {
-            result.back().cells_data.insert(result.back().cells_data.end(), el.cells_data.begin(),
-                                            el.cells_data.end());
-        }
-        size_t cur_idx = ++source_idxs[source_index];
-        if (cur_idx < sources.size()) {
-            heap.emplace(sources[source_index][cur_idx], source_index);
-        }
-    }
-    return result;
 }
 
 std::vector<std::vector<std::filesystem::path>>
@@ -190,6 +157,7 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                               const std::filesystem::path &outfile,
                               uint32_t chromosome_id,
                               uint32_t max_coverage,
+                              uint32_t min_base_quality,
                               uint32_t num_threads,
                               double sequencing_error_rate) {
     size_t total_size = (chromosome_lengths[chromosome_id - 1] / CHUNK_SIZE) + 1;
@@ -220,8 +188,9 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
         is_done = true;
         for (uint32_t i = 0; i < file_batches.size(); ++i) {
             is_done &= read_bam_chunk(file_batches[i], i * MAX_OPEN_FILES, chromosome_id,
-                                      max_coverage, num_threads, start_pos, start_pos + CHUNK_SIZE,
-                                      &data, &data_size, &read_name_to_id, &last_read_id);
+                                      max_coverage, min_base_quality, num_threads, start_pos,
+                                      start_pos + CHUNK_SIZE, &data, &data_size, &read_name_to_id,
+                                      &last_read_id);
         }
 
         for (uint32_t pos = 0; pos < CHUNK_SIZE; ++pos) {

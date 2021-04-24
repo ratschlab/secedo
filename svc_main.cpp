@@ -62,6 +62,11 @@ DEFINE_string(clustering_type,
               "How to perform spectral clustering. One of FIEDLER, SPECTRAL2, SPECTRAL6, "
               "GMM_ASSIGN, GMM_PROB. See spectral_clustering.hpp for details.");
 
+DEFINE_uint32(min_base_quality,
+              13,
+              "Minimum Phred quality score for the sequencer. A quality score of 20 corresponds to "
+              "a sequencing error rate of 0.01");
+
 static bool ValidateClusteringType(const char *flagname, const std::string &value) {
     if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6" && value != "GMM_PROB"
         && value != "GMM_ASSIGN") {
@@ -264,8 +269,9 @@ int main(int argc, char *argv[]) {
         total_size += std::filesystem::file_size(f);
     }
     std::filesystem::path output_file = std::filesystem::path(FLAGS_o) / "somatic.mpileup";
-    std::vector<PosData> pos_data2 = read_bam(input_files, output_file, 1, FLAGS_max_coverage,
-                                              FLAGS_num_threads, FLAGS_seq_error_rate);
+    std::vector<PosData> pos_data2
+            = read_bam(input_files, output_file, 1, FLAGS_max_coverage, FLAGS_min_base_quality,
+                       FLAGS_num_threads, FLAGS_seq_error_rate);
     logger()->trace("Done reading");
 
     // read input files in parallel

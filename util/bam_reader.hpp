@@ -21,5 +21,6 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                               const std::filesystem::path &outfile,
                               uint32_t chromosome_id,
                               uint32_t max_coverage,
+                              uint32_t min_base_quality,
                               uint32_t num_threads,
                               double sequencing_error_rate);
