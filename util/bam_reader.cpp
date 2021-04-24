@@ -71,16 +71,15 @@ bool read_bam_file(const uint16_t cell_id,
 
         al.BuildCharData();
 
-        if (al.MapQuality < min_base_quality) {
-            continue;
-        }
-
         auto read_id_iter = read_name_to_id->find(al.Name);
         uint64_t read_id;
         read_id = (read_id_iter == read_name_to_id->end()) ? (*last_read_id)++
                                                            : read_id_iter->second;
         for (uint32_t i = 0; i < al.AlignedBases.size(); ++i) {
             uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i]];
+            if ((uint8_t)al.Qualities[i] - 33 < min_base_quality) {
+                continue;
+            }
             if (base == 5) {
                 continue; // not ACGT, probably an inserted or deleted char
             }
