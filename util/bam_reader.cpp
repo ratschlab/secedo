@@ -203,7 +203,8 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                 continue;
             }
 
-            fout << (chromosome_id + 1) << '\t' << start_pos + pos << '\t' << data_size[pos]
+            // adding 1 to start pos, bc. samtools is 1-based
+            fout << (chromosome_id + 1) << '\t' << start_pos + pos + 1 << '\t' << data_size[pos]
                  << '\t';
             std::sort(data[pos].begin(), data[pos].begin() + data_size[pos],
                       [](auto &a, auto &b) { return a.cell_id < b.cell_id; });
@@ -215,7 +216,7 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
             for (uint32_t i = 0; i < data_size[pos] - 1U; ++i) {
                 fout << data[pos][i].cell_id << ",";
             }
-            fout << data[pos].back().cell_id;
+            fout << data[pos][data_size[pos] - 1].cell_id;
             fout << std::endl;
 
             result.push_back({ start_pos + pos, data[pos] });
