@@ -56,7 +56,6 @@ bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
 
     // choose K for the closest coverage
     uint32_t i = std::clamp(std::round(coverage / 10.) - 1, 0., 19.);
-    double threshold = Ks.at(i);
 
     // if there are no reads or if we have just one base, do not keep
     if (coverage == 0 || base_count[2] == 0) {
@@ -74,8 +73,8 @@ bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
     // add prior on null hypothesis (0.998)
     log_prob_homozygous += std::log(0.998);
     // the normalizing coefficient (normalizing for read depth)
-    double log_normalizing_coef = log_fact(coverage + 3) - std::log(6) - log_fact(coverage);
-    return log_normalizing_coef + log_prob_homozygous < threshold;
+    double log_normalizing_coef = log_fact(coverage - 3) - std::log(6) - log_fact(coverage);
+    return log_normalizing_coef + log_prob_homozygous < Ks.at(i);
 }
 
 bool is_significant(const PosData &pos_data, double theta, uint32_t *coverage) {
