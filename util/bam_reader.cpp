@@ -34,6 +34,8 @@ constexpr uint32_t chromosome_lengths[]
             114'364'328, 101'991'189, 90'338'345,  83'257'441,  80'373'285,  58'617'616,
             64'444'167,  46'709'983,  50'818'468,  156'040'895, 57'227'415 };
 
+
+
 /**
  * Reads data between start_pos and end_pos from the specified BAM reader and places the result in
  * #data.
@@ -74,9 +76,24 @@ bool read_bam_file(const uint16_t cell_id,
         auto read_id_iter = read_name_to_id->find(al.Name);
         uint64_t read_id = (read_id_iter == read_name_to_id->end()) ? (*last_read_id)++
                                                                     : read_id_iter->second;
-        for (uint32_t i = 0; i < al.AlignedBases.size(); ++i) {
-            uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i]];
+        uint32_t offset = 0; // if the CIGAR string contains inserts, we need to adjust the offset
+        uint32_t cigar_idx = 0;
+        uint32_t cigar_end = al.CigarData[0].Length;
+        for (uint32_t i = 0; i < al.AlignedBases.size() - offset; ++i) {
+            if (i >= cigar_end) {
+                cigar_idx++;
+                cigar_end = i + al.CigarData[cigar_idx].Length;
+            }
+            if (al.CigarData[cigar_idx].Type == 'I') {
+                offset++;
+            }
+
+            uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i + offset]];
+            // make sure we have a '-' on a deleted position
+            assert(al.CigarData[cigar_idx].Type != 'D' || base == 5);
+
             if (base == 5 || static_cast<uint32_t>(al.Qualities[i] - 33U) < min_base_quality) {
+                std::ignore = min_base_quality;
                 continue;
             }
 
@@ -156,7 +173,7 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                               uint32_t min_base_quality,
                               uint32_t num_threads,
                               double sequencing_error_rate) {
-    size_t total_size = (chromosome_lengths[chromosome_id - 1] / CHUNK_SIZE) + 1;
+    size_t total_size = (chromosome_lengths[chromosome_id] / CHUNK_SIZE) + 1;
 
     logger()->trace("Allocating data structures...");
     std::atomic<uint64_t> last_read_id = 0; // used to map read names to shorter integer values
