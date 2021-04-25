@@ -72,9 +72,8 @@ bool read_bam_file(const uint16_t cell_id,
         al.BuildCharData();
 
         auto read_id_iter = read_name_to_id->find(al.Name);
-        uint64_t read_id;
-        read_id = (read_id_iter == read_name_to_id->end()) ? (*last_read_id)++
-                                                           : read_id_iter->second;
+        uint64_t read_id = (read_id_iter == read_name_to_id->end()) ? (*last_read_id)++
+                                                                    : read_id_iter->second;
         for (uint32_t i = 0; i < al.AlignedBases.size(); ++i) {
             uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i]];
             if (base == 5 || static_cast<uint32_t>(al.Qualities[i] - 33U) < min_base_quality) {
@@ -194,6 +193,7 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
             if (data_size[pos] < 2 || data_size[pos] >= max_coverage) {
                 continue; // positions with too low or too high coverage are ignored
             }
+            // count the number of bases at position pos
             std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
             for (uint32_t i = 0; i < data_size[pos]; ++i) {
                 base_count[data[pos][i].base]++;
@@ -203,15 +203,16 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                 continue;
             }
 
-            fout << chromosome_id << "\t" << start_pos + pos << "\t" << data_size[pos] << "\t";
-            std::sort(data[pos].begin(), data[pos].end(),
+            fout << (chromosome_id + 1) << '\t' << start_pos + pos << '\t' << data_size[pos]
+                 << '\t';
+            std::sort(data[pos].begin(), data[pos].begin() + data_size[pos],
                       [](auto &a, auto &b) { return a.cell_id < b.cell_id; });
 
             for (uint32_t i = 0; i < data_size[pos]; ++i) {
                 fout << IntToChar[data[pos][i].base];
             }
             fout << '\t';
-            for (uint32_t i = 0; i < data_size[pos] - 1; ++i) {
+            for (uint32_t i = 0; i < data_size[pos] - 1U; ++i) {
                 fout << data[pos][i].cell_id << ",";
             }
             fout << data[pos].back().cell_id;
