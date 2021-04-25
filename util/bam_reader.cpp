@@ -77,12 +77,10 @@ bool read_bam_file(const uint16_t cell_id,
                                                            : read_id_iter->second;
         for (uint32_t i = 0; i < al.AlignedBases.size(); ++i) {
             uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i]];
-            if (static_cast<uint32_t>(al.Qualities[i] - 33U) < min_base_quality) {
+            if (base == 5 || static_cast<uint32_t>(al.Qualities[i] - 33U) < min_base_quality) {
                 continue;
             }
-            if (base == 5) {
-                continue; // not ACGT, probably an inserted or deleted char
-            }
+
             assert(al.Position + i < end_pos + MAX_INSERT_SIZE);
             std::vector<CellData> &cell_datas = data->at(al.Position + i - start_pos);
             uint16_t current_coverage = data_size->at(al.Position + i - start_pos).fetch_add(1);
@@ -205,16 +203,18 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                 continue;
             }
 
-            fout << "Size: " << data_size[pos] << "\t Start pos: " << start_pos + pos
-                 << "\tCell ids: ";
-            for (uint32_t i = 0; i < data_size[pos]; ++i) {
-                fout << data[pos][i].cell_id << ",";
-            }
-            fout << "\tBases: ";
+            fout << chromosome_id << "\t" << start_pos + pos << "\t" << data_size[pos] << "\t";
+            std::sort(data[pos].begin(), data[pos].end(),
+                      [](auto &a, auto &b) { return a.cell_id < b.cell_id; });
 
             for (uint32_t i = 0; i < data_size[pos]; ++i) {
                 fout << IntToChar[data[pos][i].base];
             }
+            fout << '\t';
+            for (uint32_t i = 0; i < data_size[pos] - 1; ++i) {
+                fout << data[pos][i].cell_id << ",";
+            }
+            fout << data[pos].back().cell_id;
             fout << std::endl;
 
             result.push_back({ start_pos + pos, data[pos] });

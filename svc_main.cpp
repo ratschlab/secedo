@@ -67,6 +67,8 @@ DEFINE_uint32(min_base_quality,
               "Minimum Phred quality score for the sequencer. A quality score of 20 corresponds to "
               "a sequencing error rate of 0.01");
 
+DEFINE_uint32(chromosome_id, 1, "Run the mpileup phase only on this chromosome (1-22,X=23,Y=24");
+
 static bool ValidateClusteringType(const char *flagname, const std::string &value) {
     if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6" && value != "GMM_PROB"
         && value != "GMM_ASSIGN") {
@@ -235,6 +237,7 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
            heterozygous_rate, seq_error_rate, num_threads, out_dir, normalization, marker + 'B');
 }
 
+//============================================================================
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
@@ -268,10 +271,10 @@ int main(int argc, char *argv[]) {
     for (const auto &f : input_files) {
         total_size += std::filesystem::file_size(f);
     }
-    std::filesystem::path output_file = std::filesystem::path(FLAGS_o) / "somatic.mpileup";
+    auto output_file = std::filesystem::path(FLAGS_o) / "somatic.mpileup";
     std::vector<PosData> pos_data2
-            = read_bam(input_files, output_file, 1, FLAGS_max_coverage, FLAGS_min_base_quality,
-                       FLAGS_num_threads, FLAGS_seq_error_rate);
+            = read_bam(input_files, output_file, FLAGS_chromosome_id - 1, FLAGS_max_coverage,
+                       FLAGS_min_base_quality, FLAGS_num_threads, FLAGS_seq_error_rate);
     logger()->trace("Done reading");
 
     // read input files in parallel
