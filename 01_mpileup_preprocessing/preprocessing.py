@@ -45,6 +45,9 @@ def preprocessing(data, theta, K):
         # the normalizing coefficient (normalizing for read depth)
         logNorm_coef = log_fact(cov + 3) - math.log(6) - log_fact(cov)
         # the result
+        print('log logMultinom_coef ', logMultinom_coef)
+        print('logNorm_coef ', logNorm_coef)
+        print('log prob homo ', logProb_homo, 'logNorm_coef ', logNorm_coef)
         res = logNorm_coef + logProb_homo
         if res < K:
             return True
@@ -55,6 +58,7 @@ def preprocessing(data, theta, K):
 
 
 def main(argv):
+    print(preprocessing([51, 1, 0, 0], 0.01, Ks[4]))
     # parse the arguments
     try:
         opts, args = getopt.getopt(argv, "n:t:")

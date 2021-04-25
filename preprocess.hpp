@@ -21,7 +21,7 @@ void init() {
     for (uint32_t i = 1; i < 171; ++i) {
         log_factorial.push_back(log_factorial.back() * i);
     }
-    for (uint32_t i = 1; i < 171; ++i) {
+    for (uint32_t i = 0; i < 171; ++i) {
         log_factorial[i] = std::log(log_factorial[i]);
     }
 }
@@ -69,11 +69,11 @@ bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
             + (coverage - base_count[3]) * log_theta;
     // add prior on the most probable genotype (1/4, because all four homozygous genotypes are
     // equally likely)
-    log_prob_homozygous += std::log(1 / 4);
+    log_prob_homozygous += std::log(1. / 4);
     // add prior on null hypothesis (0.998)
     log_prob_homozygous += std::log(0.998);
     // the normalizing coefficient (normalizing for read depth)
-    double log_normalizing_coef = log_fact(coverage - 3) - std::log(6) - log_fact(coverage);
+    double log_normalizing_coef = log_fact(coverage + 3) - std::log(6) - log_fact(coverage);
     return log_normalizing_coef + log_prob_homozygous < Ks.at(i);
 }
 
