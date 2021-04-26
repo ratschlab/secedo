@@ -84,21 +84,22 @@ bool read_bam_file(const uint16_t cell_id,
                 cigar_idx++;
                 cigar_end = i + al.CigarData[cigar_idx].Length;
             }
-            if (al.CigarData[cigar_idx].Type == 'D') {
+            if (al.CigarData[cigar_idx].Type == 'I') {
                 offset++;
             }
 
             uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i + offset]];
             // make sure we have a '-' on a deleted position
-            assert(al.CigarData[cigar_idx].Type != 'I' || base == 5);
+            assert(al.CigarData[cigar_idx].Type != 'D' || base == 5);
 
             if (base == 5 || static_cast<uint32_t>(al.Qualities[i] - 33U) < min_base_quality) {
                 continue;
             }
 
             assert(al.Position + i < end_pos + MAX_INSERT_SIZE);
-            std::vector<CellData> &cell_datas = data->at(al.Position + i - start_pos);
-            uint16_t current_coverage = data_size->at(al.Position + i - start_pos).fetch_add(1);
+            uint32_t pos = al.Position + i - start_pos - offset;
+            std::vector<CellData> &cell_datas = data->at(pos);
+            uint16_t current_coverage = data_size->at(pos).fetch_add(1);
             if (current_coverage >= max_coverage) {
                 continue; // this position has suspiciously high coverage, treating as noise
             }
