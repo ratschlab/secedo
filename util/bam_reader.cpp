@@ -97,7 +97,7 @@ bool read_bam_file(const uint16_t cell_id,
             }
 
             assert(al.Position + i < end_pos + MAX_INSERT_SIZE);
-            uint32_t pos = al.Position + i - start_pos - offset;
+            uint32_t pos = al.Position + i - start_pos;
             std::vector<CellData> &cell_datas = data->at(pos);
             uint16_t current_coverage = data_size->at(pos).fetch_add(1);
             if (current_coverage >= max_coverage) {
