@@ -75,16 +75,22 @@ bool read_bam_file(const uint16_t cell_id,
         uint32_t read_id = (read_id_iter == read_name_to_id->end()) ? (*last_read_id)++
                                                                     : read_id_iter->second;
         uint32_t offset = 0; // if the CIGAR string contains inserts, we need to adjust the offset
+        uint32_t del_offset = 0;
         uint32_t cigar_idx = 0;
         uint32_t cigar_end = al.CigarData[0].Length;
         for (uint32_t i = 0; i < al.AlignedBases.size() - offset; ++i) {
             // check if we stepped outside the current CIGAR chunk
             while (i >= cigar_end) { // TODO: write a test for this
                 cigar_idx++;
+                assert(cigar_idx < al.CigarData.size());
                 // if the aligned string has inserted bases relative to the reference, we simply
                 // skip those bases by increasing the offset and move on to the next CIGAR chunk
-                if (al.CigarData[cigar_idx].Type == 'I') {
+                if (al.CigarData.at(cigar_idx).Type == 'I') {
                     offset += al.CigarData[cigar_idx].Length;
+                    continue;
+                } else if (al.CigarData[cigar_idx].Type == 'D') {
+                    del_offset += al.CigarData[cigar_idx].Length;
+                    cigar_end += al.CigarData[cigar_idx].Length;
                     continue;
                 }
                 cigar_end = i + al.CigarData[cigar_idx].Length;
@@ -92,10 +98,11 @@ bool read_bam_file(const uint16_t cell_id,
 
             uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i + offset]];
             // make sure we have a '-' on a deleted position
-            assert(al.CigarData[cigar_idx].Type != 'D' || base == 5);
+            assert(al.CigarData[cigar_idx].Type != 'D' || al.AlignedBases[i + offset] == '-');
 
             if (base == 5
-                || static_cast<uint32_t>(al.Qualities[i + offset] - 33U) < min_base_quality) {
+                || static_cast<uint32_t>(al.Qualities[i + offset - del_offset] - 33U)
+                        < min_base_quality) {
                 continue;
             }
 
