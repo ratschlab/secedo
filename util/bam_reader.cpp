@@ -1,7 +1,6 @@
 #include "bam_reader.hpp"
 
-#include "heap.hpp"
-#include "preprocess.hpp"
+#include "is_significant.hpp"
 #include "sequenced_data.hpp"
 #include "util/logger.hpp"
 #include "util/util.hpp"
@@ -224,7 +223,7 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
             if (!is_significant(base_count, sequencing_error_rate)) {
                 continue;
             }
-            uint8_t chromosome = chromosome_id + 1;
+            uint32_t chromosome = chromosome_id + 1;
             uint64_t position = start_pos + pos + 1;
             if (write_text_file) {
                 // adding 1 to start pos, bc. samtools is 1-based

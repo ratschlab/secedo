@@ -59,17 +59,15 @@ int main(int argc, char *argv[]) {
     spdlog::set_level(spdlog::level::from_str(FLAGS_log_level));
 
     std::vector<std::filesystem::path> input_files = { FLAGS_i };
-    if (!std::filesystem::is_directory(FLAGS_i)) {
-        logger()->error("-i <input_dir> must be a directory, not a file.");
-        std::exit(1);
+    if (std::filesystem::is_directory(FLAGS_i)) {
+        input_files = get_files(FLAGS_i, ".bam");
+        if (input_files.empty()) {
+            logger()->info("No BAM files found in {}. Done.", FLAGS_i);
+            std::exit(0);
+        }
+        std::sort(input_files.begin(), input_files.end());
+        logger()->info("Found {} input files in '{}'", input_files.size(), FLAGS_i);
     }
-    input_files = get_files(FLAGS_i, ".bam");
-    if (input_files.empty()) {
-        logger()->info("No BAM files found in {}. Done.", FLAGS_i);
-        std::exit(0);
-    }
-    std::sort(input_files.begin(), input_files.end());
-    logger()->info("Found {} input files in '{}'", input_files.size(), FLAGS_i);
 
     if (std::filesystem::is_directory(FLAGS_o)) {
         logger()->error("-o <output_dir> must be a file prefix, not a directory");
@@ -77,7 +75,7 @@ int main(int argc, char *argv[]) {
     }
 
     for (const auto &chromosome : split(FLAGS_chromosomes, ',')) {
-        auto output_file = std::filesystem::path(FLAGS_o) / ("_" + chromosome + ".pileup");
+        auto output_file = std::filesystem::path(FLAGS_o + "_" + chromosome + ".pileup");
         read_bam(input_files, output_file, true, chromosome_to_id(chromosome), FLAGS_max_coverage,
                  FLAGS_min_base_quality, FLAGS_num_threads, FLAGS_seq_error_rate);
         logger()->trace("Done processing chromosome {}", chromosome);

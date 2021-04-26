@@ -1,11 +1,4 @@
-#pragma once
-
-#include "sequenced_data.hpp"
-
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <vector>
+#include "is_significant.hpp"
 
 // thresholds K to use for pre-processing; values for coverage 10, 20, 30, ... 200
 // always the largest values for any tumour proportion, rounded up to one decimal place
@@ -26,10 +19,6 @@ void init() {
     }
 }
 
-/**
- * Computes the log factorial using a table for small values or Stirling's formula for larger
- * values.
- */
 double log_fact(uint32_t n) {
     static bool is_init = false;
     if (!is_init) {
@@ -40,11 +29,6 @@ double log_fact(uint32_t n) {
                      : log_factorial.at(n);
 }
 
-/** Decides if a given position is worth keeping, i.e. it will be useful in distinguishing cells.
- * @param base_count counts of A,C,G, and T in the pooled data at a fixed position
- * @param theta sequencing error rate (e.g. ~0.01 on Illumina machines)
- * @return True if the position is kept
- */
 bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
     double log_theta = std::log(theta / 3);
     double log_one_minus_theta = std::log(1 - theta);
@@ -85,3 +69,5 @@ bool is_significant(const PosData &pos_data, double theta, uint32_t *coverage) {
     *coverage = base_count[0] + base_count[1] + base_count[2] + base_count[3];
     return is_significant(base_count, theta);
 }
+
+

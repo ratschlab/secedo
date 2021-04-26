@@ -1,9 +1,8 @@
 #pragma once
 
-#include "heap.hpp"
-#include "util/logger.hpp"
-#include "preprocess.hpp"
+#include "is_significant.hpp"
 #include "sequenced_data.hpp"
+#include "util/logger.hpp"
 #include "util/util.hpp"
 
 #include <api/BamMultiReader.h>

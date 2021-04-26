@@ -40,37 +40,37 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/bamtools EXCLUDE_FROM_ALL)
 
 
 file(GLOB util_files util/*.cpp)
-add_library(lib_util ${util_files})
-target_link_libraries(lib_util spdlog::spdlog BamTools progress_bar OpenMP::OpenMP_CXX)
+add_library(util ${util_files})
+target_link_libraries(util spdlog::spdlog BamTools progress_bar OpenMP::OpenMP_CXX)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_link_libraries(lib_util stdc++fs)
+  target_link_libraries(util stdc++fs)
 endif()
 
 file(GLOB expectation_maximization_files expectation_maximization.cpp)
 add_library(lib_expectation_maximization ${expectation_maximization_files})
-target_link_libraries(lib_expectation_maximization lib_util OpenMP::OpenMP_CXX)
+target_link_libraries(lib_expectation_maximization util OpenMP::OpenMP_CXX)
 
 file(GLOB similarity_matrix_files similarity_matrix.cpp)
 add_library(lib_similarity_matrix ${similarity_matrix_files})
-target_link_libraries(lib_similarity_matrix progress_bar lib_util OpenMP::OpenMP_CXX)
+target_link_libraries(lib_similarity_matrix progress_bar util OpenMP::OpenMP_CXX)
 
 file(GLOB spectral_clustering_files spectral_clustering.cpp)
 add_library(lib_spectral_clustering ${spectral_clustering_files})
-target_link_libraries(lib_spectral_clustering armadillo lib_util  OpenMP::OpenMP_CXX)
+target_link_libraries(lib_spectral_clustering armadillo util  OpenMP::OpenMP_CXX)
 
 file(GLOB variant_calling_files variant_calling.cpp variant_calling.cpp)
 add_library(lib_variant_calling ${variant_calling_files})
-target_link_libraries(lib_variant_calling lib_util)
+target_link_libraries(lib_variant_calling util)
 
 add_executable(svc svc_main.cpp)
 target_link_libraries(svc lib_expectation_maximization lib_variant_calling lib_similarity_matrix
-    lib_spectral_clustering lib_util gflags spdlog::spdlog BamTools)
+    lib_spectral_clustering util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(svc stdc++fs)
 endif()
 
 add_executable(preprocess preprocess_main.cpp)
-target_link_libraries(preprocess lib_util gflags spdlog::spdlog BamTools)
+target_link_libraries(preprocess util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(preprocess stdc++fs)
 endif()
