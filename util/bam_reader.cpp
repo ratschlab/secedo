@@ -84,7 +84,7 @@ bool read_bam_file(const uint16_t cell_id,
                 cigar_idx++;
                 cigar_end = i + al.CigarData[cigar_idx].Length;
             }
-            if (al.CigarData[cigar_idx].Type == 'I') {
+            if (al.CigarData[cigar_idx].Type == 'D') {
                 offset++;
             }
 
@@ -93,7 +93,6 @@ bool read_bam_file(const uint16_t cell_id,
             assert(al.CigarData[cigar_idx].Type != 'D' || base == 5);
 
             if (base == 5 || static_cast<uint32_t>(al.Qualities[i] - 33U) < min_base_quality) {
-                std::ignore = min_base_quality;
                 continue;
             }
 
