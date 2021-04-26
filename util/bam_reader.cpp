@@ -35,7 +35,6 @@ constexpr uint32_t chromosome_lengths[]
             64'444'167,  46'709'983,  50'818'468,  156'040'895, 57'227'415 };
 
 
-
 /**
  * Reads data between start_pos and end_pos from the specified BAM reader and places the result in
  * #data.
@@ -92,7 +91,8 @@ bool read_bam_file(const uint16_t cell_id,
             // make sure we have a '-' on a deleted position
             assert(al.CigarData[cigar_idx].Type != 'D' || base == 5);
 
-            if (base == 5 || static_cast<uint32_t>(al.Qualities[i] - 33U) < min_base_quality) {
+            if (base == 5
+                || static_cast<uint32_t>(al.Qualities[i + offset] - 33U) < min_base_quality) {
                 continue;
             }
 
