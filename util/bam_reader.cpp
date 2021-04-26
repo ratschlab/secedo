@@ -90,7 +90,7 @@ bool read_bam_file(const uint16_t cell_id,
 
             uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i + offset]];
             // make sure we have a '-' on a deleted position
-            assert(al.CigarData[cigar_idx].Type != 'D' || base == 5);
+            assert(al.CigarData[cigar_idx].Type != 'I' || base == 5);
 
             if (base == 5 || static_cast<uint32_t>(al.Qualities[i] - 33U) < min_base_quality) {
                 continue;
