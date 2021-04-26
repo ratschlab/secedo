@@ -34,13 +34,17 @@ target_compile_options(armadillo PUBLIC -Wno-unused-parameter)
 # Spdlog logging library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/spdlog EXCLUDE_FROM_ALL)
 
-file(GLOB util_files util.cpp pileup_reader.cpp logger.cpp)
+# BAMTools library for parsing BAM files
+include_directories(${PROJECT_SOURCE_DIR}/third_party/bamtools/src)
+add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/bamtools EXCLUDE_FROM_ALL)
+
+
+file(GLOB util_files util/*.cpp)
 add_library(lib_util ${util_files})
-target_link_libraries(lib_util spdlog::spdlog)
+target_link_libraries(lib_util spdlog::spdlog BamTools progress_bar OpenMP::OpenMP_CXX)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(lib_util stdc++fs)
 endif()
-
 
 file(GLOB expectation_maximization_files expectation_maximization.cpp)
 add_library(lib_expectation_maximization ${expectation_maximization_files})
@@ -60,9 +64,15 @@ target_link_libraries(lib_variant_calling lib_util)
 
 add_executable(svc svc_main.cpp)
 target_link_libraries(svc lib_expectation_maximization lib_variant_calling lib_similarity_matrix
-    lib_spectral_clustering lib_util gflags spdlog::spdlog)
+    lib_spectral_clustering lib_util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(svc stdc++fs)
+endif()
+
+add_executable(preprocess preprocess_main.cpp)
+target_link_libraries(preprocess lib_util gflags spdlog::spdlog BamTools)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_link_libraries(preprocess stdc++fs)
 endif()
 
 # TESTS

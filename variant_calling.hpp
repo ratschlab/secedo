@@ -1,7 +1,7 @@
 #pragma once
 
 #include "expectation_maximization.hpp"
-#include "util.hpp"
+#include "util/util.hpp"
 
 
 #include <array>

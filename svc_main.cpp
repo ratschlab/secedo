@@ -1,10 +1,11 @@
-#include "logger.hpp"
-#include "pileup_reader.hpp"
 #include "preprocess.hpp"
 #include "sequenced_data.hpp"
 #include "similarity_matrix.hpp"
 #include "spectral_clustering.hpp"
-#include "util.hpp"
+#include "util/bam_reader.hpp" // TODO: remove?
+#include "util/logger.hpp"
+#include "util/pileup_reader.hpp"
+#include "util/util.hpp"
 #include "variant_calling.hpp"
 
 #include <gflags/gflags.h>
@@ -39,7 +40,7 @@ DEFINE_string(labels_file, "", "Input file containing labels");
 
 DEFINE_string(chromosomes,
               "The chromosomes on which to run the algorithm",
-              "1,2,3,4,5,6,7,8,9,10,11,12,13.14,15,16,17,18,19,20,21,22,X");
+              "1,2,3,4,5,6,7,8,9,10,11,12,13.14,15,16,17,18,19,20,21,22,X,Y");
 
 DEFINE_string(log_level,
               "trace",
@@ -129,9 +130,9 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     }
 
     std::vector<uint16_t> id_to_cluster(id_to_group.size());
-    for (uint16_t i = 0; i < id_to_group.size(); ++i) {
-        uint16_t pos = id_to_pos[id_to_group[i]];
-        id_to_cluster[i] = pos == NO_POS ? NO_POS : cluster[pos];
+    for (uint16_t cell_id = 0; cell_id < id_to_group.size(); ++cell_id) {
+        uint16_t pos = id_to_pos[id_to_group[cell_id]];
+        id_to_cluster[cell_id] = pos == NO_POS ? NO_POS : cluster[pos];
     }
     write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), id_to_cluster);
 
@@ -229,45 +230,51 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
            heterozygous_rate, seq_error_rate, num_threads, out_dir, normalization, marker + 'B');
 }
 
+//============================================================================
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     spdlog::set_level(spdlog::level::from_str(FLAGS_log_level));
 
-    std::vector<std::filesystem::path> mpileup_files = { FLAGS_i };
-    // if the input is a directory, get all pileup files in the directory
-    if (std::filesystem::is_directory(FLAGS_i)) {
-        mpileup_files = get_files(FLAGS_i, ".bin");
-        if (mpileup_files.empty()) {
-            logger()->info("No binary pileup files found. Looking for textual pileup files...");
-            mpileup_files = get_files(FLAGS_i, ".pileup");
-        }
-        spdlog::info("Found {} .pileup files in '{}'", mpileup_files.size(), FLAGS_i);
-    }
-
-    if (mpileup_files.empty()) {
-        spdlog::info("No pileup files found in {}. Bailing out.", FLAGS_i);
-        std::exit(0);
-    }
-
     std::vector<uint16_t> id_to_group
             = get_grouping(FLAGS_merge_count, FLAGS_merge_file, FLAGS_max_cell_count);
 
+    std::vector<std::filesystem::path> input_files = { FLAGS_i };
+    // if the input is a directory, get all pileup files in the directory
+    if (std::filesystem::is_directory(FLAGS_i)) {
+        input_files = get_files(FLAGS_i, ".bin");
+        if (input_files.empty()) {
+            logger()->info("No binary pileup files found. Looking for textual pileup files...");
+            input_files = get_files(FLAGS_i, ".pileup");
+        }
+        std::sort(input_files.begin(), input_files.end());
+        logger()->info("Found {} input files in '{}'", input_files.size(), FLAGS_i);
+    }
+
+    if (input_files.empty()) {
+        logger()->info("No input files found in {}. Bailing out.", FLAGS_i);
+        std::exit(0);
+    }
+
     uint64_t total_size = 0;
-    for (const auto &f : mpileup_files) {
+    for (const auto &f : input_files) {
         total_size += std::filesystem::file_size(f);
     }
-    ProgressBar read_progress(total_size, "Reading progress", std::cout);
+
+    logger()->trace("Done reading");
 
     // read input files in parallel
-    std::vector<std::vector<PosData>> pos_data(mpileup_files.size());
-    std::vector<std::unordered_set<uint32_t>> cell_ids(mpileup_files.size());
-    std::vector<uint32_t> max_read_lengths(mpileup_files.size());
+    std::vector<std::vector<PosData>> pos_data(input_files.size());
+    std::vector<std::unordered_set<uint32_t>> cell_ids(input_files.size());
+    std::vector<uint32_t> max_read_lengths(input_files.size());
+
+    ProgressBar read_progress(total_size, "Reading progress", std::cout);
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
-        std::tie(pos_data[i], cell_ids[i], max_read_lengths[i])
-                = read_pileup(mpileup_files[i], id_to_group,
-                              [&read_progress](uint32_t progress) { read_progress += progress; }, FLAGS_max_coverage);
+        std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(
+                input_files[i], id_to_group,
+                [&read_progress](uint32_t progress) { read_progress += progress; },
+                FLAGS_max_coverage);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
 
@@ -289,8 +296,8 @@ int main(int argc, char *argv[]) {
 
     uint32_t num_groups = *std::max_element(id_to_group.begin(), id_to_group.end()) + 1;
 
-    // this will maps the cell id to its actual position and vice-versa, as we divide cells into
-    // smaller and smaller clusters
+    // this maps the cell id to its actual position as we divide cells into smaller and smaller
+    // clusters
     std::vector<uint32_t> cell_id_map(num_groups);
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 

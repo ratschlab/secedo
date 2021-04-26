@@ -189,7 +189,10 @@ ProgressBar& ProgressBar::operator+=(uint64_t delta) {
     uint64_t after_update
         = progress_.fetch_add(delta, std::memory_order_relaxed) + delta;
 
-    assert(after_update <= total_);
+    if(after_update > total_) {
+        after_update = total_;
+        progress_ = total_;
+    }
 
     // determines whether to update the progress bar from frequency_update
     if (after_update == total_
@@ -200,5 +203,15 @@ ProgressBar& ProgressBar::operator+=(uint64_t delta) {
     if (after_update == total_)
         *out << std::endl;
 
+    return *this;
+}
+
+ProgressBar& ProgressBar::operator-=(uint64_t delta) {
+    if (silent_ || !delta)
+        return *this;
+
+    assert(delta <= progress_);
+
+    progress_.fetch_add(-(int64_t)delta, std::memory_order_relaxed);
     return *this;
 }

@@ -1,7 +1,7 @@
 #include "pileup_reader.hpp"
 
-#include "logger.hpp"
-#include "util.hpp"
+#include "util/logger.hpp"
+#include "util/util.hpp"
 
 #include <filesystem>
 #include <iostream>
@@ -71,6 +71,7 @@ read_pileup_text(const std::string fname,
         }
 
         std::vector<CellData> cells_data;
+        std::vector<CellData> cells_data_ungrouped;
         for (uint32_t j = 0; j < bases.size(); ++j) {
             if (cell_ids[j] > id_to_group.size()) {
                 logger()->error(
@@ -81,7 +82,9 @@ read_pileup_text(const std::string fname,
             }
 
             cells_data.push_back(
-                    { read_ids[j], id_to_group.at(cell_ids[j]), CharToInt[(uint8_t)bases[j]] });
+                    { read_ids_int[j], id_to_group.at(cell_ids[j]), CharToInt[(uint8_t)bases[j]] });
+            cells_data_ungrouped.push_back(
+                    { read_ids_int[j], cell_ids[j], CharToInt[(uint8_t)bases[j]] });
         }
         result.push_back({ position, cells_data });
 
@@ -91,11 +94,8 @@ read_pileup_text(const std::string fname,
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             uint16_t coverage = bases.size();
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
-            out_bin.write(reinterpret_cast<char *>(bases.data()), bases.size());
-            out_bin.write(reinterpret_cast<char *>(cell_ids.data()),
-                          cell_ids.size() * sizeof(cell_ids.data()[0]));
-            out_bin.write(reinterpret_cast<char *>(read_ids_int.data()),
-                          read_ids_int.size() * sizeof(read_ids_int.data()[0]));
+            out_bin.write(reinterpret_cast<char *>(cells_data_ungrouped.data()),
+                          cells_data_ungrouped.size() * sizeof(cells_data_ungrouped[0]));
         }
     }
 
@@ -103,9 +103,9 @@ read_pileup_text(const std::string fname,
     for (const auto &[k, v] : id_stats) {
         max_length = std::max(max_length, v.second - v.first);
     }
-    logger()->trace("{}: found {} cell ids, {} after grouping, {} reads. Longest read has {} bases",
-                    fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(),
-                    max_length);
+    logger()->trace(
+            "{}: found {} cell ids, {} after grouping, {} reads. Longest fragment is {} bases",
+            fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(), max_length);
 
     return { result, all_cell_ids, max_length };
 }
@@ -144,17 +144,13 @@ read_pileup_bin(const std::string fname,
         f.read(reinterpret_cast<char *>(&position), sizeof(position));
         f.read(reinterpret_cast<char *>(&coverage), sizeof(coverage));
 
-        std::vector<char> bases(coverage);
-        std::vector<uint16_t> cell_ids(coverage);
-        std::vector<uint32_t> read_ids(coverage);
+        std::vector<CellData> cell_data(coverage);
 
-        f.read(bases.data(), bases.size());
-        f.read(reinterpret_cast<char *>(cell_ids.data()), cell_ids.size() * sizeof(cell_ids[0]));
-        f.read(reinterpret_cast<char *>(read_ids.data()), read_ids.size() * sizeof(read_ids[0]));
+        f.read(reinterpret_cast<char *>(cell_data.data()), cell_data.size() * sizeof(cell_data[0]));
 
         // report progress
         read_bytes = f.tellg();
-        if ((int64_t )read_bytes == -1 ) { // end of file
+        if ((int64_t)read_bytes == -1) { // end of file
             read_bytes = std::filesystem::file_size(fname);
         }
         progress(read_bytes - reported_bytes);
@@ -164,30 +160,28 @@ read_pileup_bin(const std::string fname,
             continue;
         }
 
-        for (const uint16_t id : cell_ids) {
-            all_cell_ids.insert(id);
-            all_cell_ids_grouped.insert(id_to_group[id]);
-        }
-
-        std::vector<CellData> cells_data;
-        for (uint32_t j = 0; j < bases.size(); ++j) {
-            if (cell_ids[j] > id_to_group.size()) {
+        for (auto &cd : cell_data) {
+            all_cell_ids.insert(cd.cell_id);
+            if (cd.cell_id >= id_to_group.size()) {
                 logger()->error(
                         "Cell id {} is too large. Increase --max_cell_count if using the default "
                         "mapping, or fix the mapping in --merge_file",
                         id_to_group.size());
                 std::exit(1);
             }
-
-            if (id_stats.find(read_ids[j]) != id_stats.end()) {
-                id_stats[read_ids[j]] = { id_stats[read_ids[j]].first, position };
-            } else {
-                id_stats[read_ids[j]] = { position, position };
-            }
-            cells_data.push_back({ std::to_string(read_ids[j]), id_to_group.at(cell_ids[j]),
-                                   CharToInt[(uint8_t)bases[j]] });
+            cd.cell_id = id_to_group[cd.cell_id];
+            all_cell_ids_grouped.insert(cd.cell_id);
         }
-        result.push_back({ position, cells_data });
+
+        for (uint32_t j = 0; j < cell_data.size(); ++j) {
+            uint32_t read_id = cell_data[j].read_id;
+            if (id_stats.find(read_id) != id_stats.end()) {
+                id_stats[read_id] = { id_stats[read_id].first, position };
+            } else {
+                id_stats[read_id] = { position, position };
+            }
+        }
+        result.push_back({ position, cell_data });
     }
 
     uint32_t max_length = 0;
@@ -195,9 +189,9 @@ read_pileup_bin(const std::string fname,
         max_length = std::max(max_length, v.second - v.first);
     }
 
-    logger()->trace("{}: found {} cell ids, {} after grouping, {} reads. Longest read has {} bases",
-                    fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(),
-                    max_length);
+    logger()->trace(
+            "{}: found {} cell ids, {} after grouping, {} reads. Longest fragment is {} bases",
+            fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(), max_length);
 
     return { result, all_cell_ids, max_length };
 }

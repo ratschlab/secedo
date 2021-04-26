@@ -1,7 +1,7 @@
 #include "spectral_clustering.hpp"
 
-#include "logger.hpp"
-#include "util.hpp"
+#include "util/logger.hpp"
+#include "util/util.hpp"
 
 #include <armadillo>
 

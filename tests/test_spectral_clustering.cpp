@@ -36,7 +36,7 @@ TEST_P(SpectralClustering, OneCluster) {
         constexpr uint32_t num_cells = 100;
         Matd similarity(num_cells, num_cells);
         for (uint32_t i = 0; i < num_cells; ++i) {
-            similarity(i,i) = 0;
+            similarity(i, i) = 0;
             for (uint32_t j = 0; j < i; ++j) {
                 similarity(i, j) = 1 + noise(generator);
                 similarity(j, i) = similarity(i, j);
@@ -55,7 +55,7 @@ TEST_P(SpectralClustering, TwoClusters) {
     auto [clustering, termination] = GetParam();
 
     std::default_random_engine generator;
-    std::uniform_real_distribution<double> noise(-1e-1, 1e-1);
+    std::uniform_real_distribution<double> noise(-1e-2, 1e-2);
 
     constexpr uint32_t num_cells = 100;
 
@@ -80,10 +80,10 @@ TEST_P(SpectralClustering, TwoClusters) {
 
     ASSERT_FALSE(done); // the split should be successful
     for (uint32_t i = 0; i < half - 1; ++i) {
-        ASSERT_EQ(cluster[i], cluster[i + 1]);
+        ASSERT_NEAR(0, std::abs(cluster[i] - cluster[i + 1]), 1e-3);
     }
     for (uint32_t i = half; i < num_cells - 1; ++i) {
-        ASSERT_EQ(cluster[i], cluster[i + 1]);
+        ASSERT_NEAR(0, std::abs(cluster[i] - cluster[i + 1]), 1e-3);
     }
     ASSERT_EQ(1., std::abs(cluster.front() - cluster.back()));
 }
@@ -110,16 +110,15 @@ TEST_P(SpectralClustering, ThreeClusters) {
     ASSERT_NE(cluster[0], cluster[4]);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-        Method,
-        SpectralClustering,
-        ::testing::Values(std::make_pair("SPECTRAL2", Termination::AIC),
-                          std::make_pair("FIEDLER", Termination::AIC),
-                          std::make_pair("GMM_ASSIGN", Termination::AIC),
-                          std::make_pair("GMM_PROB", Termination::AIC),
-                          std::make_pair("SPECTRAL2", Termination::BIC),
-                          std::make_pair("FIEDLER", Termination::BIC),
-                          std::make_pair("GMM_PROB", Termination::BIC),
-                          std::make_pair("GMM_ASSIGN", Termination::BIC)));
+INSTANTIATE_TEST_SUITE_P(Method,
+                         SpectralClustering,
+                         ::testing::Values(std::make_pair("SPECTRAL2", Termination::AIC),
+                                           std::make_pair("FIEDLER", Termination::AIC),
+                                           std::make_pair("GMM_ASSIGN", Termination::AIC),
+                                           std::make_pair("GMM_PROB", Termination::AIC),
+                                           std::make_pair("SPECTRAL2", Termination::BIC),
+                                           std::make_pair("FIEDLER", Termination::BIC),
+                                           std::make_pair("GMM_PROB", Termination::BIC),
+                                           std::make_pair("GMM_ASSIGN", Termination::BIC)));
 
 } // namespace

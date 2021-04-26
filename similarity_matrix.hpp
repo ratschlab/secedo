@@ -1,7 +1,7 @@
 #pragma once
 
-#include "mat.hpp"
 #include "sequenced_data.hpp"
+#include "util/mat.hpp"
 
 #include <cstdint>
 #include <vector>
