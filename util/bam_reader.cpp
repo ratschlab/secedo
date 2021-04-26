@@ -79,12 +79,16 @@ bool read_bam_file(const uint16_t cell_id,
         uint32_t cigar_idx = 0;
         uint32_t cigar_end = al.CigarData[0].Length;
         for (uint32_t i = 0; i < al.AlignedBases.size() - offset; ++i) {
-            if (i >= cigar_end) {
+            // check if we stepped outside the current CIGAR chunk
+            while (i >= cigar_end) { // TODO: write a test for this
                 cigar_idx++;
+                // if the aligned string has inserted bases relative to the reference, we simply
+                // skip those bases by increasing the offset and move on to the next CIGAR chunk
+                if (al.CigarData[cigar_idx].Type == 'I') {
+                    offset += al.CigarData[cigar_idx].Length;
+                    continue;
+                }
                 cigar_end = i + al.CigarData[cigar_idx].Length;
-            }
-            if (al.CigarData[cigar_idx].Type == 'I') {
-                offset++;
             }
 
             uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i + offset]];
