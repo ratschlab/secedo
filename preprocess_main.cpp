@@ -38,8 +38,6 @@ DEFINE_uint32(max_coverage,
               "Positions with higher coverage are considered anomalies and discarded during "
               "preprocessing (also at clustering time)");
 
-constexpr uint16_t NO_POS = std::numeric_limits<uint16_t>::max();
-
 uint32_t chromosome_to_id(const std::string &chromosome) {
     char *p;
     uint32_t converted = strtol(chromosome.c_str(), &p, 10);

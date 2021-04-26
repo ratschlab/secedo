@@ -179,8 +179,8 @@ struct Read {
  * updates mat_same and mat_diff accordingly. Well it doesn't update mat_same and mat_diff directly
  * in order to avoid a critical section, it pushes the updates into #updates_same and #updates_diff.
  */
-void compare_with_reads(const std::unordered_map<std::string, Read> &active_reads,
-                        const std::deque<std::string> &active_keys,
+void compare_with_reads(const std::unordered_map<uint32_t, Read> &active_reads,
+                        const std::deque<uint32_t> &active_keys,
                         uint32_t start_idx,
                         const std::vector<uint32_t> &cell_id_to_cell_idx,
                         const Cache &cache,
@@ -346,7 +346,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
 
     // key: read id of an active read
     // value: A Read struct, containing: sequence, line number, cell_id and position in genome
-    std::unordered_map<std::string, Read> active_reads;
+    std::unordered_map<uint32_t, Read> active_reads;
 
     Cache cache(mutation_rate, heterozygous_rate, seq_error_rate,
                 max_fragment_length); // store intermediate values to avoid recomputation
@@ -357,7 +357,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     }
 
     ProgressBar read_progress(total_positions, "Processed;", std::cout);
-    std::deque<std::string> active_keys;
+    std::deque<uint32_t> active_keys;
     // the number of completed DNA fragments, i.e. reads that started max_fragment_length ago
     uint32_t completed = 0;
     for (const auto &chromosome_data : pos_data) {
