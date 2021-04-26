@@ -73,7 +73,7 @@ bool read_bam_file(const uint16_t cell_id,
         al.BuildCharData();
 
         auto read_id_iter = read_name_to_id->find(al.Name);
-        uint64_t read_id = (read_id_iter == read_name_to_id->end()) ? (*last_read_id)++
+        uint32_t read_id = (read_id_iter == read_name_to_id->end()) ? (*last_read_id)++
                                                                     : read_id_iter->second;
         uint32_t offset = 0; // if the CIGAR string contains inserts, we need to adjust the offset
         uint32_t cigar_idx = 0;
@@ -107,8 +107,7 @@ bool read_bam_file(const uint16_t cell_id,
             if (current_coverage >= max_coverage) {
                 continue; // this position has suspiciously high coverage, treating as noise
             }
-            // TODO: use integer ids
-            cell_datas[current_coverage] = { std::to_string(read_id), cell_id, base };
+            cell_datas[current_coverage] = { read_id, cell_id, base };
         }
     }
 
@@ -172,6 +171,7 @@ get_batches(const std::vector<std::filesystem::path> &input_files, uint32_t batc
 
 std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_files,
                               const std::filesystem::path &outfile,
+                              bool write_text_file,
                               uint32_t chromosome_id,
                               uint32_t max_coverage,
                               uint32_t min_base_quality,
@@ -186,7 +186,8 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
     std::vector<std::vector<std::filesystem::path>> file_batches
             = get_batches(input_files, MAX_OPEN_FILES);
 
-    std::ofstream fout(outfile);
+    std::ofstream out_text(outfile.string() + ".txt");
+    std::ofstream out_bin(outfile.string() + ".bin", std::fstream::binary);
 
     std::vector<PosData> result; // the final result containing the merged data
 
@@ -223,24 +224,31 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
             if (!is_significant(base_count, sequencing_error_rate)) {
                 continue;
             }
+            uint8_t chromosome = chromosome_id + 1;
+            uint64_t position = start_pos + pos + 1;
+            if (write_text_file) {
+                // adding 1 to start pos, bc. samtools is 1-based
+                out_text << chromosome << '\t' << position << '\t' << data_size[pos] << '\t';
+                std::sort(data[pos].begin(), data[pos].begin() + data_size[pos],
+                          [](auto &a, auto &b) { return a.cell_id < b.cell_id; });
 
-            // adding 1 to start pos, bc. samtools is 1-based
-            fout << (chromosome_id + 1) << '\t' << start_pos + pos + 1 << '\t' << data_size[pos]
-                 << '\t';
-            std::sort(data[pos].begin(), data[pos].begin() + data_size[pos],
-                      [](auto &a, auto &b) { return a.cell_id < b.cell_id; });
+                for (uint32_t i = 0; i < data_size[pos]; ++i) {
+                    out_text << IntToChar[data[pos][i].base];
+                }
+                out_text << '\t';
+                for (uint32_t i = 0; i < data_size[pos] - 1U; ++i) {
+                    out_text << data[pos][i].cell_id << ",";
+                }
+                out_text << data[pos][data_size[pos] - 1].cell_id;
+                out_text << std::endl;
 
-            for (uint32_t i = 0; i < data_size[pos]; ++i) {
-                fout << IntToChar[data[pos][i].base];
+                result.push_back({ start_pos + pos, data[pos] });
             }
-            fout << '\t';
-            for (uint32_t i = 0; i < data_size[pos] - 1U; ++i) {
-                fout << data[pos][i].cell_id << ",";
-            }
-            fout << data[pos][data_size[pos] - 1].cell_id;
-            fout << std::endl;
-
-            result.push_back({ start_pos + pos, data[pos] });
+            out_bin.write(reinterpret_cast<char *>(&chromosome), 1);
+            out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
+            uint16_t coverage = data_size[pos];
+            out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
+            out_bin.write(reinterpret_cast<char *>(&data[pos]), coverage * sizeof(data[pos][0]));
         }
 
         for (uint32_t i = 0; i < MAX_INSERT_SIZE; ++i) {

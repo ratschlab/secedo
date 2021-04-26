@@ -26,8 +26,8 @@ TEST(EM, OneCell) {
  * they will have identical probabilities of belonging to either cluster.
  */
 TEST(EM, TwoCellsSame) {
-    CellData cell_data_a = { "ida", 0, 1 }; // cell id '0' has a read of 'C'
-    CellData cell_data_b = { "id_b", 1, 1 }; // cell id '1' also has a read of 'C'
+    CellData cell_data_a = { 1000, 0, 1 }; // cell id '0' has a read of 'C'
+    CellData cell_data_b = { 1001, 1, 1 }; // cell id '1' also has a read of 'C'
     PosData one_pos = { 1234, { cell_data_a, cell_data_b } };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.3, 0.4 };
@@ -41,8 +41,8 @@ TEST(EM, TwoCellsSame) {
  * towards different clusters.
  */
 TEST(EM, TwoCellsDifferent) {
-    CellData cell_data_a = { "id_a", 0, 1 }; // cell id '0' has a read of 'C'
-    CellData cell_data_b = { "id_b", 1, 2 }; // cell id '1' has a read of 'G'
+    CellData cell_data_a = { 1000, 0, 1 }; // cell id '0' has a read of 'C'
+    CellData cell_data_b = { 1001, 1, 2 }; // cell id '1' has a read of 'G'
     PosData one_pos = { 1234, { cell_data_a, cell_data_b } };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.01, 0.02 };
@@ -56,10 +56,10 @@ TEST(EM, TwoCellsDifferent) {
  * the same cluster, in the end the probabilities should converge towards the correct clusters.
  */
 TEST(EM, FourCellsTwoGroups22) {
-    CellData cell_data_a = { "id_a", 0, 1 }; // cell id '0' has a read of 'C'
-    CellData cell_data_b = { "id_b", 1, 1 }; // cell id '1' also has a read of 'C'
-    CellData cell_data_c = { "id_c", 2, 2 }; // cell id '2' has a read of 'G'
-    CellData cell_data_d = { "id_d", 3, 2 }; // cell id '3' also has a read of 'G'
+    CellData cell_data_a = { 1000, 0, 1 }; // cell id '0' has a read of 'C'
+    CellData cell_data_b = { 1001, 1, 1 }; // cell id '1' also has a read of 'C'
+    CellData cell_data_c = { 1002, 2, 2 }; // cell id '2' has a read of 'G'
+    CellData cell_data_d = { 1003, 3, 2 }; // cell id '3' also has a read of 'G'
     PosData one_pos = { 1234, { cell_data_a, cell_data_b, cell_data_c, cell_data_d } };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.9, 0.02, 0.03, 0.9 };
@@ -76,10 +76,10 @@ TEST(EM, FourCellsTwoGroups22) {
  * clusters.
  */
 TEST(EM, FourCellsTwoGroups31) {
-    CellData cell_data_a = { "id_a", 0, 2 }; // cell id '0' has a read of 'C'
-    CellData cell_data_b = { "id_b", 1, 1 }; // cell id '1' also has a read of 'C'
-    CellData cell_data_c = { "id_c", 2, 2 }; // cell id '2' has a read of 'G'
-    CellData cell_data_d = { "id_d", 3, 2 }; // cell id '3' also has a read of 'G'
+    CellData cell_data_a = { 1000, 0, 2 }; // cell id '0' has a read of 'C'
+    CellData cell_data_b = { 1001, 1, 1 }; // cell id '1' also has a read of 'C'
+    CellData cell_data_c = { 1002, 2, 2 }; // cell id '2' has a read of 'G'
+    CellData cell_data_d = { 1003, 3, 2 }; // cell id '3' also has a read of 'G'
     PosData one_pos = { 1234, { cell_data_a, cell_data_b, cell_data_c, cell_data_d } };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.9, 0.9, 0.03, 0.1 };

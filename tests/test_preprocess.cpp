@@ -48,6 +48,12 @@ TEST(Preprocess, Cov52TenDifferent) {
 
 TEST(Preproces, Cov59TwoDifferent) {
     std::string bases = "tttttTTTTaTTTttTaTtTTTTtTTtTTTtTttTTtTtTtttTTttttTTttTTTTtt";
+    ASSERT_FALSE(is_significant_helper(bases));
+}
+
+TEST(Preproces, AtLimit) {
+    std::string bases = "CcccccccCcccCCCCcaCcccCccACccccCCCcCcCCCC";
+    ASSERT_TRUE(is_significant_helper(bases, 0.001));
 }
 
 } // namespace

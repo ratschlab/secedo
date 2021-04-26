@@ -46,8 +46,8 @@ double log_fact(uint32_t n) {
  * @return True if the position is kept
  */
 bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
-    static double log_theta = std::log(theta / 3);
-    static double log_one_minus_theta = std::log(1 - theta);
+    double log_theta = std::log(theta / 3);
+    double log_one_minus_theta = std::log(1 - theta);
 
     // sort base_count; sorts in ascending order
     std::sort(base_count.begin(), base_count.end());

@@ -69,6 +69,12 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(svc stdc++fs)
 endif()
 
+add_executable(preprocess preprocess_main.cpp)
+target_link_libraries(preprocess lib_util gflags spdlog::spdlog BamTools)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_link_libraries(preprocess stdc++fs)
+endif()
+
 # TESTS
 enable_testing()
 include(GoogleTest)
