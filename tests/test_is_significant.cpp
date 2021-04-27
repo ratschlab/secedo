@@ -71,5 +71,10 @@ TEST(Preproces, LengthAtLimitRoundUp) {
     ASSERT_FALSE(is_significant_helper(bases, 0.001));
 }
 
+TEST(Preproces, Debug) {
+    std::string bases = "TTTTTTCTCCTTTTTTTTTTTTTTTTTTTTTTTTCTCTTTTTTTTTTTTTTTTTTTTTTTCTTT";
+    ASSERT_FALSE(is_significant_helper(bases, 0.001));
+}
+
 
 } // namespace

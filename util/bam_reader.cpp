@@ -142,7 +142,7 @@ bool read_bam_chunk(const std::vector<std::filesystem::path> &input_files,
     for (uint32_t i = 0; i < input_files.size(); ++i) {
         auto reader = std::make_unique<BamTools::BamReader>();
         if (!reader->Open(input_files[i])) {
-            logger()->error("Could not open input BAM files.");
+            logger()->error("Could not open {}", input_files[i]);
             std::exit(1);
         }
 
@@ -254,7 +254,8 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             uint16_t coverage = data_size[pos];
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
-            out_bin.write(reinterpret_cast<char *>(&data[pos]), coverage * sizeof(data[pos][0]));
+            out_bin.write(reinterpret_cast<char *>(data[pos].data()),
+                          coverage * sizeof(data[pos][0]));
         }
 
         for (uint32_t i = 0; i < MAX_INSERT_SIZE; ++i) {
