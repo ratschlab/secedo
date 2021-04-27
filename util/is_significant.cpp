@@ -1,5 +1,7 @@
 #include "is_significant.hpp"
 
+#include <cfenv>
+
 // thresholds K to use for pre-processing; values for coverage 10, 20, 30, ... 200
 // always the largest values for any tumour proportion, rounded up to one decimal place
 std::vector<double> Ks = { 0.872,   0.872,   0.872,   -1.238,  -1.358,   -5.749,  -10.139,
@@ -29,7 +31,8 @@ double log_fact(uint32_t n) {
 }
 
 double round_nearest_even(double x) {
-    return std::round( x * 0.5 ) * 2.0;
+    std::fesetround(FE_TONEAREST);
+    return std::nearbyint(x);
 }
 
 bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
