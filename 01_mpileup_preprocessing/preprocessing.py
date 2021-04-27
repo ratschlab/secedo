@@ -49,6 +49,7 @@ def preprocessing(data, theta, K):
         print('logNorm_coef ', logNorm_coef)
         print('log prob homo ', logProb_homo, 'logNorm_coef ', logNorm_coef)
         res = logNorm_coef + logProb_homo
+        print('res ', res, ' k ', K)
         if res < K:
             return True
         else:
@@ -58,7 +59,7 @@ def preprocessing(data, theta, K):
 
 
 def main(argv):
-    print(preprocessing([51, 1, 0, 0], 0.01, Ks[4]))
+    print(preprocessing([61, 4, 0, 0], 0.001, Ks[6]))
     # parse the arguments
     try:
         opts, args = getopt.getopt(argv, "n:t:")

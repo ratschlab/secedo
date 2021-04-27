@@ -227,11 +227,7 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                 base_count[data[pos][i].base]++;
             }
 
-            if (start_pos+pos+1==1'311'757) {
-                logger()->trace("Reached position 1'311'757");
-            }
-
-            if (!is_significant(base_count, sequencing_error_rate) && start_pos+pos+1!=1'311'757) {
+            if (!is_significant(base_count, sequencing_error_rate)) {
                 continue;
             }
             uint32_t chromosome = chromosome_id + 1;
