@@ -72,8 +72,13 @@ bool read_bam_file(const uint16_t cell_id,
         al.BuildCharData();
 
         auto read_id_iter = read_name_to_id->find(al.Name);
-        uint32_t read_id = (read_id_iter == read_name_to_id->end()) ? (*last_read_id)++
-                                                                    : read_id_iter->second;
+        uint32_t read_id;
+        if (read_id_iter == read_name_to_id->end()) {
+            read_id = (*last_read_id)++;
+            (*read_name_to_id)[al.Name] = read_id;
+        } else {
+            read_id = read_id_iter->second;
+        }
         uint32_t offset = 0; // if the CIGAR string contains inserts, we need to adjust the offset
         uint32_t del_offset = 0;
         uint32_t cigar_idx = 0;
