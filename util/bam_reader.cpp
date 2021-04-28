@@ -251,6 +251,13 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                     out_text << data[pos][i].cell_id << ",";
                 }
                 out_text << data[pos][data_size[pos] - 1].cell_id;
+
+                out_text << '\t';
+                for (uint32_t i = 0; i < data_size[pos] - 1U; ++i) {
+                    out_text << data[pos][i].read_id << ",";
+                }
+                out_text << data[pos][data_size[pos] - 1].read_id;
+
                 out_text << std::endl;
 
                 result.push_back({ start_pos + pos, data[pos] });

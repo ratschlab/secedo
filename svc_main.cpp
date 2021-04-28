@@ -260,8 +260,6 @@ int main(int argc, char *argv[]) {
         total_size += std::filesystem::file_size(f);
     }
 
-    logger()->trace("Done reading");
-
     // read input files in parallel
     std::vector<std::vector<PosData>> pos_data(input_files.size());
     std::vector<std::unordered_set<uint32_t>> cell_ids(input_files.size());
