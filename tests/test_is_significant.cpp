@@ -30,7 +30,7 @@ TEST(LogFact, SomeValues) {
 }
 
 TEST(LogFact, LargeValues) {
-    double values[] = { 716.86, 722.01, 727.17, 732.33};
+    double values[] = { 716.86, 722.01, 727.17, 732.33 };
     for (uint32_t i = 0; i < 4; ++i) {
         ASSERT_NEAR(values[i], log_fact(i + 172), 1e-2);
     }
@@ -55,5 +55,26 @@ TEST(Preproces, AtLimit) {
     std::string bases = "CcccccccCcccCCCCcaCcccCccACccccCCCcCcCCCC";
     ASSERT_TRUE(is_significant_helper(bases, 0.001));
 }
+
+/** Make sure we round the length of the string properly (for computing the proper threshold K),
+ * i.e. length 65 in this case should generate index 5 */
+TEST(Preproces, LengthAtLimitRoundDown) {
+    std::string bases = "TTTTTTTTTTTTTTTTTTTTTTTTTTTTGGGTGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT";
+    ASSERT_TRUE(is_significant_helper(bases, 0.001));
+}
+
+/** Make sure we round the length of the string properly (for computing the proper threshold K),
+ * i.e. length 55 in this case should generate index 5 (because we emulate rounding to nearest even
+ */
+TEST(Preproces, LengthAtLimitRoundUp) {
+    std::string bases = "GGGGGGGGGGGGGTGGGGGGGGGGGAGGGGGGGGGGGGGGGTGGGGGGGGGGGGG";
+    ASSERT_FALSE(is_significant_helper(bases, 0.001));
+}
+
+TEST(Preproces, Debug) {
+    std::string bases = "TTTTTTCTCCTTTTTTTTTTTTTTTTTTTTTTTTCTCTTTTTTTTTTTTTTTTTTTTTTTCTTT";
+    ASSERT_FALSE(is_significant_helper(bases, 0.001));
+}
+
 
 } // namespace

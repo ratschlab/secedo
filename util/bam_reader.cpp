@@ -72,8 +72,13 @@ bool read_bam_file(const uint16_t cell_id,
         al.BuildCharData();
 
         auto read_id_iter = read_name_to_id->find(al.Name);
-        uint32_t read_id = (read_id_iter == read_name_to_id->end()) ? (*last_read_id)++
-                                                                    : read_id_iter->second;
+        uint32_t read_id;
+        if (read_id_iter == read_name_to_id->end()) {
+            read_id = (*last_read_id)++;
+            (*read_name_to_id)[al.Name] = read_id;
+        } else {
+            read_id = read_id_iter->second;
+        }
         uint32_t offset = 0; // if the CIGAR string contains inserts, we need to adjust the offset
         uint32_t del_offset = 0;
         uint32_t cigar_idx = 0;
@@ -142,7 +147,7 @@ bool read_bam_chunk(const std::vector<std::filesystem::path> &input_files,
     for (uint32_t i = 0; i < input_files.size(); ++i) {
         auto reader = std::make_unique<BamTools::BamReader>();
         if (!reader->Open(input_files[i])) {
-            logger()->error("Could not open input BAM files.");
+            logger()->error("Could not open {}", input_files[i]);
             std::exit(1);
         }
 
@@ -246,6 +251,13 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
                     out_text << data[pos][i].cell_id << ",";
                 }
                 out_text << data[pos][data_size[pos] - 1].cell_id;
+
+                out_text << '\t';
+                for (uint32_t i = 0; i < data_size[pos] - 1U; ++i) {
+                    out_text << data[pos][i].read_id << ",";
+                }
+                out_text << data[pos][data_size[pos] - 1].read_id;
+
                 out_text << std::endl;
 
                 result.push_back({ start_pos + pos, data[pos] });
@@ -254,7 +266,8 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             uint16_t coverage = data_size[pos];
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
-            out_bin.write(reinterpret_cast<char *>(&data[pos]), coverage * sizeof(data[pos][0]));
+            out_bin.write(reinterpret_cast<char *>(data[pos].data()),
+                          coverage * sizeof(data[pos][0]));
         }
 
         for (uint32_t i = 0; i < MAX_INSERT_SIZE; ++i) {
