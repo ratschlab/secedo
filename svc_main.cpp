@@ -1,7 +1,7 @@
-#include "util/is_significant.hpp"
 #include "sequenced_data.hpp"
 #include "similarity_matrix.hpp"
 #include "spectral_clustering.hpp"
+#include "util/is_significant.hpp"
 #include "util/logger.hpp"
 #include "util/pileup_reader.hpp"
 #include "util/util.hpp"
@@ -60,7 +60,6 @@ DEFINE_string(clustering_type,
               "SPECTRAL6",
               "How to perform spectral clustering. One of FIEDLER, SPECTRAL2, SPECTRAL6, "
               "GMM_ASSIGN, GMM_PROB. See spectral_clustering.hpp for details.");
-
 static bool ValidateClusteringType(const char *flagname, const std::string &value) {
     if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6" && value != "GMM_PROB"
         && value != "GMM_ASSIGN") {
@@ -71,8 +70,24 @@ static bool ValidateClusteringType(const char *flagname, const std::string &valu
     }
     return true;
 }
-
 DEFINE_validator(clustering_type, ValidateClusteringType);
+
+static bool ValidateTermination(const char *flagname, const std::string &value) {
+    if (value != "AIC" && value != "BIC") {
+        printf("Invalid value for --%s: %s.\nShould be one of AIC, BIC\n", flagname, value.c_str());
+        return false;
+    }
+    return true;
+}
+DEFINE_string(termination,
+              "BIC",
+              "Which criteria to use for determining if a Simple or Multivariate Gaussian matches "
+              "the data better (AIC/BIC)");
+DEFINE_validator(termination, ValidateTermination);
+
+Termination parse_termination(const std::string &str_termination) {
+    return str_termination == "AIC" ? Termination::AIC : Termination::BIC;
+}
 
 static bool ValidateNormalization(const char *flagname, const std::string &value) {
     if (value != "ADD_MIN" && value != "EXPONENTIATE" && value != "SCALE_MAX_1") {
@@ -122,8 +137,9 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
 
     logger()->info("Performing spectral clustering...");
     std::vector<double> cluster;
-    bool is_done = spectral_clustering(sim_mat, FLAGS_clustering_type, Termination::AIC, FLAGS_o,
-                                       marker, &cluster);
+    Termination termination = parse_termination(FLAGS_termination);
+    bool is_done = spectral_clustering(sim_mat, FLAGS_clustering_type, termination, FLAGS_o, marker,
+                                       &cluster);
     if (is_done) {
         return;
     }
