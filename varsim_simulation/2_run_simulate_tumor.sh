@@ -32,8 +32,8 @@ command="time python2 ${base_dir}/varsim-0.8.4/varsim_somatic.py \
         --som_num_complex 200 \
         --cosmic_vcf ${base_dir}/cosmic/cosmic.vcf.gz \
         --normal_vcf ${healthy_vcf} \
-        --nlanes ${n_cells} --total_coverage ${coverage} \
-        --simulator_executable /cluster/work/grlab/projects/projects2019-supervario/art_bin_MountRainier/art_illumina \
+        --disable_sim \
+        --simulator_executable doesnt_matter_we_are_not_simulating \
         --out_dir ${out_dir} \
         --log_dir ${out_dir}/logs --work_dir ${out_dir}/tmp --sv_insert_seq ${out_dir}/empty_file"
 

@@ -19,9 +19,8 @@ cmd="time ${base_dir}/varsim-0.8.4/varsim.py --id healthy --vc_in_vcf ${base_dir
    --vc_num_del 100000 --vc_num_mnp 50000 --vc_num_complex 50000 \
    --sv_num_ins 0 --sv_num_del 0 --sv_num_dup 0 --sv_num_inv 0 --sv_insert_seq ${out_dir}/empty_file \
    --sv_dgv empty_file \
-   --mean_fragment_size 350 --sd_fragment_size 50 \
-   --nlanes ${n_cells} --total_coverage ${coverage} \
-   --simulator_executable /cluster/work/grlab/projects/projects2019-supervario/art_bin_MountRainier/art_illumina \
+   --disable_sim \
+   --simulator_executable doesnt_matter_we_are_not_simulating \
    --out_dir ${out_dir} --log_dir ${out_dir}/logs/ --work_dir ${out_dir}/tmp | tee 2>&1 ${out_dir}/healthy.log"
 
 echo "Executing: $cmd"
