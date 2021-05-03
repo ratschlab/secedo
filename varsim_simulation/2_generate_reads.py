@@ -12,8 +12,11 @@ logging.basicConfig(level=logging.DEBUG)
 def execute_art(cur_idx, art, coverage, out):
     # generating paired reads (-p) of length (-l) 100, with average insert length (-m) 350 and standard deviation
     # (-s) 50
-    return subprocess.Popen([art, '-p', '-l', '100', '-m', '350', '-s', '50', '-i', args.fasta, '-f',
-                             str(coverage / 2.), '-rs', str(cur_idx), '-o', f'{out}{cur_idx}'])
+    return subprocess.Popen(
+        f'{art} -p -l 100 -m 350 -s 50 -i {args.fasta} -f {coverage / 2.} -rs {cur_idx} -o {out}{cur_idx}.; '
+        f'gzip {out}{cur_idx}.1.fq; gzip {out}{cur_idx}.2.fq; '
+        f'rm {out}{cur_idx}.1.aln {out}{cur_idx}.2.aln;',
+        executable='/bin/bash', shell=True)
 
 
 if __name__ == '__main__':
@@ -52,5 +55,4 @@ if __name__ == '__main__':
                 if cur_idx < args.stop:
                     process_list.append((execute_art(cur_idx, args.art, args.coverage, args.out), cur_idx))
                     cur_idx += 1
-        logger.info('Back to sleep')
-        time.sleep(1)
+        time.sleep(10)
