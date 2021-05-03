@@ -15,7 +15,7 @@ scratch_dir="/scratch/svc"
 out_dir="${base_dir}/${cov}/healthy"
 mkdir -p "${out_dir}/logs/"
 out_prefix=${out_dir}/healthy_
-fasta="${base_dir}/cov${cov}/healthy/healthy.fa"
+fasta="${base_dir}/genomes/healthy.fa"
 
 for batch in $(seq 0 ${step} ${n_cells}); do
   cmd="echo Copying data...; mkdir ${scratch_dir}; cp ${healthy_fa}  ${scratch_dir}"
@@ -29,7 +29,7 @@ done
 out_dir="${base_dir}/${cov}/tumor"
 mkdir -p "${out_dir}/logs/"
 out_prefix=${out_dir}/tumor_
-fasta="${base_dir}/cov${cov}/tumor/tumor.fa"
+fasta="${base_dir}/genomes/tumor-1.fa"
 
 for batch in $(seq 0 ${step} ${n_cells}); do
   cmd="echo Copying data...; mkdir ${scratch_dir}; cp ${tumor_fa} ${scratch_dir}"
