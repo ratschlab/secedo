@@ -1,10 +1,10 @@
 # runs Varsim to generate a pattern for healthy and tumor cells based on the GRCh38_new.fa reference genome
 # Inputs:
-  - the human reference genome in fasta format e.g. GRCh38_new.fa
-  - common variations on the reference genome, e.g. common_all_20180418.vcf.gz
-  - a VCF file to draw mutations for the cancer cells from, e.g. cosmic.vcf.gz
+#  - the human reference genome in fasta format e.g. GRCh38_new.fa
+#  - common variations on the reference genome, e.g. common_all_20180418.vcf.gz
+#  - a VCF file to draw mutations for the cancer cells from, e.g. cosmic.vcf.gz
 # Outputs:
-  - one fasta file for the healthy cell and one fasta for the tumor cell
+#  - one fasta file for the healthy cell and one fasta for the tumor cell
 
 # don't forget to run: "conda activate py2" before running this script
 
@@ -38,7 +38,7 @@ echo "Executing: $cmd"
 bsub  -J "sim-healthy" -W 23:00 -n 20 -R "rusage[mem=8000]" -R "span[hosts=1]"  -oo "${out_dir}/healthy.lsf.log" "${cmd}"
 
 
-out_dir=${base_dir}/cov${cov}/tumor
+out_dir=${base_dir}/${cov}/tumor
 mkdir -p  ${out_dir}
 touch "${out_dir}/empty_file"
 
@@ -46,8 +46,8 @@ touch "${out_dir}/empty_file"
 # (because the tumor cells are based on healthy cells + cosmic mutations)
 
 
-healthy_vcf="${base_dir}/cov${cov}/healthy/healthy.truth.vcf"
-if [-f ${healthy_vcf} ]; then
+healthy_vcf="${base_dir}/${cov}/healthy/healthy.truth.vcf"
+if [ -f ${healthy_vcf} ]; then
   echo "Using existing ${healthy_vcf}"
 else
   echo -n "Waiting for ${healthy_vcf} to be generated..."
@@ -73,4 +73,3 @@ command="time python2 ${base_dir}/varsim-0.8.4/varsim_somatic.py \
 echo "Executing: ${command}"
 
 bsub  -J "sim-tumor" -W 24:00 -n 10 -R "rusage[mem=20000]" -R "span[hosts=1]"  -oo "${log_dir}/tumor.lsf.log" "${command}"
-
