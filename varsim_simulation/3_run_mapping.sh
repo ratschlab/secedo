@@ -1,14 +1,10 @@
 # align synthetic reads (tumor+healthy) generated e.g. by varsim to the reference genome,
 # then filter and sort the resulting BAM file
-# indexing is necessary even if we split the resulting aligned cells later by chromosome (samtools can only split
-# indexed files).
-module load bowtie2
+# indexing is necessary because we are splitting the resulting aligned cells later by chromosome (samtools can only
+# split indexed files).
 
 step=10
-cov="cov01x"
-n_cells=500
 
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
 mkdir -p ${base_dir}/${cov}/aligned_cells
 for idx in $(seq 0 ${step} $((n_cells-1))); do
   cmd="echo hello"
@@ -18,7 +14,10 @@ for idx in $(seq 0 ${step} $((n_cells-1))); do
     file1="${base_dir}/${cov}/healthy/healthy_${i}.1.fq.gz"
     file2="${base_dir}/${cov}/healthy/healthy_${i}.2.fq.gz"
     bam_file="${base_dir}/${cov}/aligned_cells/healthy_${suf}.bam"
-    cmd="${cmd}; bowtie2 -p 20 -x ${base_dir}/genomes/ref_index/GRCh38 -1 $file1 -2 $file2 | samtools view -h -b -f 0x2 -F 0x500 - | samtools sort -@ 10 -o ${bam_file}; samtools index ${bam_file}"
+    cmd="${cmd}; bowtie2 -p 20 -x ${base_dir}/genomes/ref_index/GRCh38 -1 $file1 -2 $file2 \
+         | samtools view -h -b -f 0x2 -F 0x500 - \
+         | samtools sort -@ 10 -o ${bam_file}; samtools index ${bam_file}; \
+         ${code_dir}/varsim_simulation/split.sh ${bam_file} ${base_dir}/${cov}"
   done
 #  echo ${cmd}
   bsub  -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${base_dir}/logs/bowtie-healthy-${i}.lsf.log" "${cmd}"

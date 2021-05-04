@@ -1,13 +1,14 @@
 # generate pileup files from all cells
-work_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
-cov="cov01x"
-out_dir="${work_dir}/${cov}/pileups"
+
+source global_vars.sh
+
+out_dir="${base_dir}/${cov}/pileups"
 pileup="~/somatic_variant_calling/code/build/preprocess"
 
 mkdir -p ${out_dir}
 for chromosome in {1..22} X; do # Y was not added - maybe it confuses things
         scratch_dir="/scratch/pileup_${chromosome}"
-        source_files=${work_dir}/${cov}/aligned_cells_split/*_chr${chromosome}.bam*
+        source_files=${base_dir}/${cov}/aligned_cells_split/*_chr${chromosome}.bam*
         num_files=`ls -l ${source_files} | wc -l`
         echo "Found ${num_files} files for chromosome ${chromosome}"
         copy_command="echo Copying data...; mkdir ${scratch_dir}; cp ${source_files} ${scratch_dir}"

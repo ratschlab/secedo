@@ -2,10 +2,9 @@
 
 module load openblas # TODO: this should actually only be needed for the svc binary
 
+source global_vars.sh
+
 step=10
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
-cov="cov01x"
-n_cells=500
 
 mkdir -p "${base_dir}/${cov}/aligned_cells_split"
 for idx in $(seq 0 ${step} $((n_cells-1))); do

@@ -13,7 +13,7 @@ def execute_art(cur_idx, id_prefix, seed_offset, art, coverage, out):
     # generating paired reads (-p) of length (-l) 100, with average insert length (-m) 350 and standard deviation
     # (-s) 50
     art_cmd = f'{art} -p --noALN -l 100 -m 350 -s 50 -i {args.fasta} -f {coverage / 2.} ' \
-              f'--rndSeed {cur_idx + seed_offset} -o {out}{cur_idx}. --id {id_prefix}_{cur_idx}'
+              f'--rndSeed {cur_idx + seed_offset} -o {out}{cur_idx}. --id {id_prefix}_{cur_idx}_'
     logger.info('Running {art_cmd}')
     return subprocess.Popen(f'{art_cmd}; gzip {out}{cur_idx}.1.fq; gzip {out}{cur_idx}.2.fq',
                             executable='/bin/bash', shell=True)

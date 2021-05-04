@@ -1,13 +1,9 @@
 # runs art_illumina to generate simulated reads for #n_cells healthy and #n_cells tumor cells with coverage #coverage
 
-module load jdk # varsim doesn't work with openjdk
+source global_vars.sh
 
-cov="cov01x"
-n_cells=500 # twice as many cells will be generated: healthy and tumor
 step=100
-coverage=0.01  # coverage for each generated cell
 
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
 art_illumina="/cluster/work/grlab/projects/projects2019-supervario/art_bin_MountRainier/art_illumina"
 gen_reads="python3 ~/somatic_variant_calling/code/varsim_simulation/generate_reads.py"
 scratch_dir="/scratch/svc"
