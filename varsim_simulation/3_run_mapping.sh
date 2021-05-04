@@ -6,7 +6,7 @@ module load bowtie2
 
 step=10
 cov="cov01x"
-n_cells=600
+n_cells=500
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
 mkdir -p ${base_dir}/${cov}/aligned_cells

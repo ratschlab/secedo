@@ -9,11 +9,11 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 
-def execute_art(cur_idx, seed_offset, art, coverage, out):
+def execute_art(cur_idx, id_prefix, seed_offset, art, coverage, out):
     # generating paired reads (-p) of length (-l) 100, with average insert length (-m) 350 and standard deviation
     # (-s) 50
     art_cmd = f'{art} -p --noALN -l 100 -m 350 -s 50 -i {args.fasta} -f {coverage / 2.} ' \
-              f'--rndSeed {cur_idx + seed_offset} -o {out}{cur_idx}.'
+              f'--rndSeed {cur_idx + seed_offset} -o {out}{cur_idx}. --id {id_prefix}_{cur_idx}'
     logger.info('Running {art_cmd}')
     return subprocess.Popen(f'{art_cmd}; gzip {out}{cur_idx}.1.fq; gzip {out}{cur_idx}.2.fq',
                             executable='/bin/bash', shell=True)
@@ -34,6 +34,9 @@ if __name__ == '__main__':
                       help='Offset for the random seed used by art_illumina. Essential to make sure reads are not '
                            'identical for healthy/cancer cells that have the same id (as we are using the cell id as '
                            'a random seed for reproducibility')
+    args.add_argument('--id_prefix', default='',
+                      help='Prefix to place in front of the read ids so that they are distinguishable (otherwise each '
+                           'generated file will end up with identical ids)')
 
     args = args.parse_args()
 
@@ -44,7 +47,8 @@ if __name__ == '__main__':
     cur_idx = args.start
     process_list = []
     while cur_idx - args.start < args.p and cur_idx < args.stop:
-        process_list.append((execute_art(cur_idx, args.seed_offset, args.art, args.coverage, args.out), cur_idx))
+        process_list.append((execute_art(cur_idx, args.id_prefix, args.seed_offset, args.art, args.coverage, args.out),
+                             cur_idx))
         cur_idx += 1
 
     while process_list:
@@ -58,6 +62,7 @@ if __name__ == '__main__':
                     logger.info(f'Generation for {idx} failed. Re-trying')
                 if cur_idx < args.stop:
                     process_list.append(
-                        (execute_art(cur_idx, args.seed_offset, args.art, args.coverage, args.out), cur_idx))
+                        (execute_art(cur_idx, args.id_prefix, args.seed_offset, args.art, args.coverage, args.out),
+                         cur_idx))
                     cur_idx += 1
         time.sleep(10)
