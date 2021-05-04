@@ -17,7 +17,7 @@ mkdir -p "${out_dir}/logs/"
 out_prefix=${out_dir}/healthy_
 fasta="healthy.fa"
 
-for batch in $(seq 0 ${step} ${n_cells}); do
+for batch in $(seq 0 ${step} $((n_cells-1))); do
   cmd="echo Copying data...; mkdir -p ${scratch_dir}; cp ${base_dir}/genomes/${fasta}  ${scratch_dir}"
   cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta} --art ${art_illumina} -p 20 \
   --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} \
@@ -32,7 +32,7 @@ mkdir -p "${out_dir}/logs/"
 out_prefix=${out_dir}/tumor_
 fasta="tumor-1.fa"
 
-for batch in $(seq 0 ${step} ${n_cells}); do
+for batch in $(seq 0 ${step} $((n_cells-1))); do
   cmd="echo Copying data...; mkdir -p ${scratch_dir}; cp ${base_dir}/genomes/${fasta} ${scratch_dir}"
   cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta} --art ${art_illumina} -p 20 --seed_offset 10000 \
   --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} 2>&1 | tee \
