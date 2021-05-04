@@ -46,19 +46,19 @@ TEST(Preprocess, Cov52TenDifferent) {
     ASSERT_TRUE(is_significant_helper(bases));
 }
 
-TEST(Preproces, Cov59TwoDifferent) {
+TEST(Preprocess, Cov59TwoDifferent) {
     std::string bases = "tttttTTTTaTTTttTaTtTTTTtTTtTTTtTttTTtTtTtttTTttttTTttTTTTtt";
     ASSERT_FALSE(is_significant_helper(bases));
 }
 
-TEST(Preproces, AtLimit) {
+TEST(Preprocess, AtLimit) {
     std::string bases = "CcccccccCcccCCCCcaCcccCccACccccCCCcCcCCCC";
     ASSERT_TRUE(is_significant_helper(bases, 0.001));
 }
 
 /** Make sure we round the length of the string properly (for computing the proper threshold K),
  * i.e. length 65 in this case should generate index 5 */
-TEST(Preproces, LengthAtLimitRoundDown) {
+TEST(Preprocess, LengthAtLimitRoundDown) {
     std::string bases = "TTTTTTTTTTTTTTTTTTTTTTTTTTTTGGGTGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT";
     ASSERT_TRUE(is_significant_helper(bases, 0.001));
 }
@@ -66,13 +66,8 @@ TEST(Preproces, LengthAtLimitRoundDown) {
 /** Make sure we round the length of the string properly (for computing the proper threshold K),
  * i.e. length 55 in this case should generate index 5 (because we emulate rounding to nearest even
  */
-TEST(Preproces, LengthAtLimitRoundUp) {
+TEST(Preprocess, LengthAtLimitRoundUp) {
     std::string bases = "GGGGGGGGGGGGGTGGGGGGGGGGGAGGGGGGGGGGGGGGGTGGGGGGGGGGGGG";
-    ASSERT_FALSE(is_significant_helper(bases, 0.001));
-}
-
-TEST(Preproces, Debug) {
-    std::string bases = "TTTTTTCTCCTTTTTTTTTTTTTTTTTTTTTTTTCTCTTTTTTTTTTTTTTTTTTTTTTTCTTT";
     ASSERT_FALSE(is_significant_helper(bases, 0.001));
 }
 
