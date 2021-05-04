@@ -23,8 +23,8 @@ for batch in $(seq 0 ${step} $((n_cells-1))); do
   --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} \
     2>&1 | tee ${out_dir}/logs/sim-healthy-${batch}.log"
   echo ${cmd}
-#  bsub  -J "sim-he-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
-#              -oo "${out_dir}/logs/sim-healthy-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}"
+  bsub  -J "sim-he-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
+              -oo "${out_dir}/logs/sim-healthy-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}"
 done
 
 out_dir="${base_dir}/${cov}/tumor"
