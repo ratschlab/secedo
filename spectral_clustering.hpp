@@ -39,8 +39,11 @@ enum class ClusteringType {
      * Gaussian whose center/mean is the closest to the data point)
      */
     GMM_ASSIGN,
-
 };
+
+ClusteringType parse_clustering_type(const std::string &clustering_type);
+
+Termination parse_termination(const std::string &str_termination);
 
 /**
  * Computes the symmetric normalized Laplacian of matrix a
@@ -62,7 +65,7 @@ Matd laplacian(const Matd &a);
  * @return true if clustering into 2 groups explains the data better, false otherwise
  */
 bool spectral_clustering(const Matd &similarity,
-                         const std::string &clustering,
+                         const ClusteringType &clustering,
                          const Termination &termination,
                          const std::string &out_dir,
                          const std::string &marker,

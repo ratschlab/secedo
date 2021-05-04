@@ -85,10 +85,6 @@ DEFINE_string(termination,
               "the data better (AIC/BIC)");
 DEFINE_validator(termination, ValidateTermination);
 
-Termination parse_termination(const std::string &str_termination) {
-    return str_termination == "AIC" ? Termination::AIC : Termination::BIC;
-}
-
 static bool ValidateNormalization(const char *flagname, const std::string &value) {
     if (value != "ADD_MIN" && value != "EXPONENTIATE" && value != "SCALE_MAX_1") {
         printf("Invalid value for --%s: %s.\nShould be one of ADD_MIN, EXPONENTIATE, SCALE_MAX_1\n",
@@ -138,8 +134,9 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     logger()->info("Performing spectral clustering...");
     std::vector<double> cluster;
     Termination termination = parse_termination(FLAGS_termination);
-    bool is_done = spectral_clustering(sim_mat, FLAGS_clustering_type, termination, FLAGS_o, marker,
-                                       &cluster);
+    ClusteringType clustering_type = parse_clustering_type(FLAGS_clustering_type);
+    bool is_done
+            = spectral_clustering(sim_mat, clustering_type, termination, FLAGS_o, marker, &cluster);
     if (is_done) {
         return;
     }

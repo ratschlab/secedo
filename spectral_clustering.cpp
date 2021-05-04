@@ -8,12 +8,31 @@
 #include <cstdint>
 #include <vector>
 
+ClusteringType parse_clustering_type(const std::string &clustering_type) {
+    if (clustering_type == "FIEDLER")
+        return ClusteringType::FIEDLER;
+    else if (clustering_type == "SPECTRAL2")
+        return ClusteringType::SPECTRAL2;
+    else if (clustering_type == "SPECTRAL6")
+        return ClusteringType::SPECTRAL6;
+    else if (clustering_type == "GMM_PROB")
+        return ClusteringType::GMM_PROB;
+    else if (clustering_type == "GMM_ASSIGN")
+        return ClusteringType::GMM_ASSIGN;
+    else
+        throw std::invalid_argument(clustering_type);
+}
+
+Termination parse_termination(const std::string &str_termination) {
+    return str_termination == "AIC" ? Termination::AIC : Termination::BIC;
+}
+
 Matd laplacian(const Matd &a) {
     std::vector<double> diag(a.rows());
     for (uint32_t r = 0; r < a.rows(); ++r) {
         assert(a(r, r) == 0); // diagonal elements MUST be zero
         for (uint32_t c = 0; c < a.cols(); ++c) {
-            assert(a(r,c) == a(c,r));
+            assert(a(r, c) == a(c, r));
             diag[r] += a(r, c);
         }
     }
@@ -23,7 +42,7 @@ Matd laplacian(const Matd &a) {
     for (uint32_t r = 0; r < a.rows(); ++r) {
         for (uint32_t c = 0; c <= r; ++c) {
             result(r, c) = (r == c ? 1 : 0) - diag[r] * diag[c] * a(r, c);
-            result(c, r) = result(r,c);
+            result(c, r) = result(r, c);
         }
     }
     return result;
@@ -93,7 +112,7 @@ double bic(const arma::gmm_full &gmm, const arma::mat &data) {
 }
 
 bool spectral_clustering(const Matd &similarity,
-                         const std::string &clustering,
+                         const ClusteringType &clustering,
                          const Termination &termination,
                          const std::string &out_dir,
                          const std::string &marker,
@@ -162,38 +181,49 @@ bool spectral_clustering(const Matd &similarity,
 
     // TODO: investigate using gmm with tied variances as in the Python version
 
-    if (clustering == "GMM_ASSIGN") {
-        *cluster = get_assignments(gmm2, cell_coord, 0);
-    } else if (clustering == "GMM_PROB") {
-        *cluster = get_probabilities(gmm2, cell_coord, 0);
-    } else if (clustering == "SPECTRAL2" || clustering == "SPECTRAL6") {
-        uint64_t col_idx = clustering == "SPECTRAL2" ? 2 : 5;
-        arma::mat ev = eigenvectors.cols(1, std::min(col_idx, static_cast<uint64_t>(eigenvectors.n_cols - 1)));
-        // normalize each row
-        for (uint32_t i = 0; i < ev.n_rows; ++i) {
-            double norm = arma::norm(ev.row(i));
-            if (norm > 0) {
-                ev.row(i) = ev.row(i) / norm;
-            }
-        }
-        ev = ev.t(); // kmeans expects each column to be one sample
-        arma::mat means;
-        arma::kmeans(means, ev, 2, arma::random_spread, 10 /* iterations */, false);
-        for (uint32_t i = 0; i < similarity.rows(); ++i) {
-            (*cluster)[i]
-                    = arma::norm(means.col(0) - ev.col(i)) > arma::norm(means.col(1) - ev.col(i));
-        }
-    } else if (clustering == "FIEDLER") {
-        // TODO: use the min-sparsity cut described in
-        // https://people.eecs.berkeley.edu/~jrs/189s17/lec/22.pdf rather than the 0 cut
-        arma::vec fiedler = eigenvectors.col(1);
-        std::sort(fiedler.begin(), fiedler.end());
+    switch (clustering) {
+        case ClusteringType::GMM_ASSIGN:
+            *cluster = get_assignments(gmm2, cell_coord, 0);
+            break;
+        case ClusteringType::GMM_PROB:
+            *cluster = get_probabilities(gmm2, cell_coord, 0);
+            break;
+        case ClusteringType::FIEDLER: {
+            // TODO: use the min-sparsity cut described in
+            // https://people.eecs.berkeley.edu/~jrs/189s17/lec/22.pdf rather than the 0 cut
+            arma::vec fiedler = eigenvectors.col(1);
+            std::sort(fiedler.begin(), fiedler.end());
 
-        // corner case: if the smallest value is zero, treat all zero values as negative, and all
-        // positive values as port of the other cluster
-        double threshold = fiedler[0] == 0 ? std::numeric_limits<double>::min() : 0;
-        for (uint32_t i = 0; i < similarity.rows(); ++i) {
-            cluster->at(i) = eigenvectors(i, 1) >= threshold;
+            // corner case: if the smallest value is zero, treat all zero values as negative, and
+            // all positive values as port of the other cluster
+            double threshold = fiedler[0] == 0 ? std::numeric_limits<double>::min() : 0;
+            for (uint32_t i = 0; i < similarity.rows(); ++i) {
+                cluster->at(i) = eigenvectors(i, 1) >= threshold;
+            }
+            break;
+        }
+        case ClusteringType::SPECTRAL2:
+        case ClusteringType::SPECTRAL6: {
+            uint64_t col_idx = clustering == ClusteringType::SPECTRAL2 ? 2 : 5;
+            // TODO: this is totally weird, but it works better if considering the zeroth column,
+            // at lest in the tests
+            arma::mat ev = eigenvectors.cols(
+                    0, std::min(col_idx, static_cast<uint64_t>(eigenvectors.n_cols - 1)));
+            // normalize each row
+            for (uint32_t i = 0; i < ev.n_rows; ++i) {
+                double norm = arma::norm(ev.row(i));
+                if (norm > 0) {
+                    ev.row(i) = ev.row(i) / norm;
+                }
+            }
+            ev = ev.t(); // kmeans expects each column to be one sample
+            arma::mat means;
+            arma::kmeans(means, ev, 2, arma::random_spread, 10 /* iterations */, false);
+            for (uint32_t i = 0; i < similarity.rows(); ++i) {
+                (*cluster)[i] = arma::norm(means.col(0) - ev.col(i))
+                        > arma::norm(means.col(1) - ev.col(i));
+            }
+            break;
         }
     }
 

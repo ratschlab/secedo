@@ -9,7 +9,7 @@
 namespace {
 using namespace testing;
 
-class SpectralClustering : public testing::TestWithParam<std::pair<std::string, Termination>> {};
+class SpectralClustering : public testing::TestWithParam<std::pair<ClusteringType, Termination>> {};
 
 TEST(Laplacian, SomeMatrix) {
     Matd a(3, 3, { 0, .5, .2, .5, 0, .5, .2, .5, 0 });
@@ -55,7 +55,8 @@ TEST_P(SpectralClustering, TwoClusters) {
     auto [clustering, termination] = GetParam();
 
     std::default_random_engine generator;
-    std::uniform_real_distribution<double> noise(-1e-2, 1e-2);
+    std::uniform_int_distribution<uint32_t> dissimilar(0, 5);
+    std::uniform_int_distribution<uint32_t> similar(100, 200);
 
     constexpr uint32_t num_cells = 100;
 
@@ -63,15 +64,24 @@ TEST_P(SpectralClustering, TwoClusters) {
     // we have 100 cells, with the first 50 and last 50 being identical (modulo some noise) to each
     // other
     Matd similarity = Matd::zeros(num_cells, num_cells);
+
+    for (uint32_t i = 0; i < num_cells; ++i) {
+        for (uint32_t j = 0; j < i; ++j) {
+            // 1st cluster
+            similarity(i, j) = dissimilar(generator); // + noise(generator);
+            similarity(j, i) = similarity(i, j);
+        }
+    }
+
     const uint32_t half = num_cells / 2;
     for (uint32_t i = 0; i < half; ++i) {
         for (uint32_t j = 0; j < i; ++j) {
             // 1st cluster
-            similarity(i, j) = 1 + noise(generator);
+            similarity(i, j) = similar(generator); // + noise(generator);
             similarity(j, i) = similarity(i, j);
 
             // 2nd cluster
-            similarity(i + half, j + half) = 1 + noise(generator);
+            similarity(i + half, j + half) = similar(generator);
             similarity(j + half, i + half) = similarity(i + half, j + half);
         }
     }
@@ -90,7 +100,7 @@ TEST_P(SpectralClustering, TwoClusters) {
 
 TEST_P(SpectralClustering, ThreeClusters) {
     auto [clustering, termination] = GetParam();
-    if (clustering == "GMM_ASSIGN" || clustering == "GMM_PROB") {
+    if (clustering == ClusteringType::GMM_ASSIGN || clustering == ClusteringType::GMM_PROB) {
         return; // GMM doesn't work well on this data
     }
 
@@ -110,15 +120,16 @@ TEST_P(SpectralClustering, ThreeClusters) {
     ASSERT_NE(cluster[0], cluster[4]);
 }
 
-INSTANTIATE_TEST_SUITE_P(Method,
-                         SpectralClustering,
-                         ::testing::Values(std::make_pair("SPECTRAL2", Termination::AIC),
-                                           std::make_pair("FIEDLER", Termination::AIC),
-                                           std::make_pair("GMM_ASSIGN", Termination::AIC),
-                                           std::make_pair("GMM_PROB", Termination::AIC),
-                                           std::make_pair("SPECTRAL2", Termination::BIC),
-                                           std::make_pair("FIEDLER", Termination::BIC),
-                                           std::make_pair("GMM_PROB", Termination::BIC),
-                                           std::make_pair("GMM_ASSIGN", Termination::BIC)));
+INSTANTIATE_TEST_SUITE_P(
+        Method,
+        SpectralClustering,
+        ::testing::Values(std::make_pair(ClusteringType::SPECTRAL2, Termination::AIC),
+                          std::make_pair(ClusteringType::FIEDLER, Termination::AIC),
+                          std::make_pair(ClusteringType::GMM_ASSIGN, Termination::AIC),
+                          std::make_pair(ClusteringType::GMM_PROB, Termination::AIC),
+                          std::make_pair(ClusteringType::SPECTRAL2, Termination::BIC),
+                          std::make_pair(ClusteringType::FIEDLER, Termination::BIC),
+                          std::make_pair(ClusteringType::GMM_PROB, Termination::BIC),
+                          std::make_pair(ClusteringType::GMM_ASSIGN, Termination::BIC)));
 
 } // namespace
