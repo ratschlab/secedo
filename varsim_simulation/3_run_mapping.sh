@@ -3,6 +3,8 @@
 # indexing is necessary because we are splitting the resulting aligned cells later by chromosome (samtools can only
 # split indexed files).
 
+source global_vars.sh
+
 step=10
 
 mkdir -p ${base_dir}/${cov}/aligned_cells
