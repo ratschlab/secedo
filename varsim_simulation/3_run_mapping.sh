@@ -21,7 +21,7 @@ for idx in $(seq 0 ${step} $((n_cells-1))); do
          | samtools sort -@ 10 -o ${bam_file}; samtools index ${bam_file}; \
          ${code_dir}/varsim_simulation/split.sh ${bam_file} ${base_dir}/${cov}"
   done
-  echo ${cmd}
+  echo "${cmd}"
   bsub  -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${base_dir}/logs/bowtie-healthy-${i}.lsf.log" "${cmd}"
 done
 
@@ -35,10 +35,10 @@ for idx in $(seq 0 ${step} $((n_cells-1))); do
       bam_file="${base_dir}/${cov}/aligned_cells/tumor_${suf}.bam"
       cmd="${cmd}; bowtie2 -p 20 -x ${base_dir}/genomes/ref_index/GRCh38 -1 $file1 -2 $file2 \
           | samtools view -h -b -f 0x2 -F 0x500 - \
-          | samtools sort -@ 10 -o ${bam_file}; samtools index ${bam_file} \
+          | samtools sort -@ 10 -o ${bam_file}; samtools index ${bam_file}; \
           ${code_dir}/varsim_simulation/split.sh ${bam_file} ${base_dir}/${cov}"
     done
-#    echo ${cmd}
+    echo "${cmd}"
     bsub  -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${base_dir}/logs/bowtie-tumor-${i}.lsf.log" "${cmd}"
 done
 
