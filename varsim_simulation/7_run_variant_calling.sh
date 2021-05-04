@@ -13,6 +13,6 @@ command="$svc -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace 
          --clustering_type SPECTRAL6 --merge_count 10 --max_coverage 100 | tee ${out_dir}/svc.log"
 echo "$command"
 
-bsub  -J "svc" -W 01:00 -n 20 -R "rusage[mem=4000]" -R "span[hosts=1]" \
+bsub  -J "svc" -W 01:00 -n 20 -R "rusage[mem=8000]" -R "span[hosts=1]" \
       -oo "${out_dir}/svc.lsf.log" "${command}"
 

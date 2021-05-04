@@ -9,12 +9,14 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 
-def execute_art(cur_idx, art, coverage, out):
+def execute_art(cur_idx, seed_offset, art, coverage, out):
     # generating paired reads (-p) of length (-l) 100, with average insert length (-m) 350 and standard deviation
     # (-s) 50
+    art_cmd = f'{art} -p -l 100 -m 350 -s 50 -i {args.fasta} -f {coverage / 2.} -rs {cur_idx + seed_offset} ' \
+              f'-o {out}{cur_idx}.;  '
+    logger.info('Running {art_cmd}')
     return subprocess.Popen(
-        f'{art} -p -l 100 -m 350 -s 50 -i {args.fasta} -f {coverage / 2.} -rs {cur_idx} -o {out}{cur_idx}.; '
-        f'gzip {out}{cur_idx}.1.fq; gzip {out}{cur_idx}.2.fq; '
+        f'{art_cmd}; gzip {out}{cur_idx}.1.fq; gzip {out}{cur_idx}.2.fq; '
         f'rm {out}{cur_idx}.1.aln {out}{cur_idx}.2.aln;',
         executable='/bin/bash', shell=True)
 
@@ -30,6 +32,10 @@ if __name__ == '__main__':
     args.add_argument('--art', help='Location of the art_illumina binary', default='art_illumina')
     args.add_argument('--fasta', help='Location of the template fasta file from which reads are generated',
                       default=None)
+    args.add_argument('--seed_offset', type=int, default=0,
+                      help='Offset for the random seed used by art_illumina. Essential to make sure reads are not '
+                           'identical for healthy/cancer cells that have the same id (as we are using the cell id as '
+                           'a random seed for reproducibility')
 
     args = args.parse_args()
 
