@@ -100,7 +100,8 @@ TEST_P(SpectralClustering, TwoClusters) {
 
 TEST_P(SpectralClustering, ThreeClusters) {
     auto [clustering, termination] = GetParam();
-    if (clustering == ClusteringType::GMM_ASSIGN || clustering == ClusteringType::GMM_PROB) {
+    if (clustering == ClusteringType::GMM_ASSIGN || clustering == ClusteringType::GMM_PROB
+        || clustering == ClusteringType::SPECTRAL2) {
         return; // GMM doesn't work well on this data
     }
 
@@ -108,10 +109,16 @@ TEST_P(SpectralClustering, ThreeClusters) {
     // we have 6 cells, with the first 2, next 2 and last 2 being identical, and the first 2
     // and next 2 being slightly more similar to each other than to the last 2. The clustering
     // should thus group the first 4 cells and last 2 cells together.
+    // clang-format off
     Matd similarity(6, 6,
-                    { 0.,  1,   0.1, 0.1, 0, 0, 1., 0, 0.1, 0.1, 0, 0, 0.1, 0.1, 0, 1, 0, 0,
-                      0.1, 0.1, 1,   0,   0, 0, 0,  0, 0,   0,   0, 1, 0,   0,   0, 0, 1, 0 });
-
+                    {
+                       0., 100, 1, 1, 0, 0,
+                      100, 0, 1, 1, 0, 0,
+                      1, 1, 0, 100, 0, 0,
+                      1, 1, 100,  0, 0, 0,
+                      0, 0, 0, 0, 0, 100,
+                      0, 0, 0, 0, 100, 0 });
+    // clang-format on
     bool done = spectral_clustering(similarity, clustering, termination, "./", "", &cluster);
 
     ASSERT_FALSE(done); // we clearly have 2 clusters
