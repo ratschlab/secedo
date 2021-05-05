@@ -15,7 +15,7 @@ fasta="healthy.fa"
 
 for batch in $(seq 0 ${step} $((n_cells-1))); do
   cmd="echo Copying data...; mkdir -p ${scratch_dir}; cp ${base_dir}/genomes/${fasta}  ${scratch_dir}"
-  cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta} --art ${art_illumina} -p 20 --id_prefix healthy \
+  cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta} --art ${art_illumina} -p 20 --id_prefix ${healthy_prefix} \
       --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} \
       2>&1 | tee ${out_dir}/logs/sim-healthy-${batch}.log"
   echo ${cmd}
@@ -30,7 +30,7 @@ fasta="tumor-1.fa"
 
 for batch in $(seq 0 ${step} $((n_cells-1))); do
   cmd="echo Copying data...; mkdir -p ${scratch_dir}; cp ${base_dir}/genomes/${fasta} ${scratch_dir}"
-  cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta} --art ${art_illumina} -p 20 --id_prefix tumor \
+  cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta} --art ${art_illumina} -p 20 --id_prefix $tumor_prefix} \
       --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} --seed_offset 10000  \
       2>&1 | tee ${out_dir}/logs/sim-tumor-${batch}.log"
   echo ${cmd}
