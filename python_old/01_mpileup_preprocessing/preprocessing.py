@@ -59,7 +59,7 @@ def preprocessing(data, theta, K):
 
 
 def main(argv):
-    print(preprocessing([61, 4, 0, 0], 0.001, Ks[6]))
+    print(preprocessing([3, 1, 0, 0], 0.001, Ks[0]))
     # parse the arguments
     try:
         opts, args = getopt.getopt(argv, "n:t:")

@@ -71,5 +71,4 @@ TEST(Preprocess, LengthAtLimitRoundUp) {
     ASSERT_FALSE(is_significant_helper(bases, 0.001));
 }
 
-
 } // namespace
