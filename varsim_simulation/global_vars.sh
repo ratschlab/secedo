@@ -6,3 +6,4 @@ coverage=0.01  # coverage for each generated cell
 cov="cov${coverage#*.}x"  # e.g. cov01x
 n_cells=500 # twice as many cells will be generated: healthy and tumor
 code_dir="$HOME/somatic_variant_calling/code"
+n_tumor=2 # how many tumor cell types to generate
