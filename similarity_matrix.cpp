@@ -319,11 +319,12 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                     "matrix");
             mat_diff = Matd::zeros(num_cells, num_cells);
             mat_same = Matd::zeros(num_cells, num_cells);
+        } else {
+            mat_diff -= mat_same;
+            normalize(normalization, &mat_diff);
+            write_mat(sim_mat_fname, mat_diff);
+            return mat_diff;
         }
-        mat_diff -= mat_same;
-        normalize(normalization, &mat_diff);
-        write_mat(sim_mat_fname, mat_diff);
-        return mat_diff;
     }
 
 
@@ -357,7 +358,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     }
 
     ProgressBar progress(total_positions, "Processed:", std::cout);
-    progress.SetFrequencyUpdate(total_positions/100);
+    progress.SetFrequencyUpdate(total_positions / 100);
     std::deque<uint32_t> active_keys;
     // the number of completed DNA fragments, i.e. reads that started max_fragment_length ago
     uint32_t completed = 0;
