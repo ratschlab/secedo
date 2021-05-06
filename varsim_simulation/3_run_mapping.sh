@@ -3,8 +3,6 @@
 # indexing is necessary because we are splitting the resulting aligned cells later by chromosome (samtools can only
 # split indexed files).
 
-source global_vars.sh
-
 # Starts jobs for mapping reads against the GRCh38 human genome and waits for the jobs to complete
 function map_reads() {
   echo "Mapping reads using bowtie2, sorting and splitting by chromosome..."
@@ -30,7 +28,7 @@ function map_reads() {
     bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${base_dir}/logs/bowtie-healthy-${i}.lsf.log" "${cmd}" &
   done
 
-  for tumor_type in $(seq 2 "${n_tumor}"); do  # TODO: change back to 1
+  for tumor_type in $(seq 3 "${n_tumor}"); do  # TODO: change back to 1
     for idx in $(seq 0 ${step} $((n_cells-1))); do
         cmd="echo hello"
         for i in $(seq "${idx}" $((idx+step-1))); do

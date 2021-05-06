@@ -1,7 +1,5 @@
 # runs art_illumina to generate simulated reads for #n_cells healthy and #n_cells tumor cells with coverage #coverage
 
-source global_vars.sh
-
 # Start jobs for generating both healthy and tumor reads and wait for the jobs to complete
 function generate_reads() {
   echo "Generating reads..."
@@ -22,15 +20,15 @@ function generate_reads() {
     cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta} --art ${art_illumina} -p 20 --id_prefix healthy \
         --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} \
         2>&1 | tee ${out_dir}/logs/sim-healthy-${batch}.log"
-    echo ${cmd}
-    bsub  -K -J "sim-he-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
-                -oo "${out_dir}/logs/sim-healthy-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
+#    echo ${cmd}
+#    bsub  -K -J "sim-he-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
+#                -oo "${out_dir}/logs/sim-healthy-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
   done
 
   out_dir="${base_dir}/${cov}/tumor"
   mkdir -p "${out_dir}/logs/"
 
-  for tumor_type in $(seq 2 ${n_tumor}); do  # TODO: change back to 1
+  for tumor_type in $(seq 3 "${n_tumor}"); do  # TODO: change back to 1
     out_prefix=${out_dir}/tumor_${tumor_type}_
     fasta="tumor-${tumor_type}.fa"
 
@@ -39,7 +37,7 @@ function generate_reads() {
       cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta} --art ${art_illumina} -p 20 --id_prefix tumor_${tumor_type}_ \
           --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} --seed_offset $((tumor_type*10000))  \
           2>&1 | tee ${out_dir}/logs/sim-tumor-${tumor_type}-${batch}.log"
-      echo ${cmd}
+ #     echo ${cmd}
       bsub  -K -J "sim-tu-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
                   -oo "${out_dir}/logs/sim-tumor-${tumor_type}-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
     done

@@ -1,7 +1,5 @@
 # generate pileup files from all cells
 
-source global_vars.sh
-
 # Starts jobs for creating pileup files from the aligned BAM files. One job per Chromosome.
 # Waits for jobs to complete
 function create_pileup() {

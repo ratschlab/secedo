@@ -6,7 +6,7 @@ base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/va
 coverage=0.01  # coverage for each generated cell
 cov="cov${coverage#*.}x"  # e.g. cov01x
 n_cells=500 # number of healthy cells and tumor cells in each group
-n_tumor=2 # how many tumor cell types to generate
+n_tumor=4 # how many tumor cell types to generate
 
 code_dir="$HOME/somatic_variant_calling/code"
 
