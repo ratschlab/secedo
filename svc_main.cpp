@@ -279,6 +279,7 @@ int main(int argc, char *argv[]) {
     std::vector<uint32_t> max_read_lengths(input_files.size());
 
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
+    read_progress.SetFrequencyUpdate(total_size/100);
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(
