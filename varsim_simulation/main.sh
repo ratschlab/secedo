@@ -22,17 +22,17 @@ source ${SCRIPT_DIR}/5_run_variant_calling.sh
 action=$1
 
 if (( action == 1)); then
-  generate_cell_patterns()
+  generate_cell_patterns
 fi
 if (( action <= 2)); then
-  generate_reads()
+  generate_reads
 fi
 if (( action <= 3)); then
-  map_reads()
+  map_reads
 fi
 if (( action <= 4)); then
-  create_pileup()
+  create_pileup
 fi
 if (( action <= 5)); then
-  variant_calling()
+  variant_calling
 fi
