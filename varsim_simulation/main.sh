@@ -145,6 +145,8 @@ function map_reads() {
 
   mkdir -p "${base_dir}/${cov}/aligned_cells"
   mkdir -p "${base_dir}/${cov}/aligned_cells_split"
+  logs_dir="${base_dir}/${cov}/aligned_cells_split/logs"
+  mkdir -p ${logs_dir}
 
   for idx in $(seq 0 ${step} $((n_cells-1))); do
     cmd="echo hello"
@@ -160,7 +162,7 @@ function map_reads() {
            ${code_dir}/varsim_simulation/split.sh ${bam_file} ${base_dir}/${cov}"
     done
     # echo "${cmd}"
-    bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${base_dir}/logs/bowtie-healthy-${i}.lsf.log" "${cmd}" &
+    bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${logs_dir}/bowtie-healthy-${i}.lsf.log" "${cmd}" &
   done
 
   for tumor_type in $(seq 3 "${n_tumor}"); do  # TODO: change back to 1
@@ -178,7 +180,7 @@ function map_reads() {
               ${code_dir}/varsim_simulation/split.sh ${bam_file} ${base_dir}/${cov}"
         done
         # echo "${cmd}"
-        bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${base_dir}/logs/bowtie-tumor-${i}.lsf.log" "${cmd}" &
+        bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${logs_dir}/bowtie-tumor-${i}.lsf.log" "${cmd}" &
     done
   done
 
@@ -195,6 +197,7 @@ function create_pileup() {
   pileup="${code_dir}/preprocess"
 
   mkdir -p ${out_dir}
+  mkdir -p ${log_dir}
   for chromosome in {1..22} X; do # Y was not added - maybe it confuses things
           scratch_dir="/scratch/pileup_${chromosome}"
           source_files=${base_dir}/${cov}/aligned_cells_split/*_chr${chromosome}.bam*
