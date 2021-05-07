@@ -67,7 +67,7 @@ bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
     return log_normalizing_coef + log_prob_homozygous < Ks.at(i);
 }
 
-bool is_significant(const PosData &pos_data, double theta, uint32_t *coverage) {
+bool is_significant(const PosData &pos_data, double theta, uint16_t *coverage) {
     std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
     for (const auto &cd : pos_data.cells_data) {
         base_count[cd.base]++;
