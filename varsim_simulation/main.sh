@@ -236,7 +236,16 @@ function variant_calling() {
   bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=8000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}"
 }
 
-if $#
+# check the command-line arguments
+if [ "$#" -ne 1 ]; then
+            echo_err "Usage: main.sh <start_step>"
+            echo "start_step=1 -> Generate genomes for healthy/tumor cells (~30 mins)"
+            echo "start_step=2 -> Generate reads for healthy/tumor cells (~20 mins)"
+            echo "start_step=3 -> Align reads against the human genome (~10 mins)"
+            echo "start_step=4 -> Create pileup files (one per chromosome) (~10 mins)"
+            echo "start_step=5 -> Run variant calling (~10 mins)"
+            exit 1
+fi
 
 action=$1
 
