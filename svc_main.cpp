@@ -202,7 +202,7 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
                     cd_b.push_back(pos_data[chr_idx][pos_idx].cells_data[cell_idx]);
                 }
             }
-            uint32_t coverage;
+            uint16_t coverage;
             PosData pda = { pos_data[chr_idx][pos_idx].position, cd_a };
             if (is_significant(pda, seq_error_rate, &coverage)) {
                 positions_a.push_back(pda);
@@ -279,11 +279,11 @@ int main(int argc, char *argv[]) {
     std::vector<uint32_t> max_read_lengths(input_files.size());
 
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
-    read_progress.SetFrequencyUpdate(total_size/100);
+    read_progress.SetFrequencyUpdate(total_size / 100);
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(
-                input_files[i], id_to_group,
+                input_files[i], FLAGS_seq_error_rate, id_to_group,
                 [&read_progress](uint32_t progress) { read_progress += progress; },
                 FLAGS_max_coverage);
     }

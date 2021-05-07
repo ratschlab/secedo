@@ -10,6 +10,8 @@
  * Reads a pileup file (typically containing single cell data for one chromosome) and returns all
  * the bases read at each position.
  * @param fname file name to read from
+ * @param sequencing_error_rate the error rate of the sequencer (used to filter out non-informative
+ * positions)
  * @param merge_count artificially increases the coverage by grouping data from merge_count
  * consecutive cells together (this assumes that consecutive cell ids are part of the same cluster)
  * @param progress callback that is invoked to report the number of bytes processed (e.g. for
@@ -22,6 +24,7 @@
  */
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t> read_pileup(
         const std::string fname,
+        double sequencing_error_rate,
         const std::vector<uint16_t> &id_to_group,
         const std::function<void(uint64_t)> &progress = [](uint32_t) {},
         uint32_t max_coverage = 100);

@@ -22,4 +22,4 @@ double log_fact(uint32_t n);
  */
 bool is_significant(std::array<uint16_t, 4> &base_count, double theta);
 
-bool is_significant(const PosData &pos_data, double theta, uint32_t *coverage);
+bool is_significant(const PosData &pos_data, double theta, uint16_t *coverage);

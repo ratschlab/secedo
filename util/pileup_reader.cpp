@@ -1,5 +1,6 @@
 #include "pileup_reader.hpp"
 
+#include "util/is_significant.hpp"
 #include "util/logger.hpp"
 #include "util/util.hpp"
 
@@ -13,7 +14,8 @@ std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup_text(const std::string fname,
                  const std::vector<uint16_t> &id_to_group,
                  const std::function<void(uint64_t)> &progress,
-                 uint32_t max_coverage) {
+                 uint32_t max_coverage,
+                 double sequencing_error_rate) {
     std::vector<PosData> result;
 
     std::ofstream out_bin(fname + ".bin", std::ios::binary);
@@ -29,7 +31,7 @@ read_pileup_text(const std::string fname,
     std::unordered_set<uint32_t> all_cell_ids_grouped;
 
     std::unordered_map<std::string, uint32_t> id_map;
-    std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> id_stats;
+    std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> id_stats;
     uint32_t id_count = 0;
     uint64_t read_bytes = 0;
     // process position by position
@@ -59,15 +61,12 @@ read_pileup_text(const std::string fname,
         // 6th column: read ids, comma separated. Each single cell sequence has its own read id
         std::vector<std::string> read_ids = split(splitLine[5], ',');
         std::vector<uint32_t> read_ids_int(read_ids.size());
-        if (simplify) {
-            for (uint32_t j = 0; j < read_ids.size(); ++j) {
-                if (id_map.find(read_ids[j]) == id_map.end()) {
-                    id_map[read_ids[j]] = id_count++;
-                    id_stats[read_ids[j]] = { position, position };
-                }
-                id_stats[read_ids[j]] = { id_stats[read_ids[j]].first, position };
-                read_ids_int[j] = id_map[read_ids[j]];
+
+        for (uint32_t j = 0; j < read_ids.size(); ++j) {
+            if (id_map.find(read_ids[j]) == id_map.end()) {
+                id_map[read_ids[j]] = id_count++;
             }
+            read_ids_int[j] = id_map[read_ids[j]];
         }
 
         std::vector<CellData> cells_data;
@@ -86,13 +85,24 @@ read_pileup_text(const std::string fname,
             cells_data_ungrouped.push_back(
                     { read_ids_int[j], cell_ids[j], CharToInt[(uint8_t)bases[j]] });
         }
-        result.push_back({ position, cells_data });
+        PosData pd = { position, cells_data };
+        uint16_t coverage;
+        if (!is_significant(pd, sequencing_error_rate, &coverage)) {
+            continue;
+        }
+        result.push_back(pd);
+
+        for (uint32_t j = 0; j < read_ids.size(); ++j) {
+            if (id_stats.find(read_ids_int[j]) == id_stats.end()) {
+                id_stats[read_ids_int[j]] = { position, position };
+            }
+            id_stats[read_ids_int[j]] = { id_stats[read_ids_int[j]].first, position };
+        }
 
         if (simplify) {
             uint8_t chromosome = splitLine[0] == "X" ? 23 : std::stoi(splitLine[0]);
             out_bin.write(reinterpret_cast<char *>(&chromosome), 1);
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
-            uint16_t coverage = bases.size();
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
             out_bin.write(reinterpret_cast<char *>(cells_data_ungrouped.data()),
                           cells_data_ungrouped.size() * sizeof(cells_data_ungrouped[0]));
@@ -114,7 +124,8 @@ std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup_bin(const std::string fname,
                 const std::vector<uint16_t> &id_to_group,
                 const std::function<void(uint64_t)> &progress,
-                uint32_t max_coverage) {
+                uint32_t max_coverage,
+                double sequencing_error_rate) {
     std::vector<PosData> result;
 
     if (!std::filesystem::exists(fname)) {
@@ -173,6 +184,11 @@ read_pileup_bin(const std::string fname,
             all_cell_ids_grouped.insert(cd.cell_id);
         }
 
+        PosData pd = { position, cell_data };
+        if (!is_significant(pd, sequencing_error_rate, &coverage)) {
+            continue;
+        }
+
         for (uint32_t j = 0; j < cell_data.size(); ++j) {
             uint32_t read_id = cell_data[j].read_id;
             if (id_stats.find(read_id) != id_stats.end()) {
@@ -181,7 +197,7 @@ read_pileup_bin(const std::string fname,
                 id_stats[read_id] = { position, position };
             }
         }
-        result.push_back({ position, cell_data });
+        result.push_back(std::move(pd));
     }
 
     uint32_t max_length = 0;
@@ -198,11 +214,13 @@ read_pileup_bin(const std::string fname,
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup(const std::string fname,
+            double sequencing_error_rate,
             const std::vector<uint16_t> &id_to_group,
             const std::function<void(uint64_t)> &progress,
             uint32_t max_coverage) {
-    return ends_with(fname, ".bin") ? read_pileup_bin(fname, id_to_group, progress, max_coverage)
-                                    : read_pileup_text(fname, id_to_group, progress, max_coverage);
+    return ends_with(fname, ".bin")
+            ? read_pileup_bin(fname, id_to_group, progress, max_coverage, sequencing_error_rate)
+            : read_pileup_text(fname, id_to_group, progress, max_coverage, sequencing_error_rate);
 }
 
 

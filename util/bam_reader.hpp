@@ -16,11 +16,10 @@
 #include <string>
 #include <vector>
 
-std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_files,
-                              const std::filesystem::path &outfile,
-                              bool write_text_file,
-                              uint32_t chromosome_id,
-                              uint32_t max_coverage,
-                              uint32_t min_base_quality,
-                              uint32_t num_threads,
-                              double sequencing_error_rate);
+std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &input_files,
+                                 const std::filesystem::path &outfile,
+                                 bool write_text_file,
+                                 uint32_t chromosome_id,
+                                 uint32_t max_coverage,
+                                 uint32_t min_base_quality,
+                                 uint32_t num_threads);

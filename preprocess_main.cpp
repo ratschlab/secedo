@@ -9,9 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-DEFINE_double(seq_error_rate, 0.01, "Sequencing errors rate, denoted by theta");
 DEFINE_string(i, "", "Input directory containing BAM files");
-
 DEFINE_string(o,
               "./",
               "File prefix where the pileup output will be written. Written files will be of the "
@@ -76,8 +74,8 @@ int main(int argc, char *argv[]) {
 
     for (const auto &chromosome : split(FLAGS_chromosomes, ',')) {
         auto output_file = std::filesystem::path(FLAGS_o + "_" + chromosome + ".pileup");
-        read_bam(input_files, output_file, true, chromosome_to_id(chromosome), FLAGS_max_coverage,
-                 FLAGS_min_base_quality, FLAGS_num_threads, FLAGS_seq_error_rate);
+        pileup_bams(input_files, output_file, true, chromosome_to_id(chromosome),
+                    FLAGS_max_coverage, FLAGS_min_base_quality, FLAGS_num_threads);
         logger()->trace("Done processing chromosome {}", chromosome);
     }
 }

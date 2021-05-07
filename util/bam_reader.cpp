@@ -180,14 +180,13 @@ get_batches(const std::vector<std::filesystem::path> &input_files, uint32_t batc
     return result;
 }
 
-std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_files,
-                              const std::filesystem::path &outfile,
-                              bool write_text_file,
-                              uint32_t chromosome_id,
-                              uint32_t max_coverage,
-                              uint32_t min_base_quality,
-                              uint32_t num_threads,
-                              double sequencing_error_rate) {
+std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &input_files,
+                                 const std::filesystem::path &outfile,
+                                 bool write_text_file,
+                                 uint32_t chromosome_id,
+                                 uint32_t max_coverage,
+                                 uint32_t min_base_quality,
+                                 uint32_t num_threads) {
     size_t total_size = (chromosome_lengths[chromosome_id] / CHUNK_SIZE) + 1;
 
     logger()->trace("Allocating data structures...");
@@ -226,19 +225,21 @@ std::vector<PosData> read_bam(const std::vector<std::filesystem::path> &input_fi
             if (data_size[pos] < 2 || data_size[pos] >= max_coverage) {
                 continue; // positions with too low or too high coverage are ignored
             }
-            // count the number of bases at position pos
-            std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
-            for (uint32_t i = 0; i < data_size[pos]; ++i) {
-                base_count[data[pos][i].base]++;
+            bool all_same = true;
+            for (uint32_t i = 1; i < data_size[pos]; ++i) {
+                if (data[pos][i].base != data[pos][0].base) {
+                    all_same = false;
+                    break;
+                }
             }
 
-            if (!is_significant(base_count, sequencing_error_rate)) {
+            if (all_same) { // all bases are the same; boring
                 continue;
             }
             uint32_t chromosome = chromosome_id + 1;
+            // adding 1 to pos to emulate samtools, which is 1-based
             uint64_t position = start_pos + pos + 1;
             if (write_text_file) {
-                // adding 1 to start pos, bc. samtools is 1-based
                 out_text << chromosome << '\t' << position << '\t' << data_size[pos] << '\t';
                 std::sort(data[pos].begin(), data[pos].begin() + data_size[pos],
                           [](auto &a, auto &b) { return a.cell_id < b.cell_id; });
