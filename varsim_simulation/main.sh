@@ -1,7 +1,7 @@
 # Simulates data using Varsim+dwgsim, aligns it, piles it up and runs variant calling on it
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
-coverage=0.05  # read coverage for each cell
+coverage=0.04  # read coverage for each cell
 cov="cov${coverage#*.}x"  # e.g. cov01x for coverage 0.01x
 n_cells=500 # number of healthy and tumor cells in each group
 n_tumor=4 # how many tumor cell types to generate
@@ -106,14 +106,14 @@ function generate_reads() {
         --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} \
         2>&1 | tee ${out_dir}/logs/sim-healthy-${batch}.log"
 #    echo ${cmd}
-#    bsub  -K -J "sim-he-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
-#                -oo "${out_dir}/logs/sim-healthy-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
+    bsub  -K -J "sim-he-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
+                -oo "${out_dir}/logs/sim-healthy-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
   done
 
   out_dir="${base_dir}/${cov}/tumor"
   mkdir -p "${out_dir}/logs/"
 
-  for tumor_type in $(seq 3 "${n_tumor}"); do  # TODO: change back to 1
+  for tumor_type in $(seq 1 "${n_tumor}"); do
     out_prefix=${out_dir}/tumor_${tumor_type}_
     fasta="tumor-${tumor_type}.fa"
 
@@ -165,7 +165,7 @@ function map_reads() {
     bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${logs_dir}/bowtie-healthy-${i}.lsf.log" "${cmd}" &
   done
 
-  for tumor_type in $(seq 3 "${n_tumor}"); do  # TODO: change back to 1
+  for tumor_type in $(seq 1 "${n_tumor}"); do  # TODO: change back to 1
     for idx in $(seq 0 ${step} $((n_cells-1))); do
         cmd="echo hello"
         for i in $(seq "${idx}" $((idx+step-1))); do
@@ -194,7 +194,7 @@ function create_pileup() {
   echo "Generating pileups..."
   out_dir="${base_dir}/${cov}/pileups"
   log_dir="${out_dir}/logs"
-  pileup="${code_dir}/preprocess"
+  pileup="${code_dir}/build/preprocess"
 
   mkdir -p ${out_dir}
   mkdir -p ${log_dir}
@@ -204,7 +204,7 @@ function create_pileup() {
           num_files=`ls -l ${source_files} | wc -l`
           echo "Found ${num_files} files for chromosome ${chromosome}"
           copy_command="echo Copying data...; mkdir ${scratch_dir}; cp ${source_files} ${scratch_dir}"
-          command="echo Running pileup binary...; $pileup -i ${scratch_dir}/ -o ${out_dir}/chromosome --num_threads 20 \
+          command="echo Running pileup binary...; ${pileup} -i ${scratch_dir}/ -o ${out_dir}/chromosome --num_threads 20 \
                   --log_level=trace --min_base_quality 13 --max_coverage 1000 --seq_error_rate 0.001 \
                   --chromosomes ${chromosome} | tee ${log_dir}/pileup-${chromosome}.log"
           echo "Copy command: ${copy_command}"
@@ -229,13 +229,14 @@ function variant_calling() {
   flagfile="${code_dir}/flags_sim"
   out_dir="${work_dir}/svc/"
   mkdir -p "${out_dir}"
-  command="$svc -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
+  command="${svc} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
            --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 100 | tee ${out_dir}/svc.log"
   echo "$command"
 
   bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=8000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}"
 }
 
+if $#
 
 action=$1
 
