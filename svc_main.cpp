@@ -108,27 +108,101 @@ DEFINE_uint32(max_coverage,
 
 constexpr uint16_t NO_POS = std::numeric_limits<uint16_t>::max();
 
-void divide(const std::vector<std::vector<PosData>> &pos_data,
-            uint32_t max_read_length,
-            const std::vector<uint16_t> &id_to_group,
-            const std::vector<uint32_t> &id_to_pos,
-            const std::vector<uint32_t> &pos_to_id,
-            double mutation_rate,
-            double heterozygous_rate,
-            double seq_error_rate,
-            const uint32_t num_threads,
-            const std::string &out_dir,
-            const std::string &normalization,
-            const std::string marker) {
-    std::cout << std::endl << std::endl;
-    if (!marker.empty()) {
-        logger()->info("Performing clustering of sub-cluster {} with {} elements", marker,
-                       pos_to_id.size());
+std::vector<std::vector<PosData>> filter(const std::vector<std::vector<PosData>> &pos_data,
+                                         const std::vector<uint16_t> &id_to_group,
+                                         const std::vector<uint32_t> &id_to_pos,
+                                         const std::string &marker,
+                                         double seq_error_rate) {
+    std::vector<std::vector<PosData>> result;
+    uint32_t total_coverage = 0;
+    uint32_t total_positions = 0;
+
+    for (uint32_t chr_idx = 0; chr_idx < pos_data.size(); ++chr_idx) {
+        std::vector<PosData> positions;
+        for (uint32_t pos_idx = 0; pos_idx < pos_data[chr_idx].size(); ++pos_idx) {
+            std::vector<CellData> cd;
+            for (uint32_t cell_idx = 0; cell_idx < pos_data[chr_idx][pos_idx].cells_data.size();
+                 ++cell_idx) {
+                uint16_t cell_id = pos_data[chr_idx][pos_idx].cells_data[cell_idx].cell_id;
+                if (id_to_pos[id_to_group[cell_id]] == NO_POS) {
+                    continue;
+                }
+                cd.push_back(pos_data[chr_idx][pos_idx].cells_data[cell_idx]);
+            }
+            uint16_t coverage;
+            PosData pd = { pos_data[chr_idx][pos_idx].position, cd };
+            if (is_significant(pd, seq_error_rate, &coverage)) {
+                positions.push_back(pd);
+                total_coverage += coverage;
+            }
+        }
+        result.push_back(positions);
+        total_positions += positions.size();
     }
 
+    double coverage
+            = total_positions == 0 ? 0 : static_cast<double>(total_coverage) / total_positions;
+    logger()->trace("Avg coverage for cluster {}: {}. Total positions: {}", marker, coverage,
+                    total_positions);
+    if (coverage < 9) {
+        logger()->trace("Coverage of cluster {} is lower than 9. Stopping.", marker);
+        return {};
+    }
+    return result;
+}
+
+/**
+ * Recursively divides cells into 2 sub-clusters until a termination criteria is met.
+ * N - number of cells
+ * G - number of cell groups (normally N=G, but in case we group cells to artificially increase
+ * coverage we have G < N)
+ * NC - number of cells in the current sub-cluster. At the first call of divide() NC=G.
+ * @param pos_data
+ * @param max_read_length length of the longest fragment (typically around 500)
+ * @param id_to_group of size N maps cell ids to cell groups. Data from cells in the same group is
+ * treated as if it came from one cell. Used to artificially increase coverage when testing
+ * @param id_to_pos of size G maps a cell id to its position in the similarity matrix as we
+ * subdivide into smaller and smaller clusters. At the beginning, this is the identity permutation.
+ * If a cell with id 'cell_id' is not in the current cluster, then id_to_pos[cell_id]==NO_POS. The
+ * position of a cell in the similarity matrix is given by id_to_pos[id_to_group[cell_id]].
+ * @param pos_to_id of size NC the inverse of #id_to_pos, it maps each position 0...pos in the
+ * current subgroup to the actual cell it corresponds to
+ * @param mutation_rate epsilon, estimated frequency of mutated loci in the pre-processed data set
+ * @param homozygous_rate  the probability that a locus is homozygous, (not filtered correctly in
+ * the first step)
+ * @param seq_error_rate error rate of the sequencer, e.g. 1e-3 if using Illumina reads with base
+ * quality >30
+ * @param num_threads number of threads to use for the computation
+ * @param out_dir where to output the clustering results
+ * @param normalization the type of normalization to use for the similiarity matrix (see the flag
+ * with the same name)
+ * @param marker marks the current sub-cluster; for example AB means we are in the second
+ * sub-cluster (B) of the first cluster (A)
+ */
+void variant_call(const std::vector<std::vector<PosData>> &pds,
+                  uint32_t max_read_length,
+                  const std::vector<uint16_t> &id_to_group,
+                  const std::vector<uint32_t> &id_to_pos,
+                  const std::vector<uint32_t> &pos_to_id,
+                  double mutation_rate,
+                  double homozygous_rate,
+                  double seq_error_rate,
+                  const uint32_t num_threads,
+                  const std::string &out_dir,
+                  const std::string &normalization,
+                  const std::string marker) {
+    if (!marker.empty()) {
+        logger()->info("\n\nPerforming clustering of sub-cluster {} with {} elements", marker,
+                       pos_to_id.size());
+    }
+    logger()->info("Filtering significant positions...");
+    std::vector<std::vector<PosData>> pos_data
+            = filter(pds, id_to_group, id_to_pos, marker, seq_error_rate);
+
+    logger()->info("Found {} significant positions out of {} total", pos_data.size(), pds.size());
     logger()->info("Computing similarity matrix...");
     Matd sim_mat = computeSimilarityMatrix(pos_data, pos_to_id.size(), max_read_length, id_to_pos,
-                                           mutation_rate, heterozygous_rate, seq_error_rate,
+                                           mutation_rate, homozygous_rate, seq_error_rate,
                                            num_threads, FLAGS_o, marker, FLAGS_normalization);
 
     logger()->info("Performing spectral clustering...");
@@ -159,8 +233,6 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
     write_vec(std::filesystem::path(out_dir) / ("expectation_maximization" + marker),
               id_to_cluster);
 
-    std::vector<std::vector<PosData>> pos_data_a;
-    std::vector<std::vector<PosData>> pos_data_b;
     std::vector<uint32_t> pos_to_id_a;
     std::vector<uint32_t> pos_to_id_b;
     std::vector<uint32_t> id_to_pos_a(id_to_pos.size(), NO_POS);
@@ -182,64 +254,12 @@ void divide(const std::vector<std::vector<PosData>> &pos_data,
         return; // TODO: hack - figure it out
     }
 
-    uint32_t total_coverage_a = 0;
-    uint32_t total_coverage_b = 0;
-    uint32_t total_positions_a = 0;
-    uint32_t total_positions_b = 0;
-
-    for (uint32_t chr_idx = 0; chr_idx < pos_data.size(); ++chr_idx) {
-        std::vector<PosData> positions_a;
-        std::vector<PosData> positions_b;
-        for (uint32_t pos_idx = 0; pos_idx < pos_data[chr_idx].size(); ++pos_idx) {
-            std::vector<CellData> cd_a;
-            std::vector<CellData> cd_b;
-            for (uint32_t cell_idx = 0; cell_idx < pos_data[chr_idx][pos_idx].cells_data.size();
-                 ++cell_idx) {
-                uint16_t cell_id = pos_data[chr_idx][pos_idx].cells_data[cell_idx].cell_id;
-                if (cluster[id_to_pos[cell_id]] < 0.05) {
-                    cd_a.push_back(pos_data[chr_idx][pos_idx].cells_data[cell_idx]);
-                } else if (cluster[id_to_pos[cell_id]] > 0.95) {
-                    cd_b.push_back(pos_data[chr_idx][pos_idx].cells_data[cell_idx]);
-                }
-            }
-            uint16_t coverage;
-            PosData pda = { pos_data[chr_idx][pos_idx].position, cd_a };
-            if (is_significant(pda, seq_error_rate, &coverage)) {
-                positions_a.push_back(pda);
-                total_coverage_a += coverage;
-            }
-            PosData pdb = { pos_data[chr_idx][pos_idx].position, cd_b };
-            if (is_significant(pdb, seq_error_rate, &coverage)) {
-                positions_b.push_back(pdb);
-                total_coverage_b += coverage;
-            }
-        }
-        pos_data_a.push_back(positions_a);
-        pos_data_b.push_back(positions_b);
-        total_positions_a += positions_a.size();
-        total_positions_b += positions_b.size();
-    }
-
-    double coverage_a = total_positions_a == 0
-            ? 0
-            : static_cast<double>(total_coverage_a) / total_positions_a;
-    double coverage_b = total_positions_b == 0
-            ? 0
-            : static_cast<double>(total_coverage_b) / total_positions_b;
-    logger()->trace("Avg coverage for cluster {}: {}. Total positions: {}", marker + 'A',
-                    coverage_a, total_positions_a);
-    logger()->trace("Avg coverage for cluster {}: {}. Total positions: {}", marker + 'B',
-                    coverage_b, total_positions_b);
-    // recursively try to further divide each of the new clusters
-    if (coverage_a < 9 || coverage_b < 9) {
-        logger()->trace("Coverage for at least one cluster is lower than 9. Stopping.");
-        return;
-    }
-
-    divide(pos_data_a, max_read_length, id_to_group, id_to_pos_a, pos_to_id_a, mutation_rate,
-           heterozygous_rate, seq_error_rate, num_threads, out_dir, normalization, marker + 'A');
-    divide(pos_data_b, max_read_length, id_to_group, id_to_pos_b, pos_to_id_b, mutation_rate,
-           heterozygous_rate, seq_error_rate, num_threads, out_dir, normalization, marker + 'B');
+    variant_call(pos_data, max_read_length, id_to_group, id_to_pos_a, pos_to_id_a, mutation_rate,
+                 homozygous_rate, seq_error_rate, num_threads, out_dir, normalization,
+                 marker + 'A');
+    variant_call(pos_data, max_read_length, id_to_group, id_to_pos_b, pos_to_id_b, mutation_rate,
+                 homozygous_rate, seq_error_rate, num_threads, out_dir, normalization,
+                 marker + 'B');
 }
 
 //============================================================================
@@ -283,7 +303,7 @@ int main(int argc, char *argv[]) {
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(
-                input_files[i], FLAGS_seq_error_rate, id_to_group,
+                input_files[i], id_to_group,
                 [&read_progress](uint32_t progress) { read_progress += progress; },
                 FLAGS_max_coverage);
     }
@@ -312,9 +332,9 @@ int main(int argc, char *argv[]) {
     std::vector<uint32_t> cell_id_map(num_groups);
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 
-    divide(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map, FLAGS_mutation_rate,
-           FLAGS_homozygous_prob, FLAGS_seq_error_rate, FLAGS_num_threads, FLAGS_o,
-           FLAGS_normalization, "");
+    variant_call(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
+                 FLAGS_mutation_rate, FLAGS_homozygous_prob, FLAGS_seq_error_rate,
+                 FLAGS_num_threads, FLAGS_o, FLAGS_normalization, "");
 
 
     logger()->info("Done.");
