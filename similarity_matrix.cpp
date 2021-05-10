@@ -393,13 +393,13 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
             }
 
             // update active_reads with the reads from the current position
-            for (const CellData &cd : pd.cells_data) {
-                auto read_it = active_reads.find(cd.read_id);
-                const char curr_base = cd.base();
+            for (uint32_t i = 0; i < pd.read_ids.size(); ++i) {
+                auto read_it = active_reads.find(pd.read_ids[i]);
+                const char curr_base = pd.base(i);
                 if (read_it == active_reads.end()) { // a new read just started
-                    Read read = { { curr_base }, cd.cell_id(), { pd.position } };
-                    active_reads[cd.read_id] = read;
-                    active_keys.push_back(cd.read_id);
+                    Read read = { { curr_base }, pd.cell_id(i), { pd.position } };
+                    active_reads[pd.read_ids[i]] = read;
+                    active_keys.push_back(pd.read_ids[i]);
                 } else {
                     Read &read = read_it->second;
                     // if we have two reads at the same position (happens due to paired-end

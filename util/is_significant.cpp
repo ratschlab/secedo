@@ -45,7 +45,7 @@ bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
     uint32_t coverage = base_count[0] + base_count[1] + base_count[2] + base_count[3];
 
     // choose K for the closest coverage, rounding to nearest even to emulate Python
-    uint32_t i = std::clamp(round_nearest_even((coverage / 10.) ) - 1, 0., 19.);
+    uint32_t i = std::clamp(round_nearest_even((coverage / 10.)) - 1, 0., 19.);
 
     // if there are no reads or if we have just one base, do not keep
     if (coverage == 0 || base_count[2] == 0) {
@@ -69,8 +69,8 @@ bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
 
 bool is_significant(const PosData &pos_data, double theta, uint16_t *coverage) {
     std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
-    for (const auto &cd : pos_data.cells_data) {
-        base_count[cd.base()]++;
+    for (uint32_t i = 0; i < pos_data.size(); ++i) {
+        base_count[pos_data.base(i)]++;
     }
     *coverage = base_count[0] + base_count[1] + base_count[2] + base_count[3];
     return is_significant(base_count, theta);

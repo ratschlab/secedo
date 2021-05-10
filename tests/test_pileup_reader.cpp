@@ -29,10 +29,10 @@ void check_binary(const std::string &fname,
     ASSERT_EQ(data2.size(), data.size());
     for (uint32_t i = 0; i < data.size(); ++i) {
         ASSERT_EQ(data2[i].position, data[i].position);
-        ASSERT_EQ(data2[i].cells_data.size(), data[i].cells_data.size());
-        for (uint32_t j = 0; j < data[i].cells_data.size(); ++j) {
-            ASSERT_EQ(data2[i].cells_data[j].base(), data[i].cells_data[j].base());
-            ASSERT_EQ(data2[i].cells_data[j].cell_id(), data[i].cells_data[j].cell_id());
+        ASSERT_EQ(data2[i].size(), data[i].size());
+        for (uint32_t j = 0; j < data[i].read_ids.size(); ++j) {
+            ASSERT_EQ(data2[i].base(j), data[i].base(j));
+            ASSERT_EQ(data2[i].cell_id(j), data[i].cell_id(j));
         }
     }
     std::filesystem::remove_all(fname); // clean up
@@ -61,15 +61,16 @@ TEST(Reader, one_row) {
     ASSERT_EQ(1, data.size());
 
     EXPECT_EQ(16050060, data[0].position);
-    ASSERT_EQ(14, data[0].cells_data.size());
+    ASSERT_EQ(14, data[0].read_ids.size());
+    ASSERT_EQ(14, data[0].cell_ids_bases.size());
 
     std::vector<uint8_t> expected_bases
             = { 'C', 'A', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C' };
 
-    for (uint32_t i = 0; i < data[0].cells_data.size(); ++i) {
-        ASSERT_EQ(data[0].cells_data[i].read_id, i);
-        ASSERT_EQ(data[0].cells_data[i].base(), CharToInt[expected_bases[i]]);
-        ASSERT_EQ(data[0].cells_data[i].cell_id(), expected_cell_ids[i]);
+    for (uint32_t i = 0; i < data[0].size(); ++i) {
+        ASSERT_EQ(data[0].read_ids[i], i);
+        ASSERT_EQ(data[0].base(i), CharToInt[expected_bases[i]]);
+        ASSERT_EQ(data[0].cell_id(i), expected_cell_ids[i]);
     }
 
     check_binary("data/one_row.pileup.bin", 1, "", data, cell_ids, max_len);
@@ -99,10 +100,10 @@ TEST(Reader, three_rows) {
                 = { { 0, 1 }, { 0, 1, 2 }, { 0, 2, 1, 3, 4 } };
         //{ { "R1", "R2" }, { "R1", "R2", "R3" }, { "R1", "R3", "R2", "R4", "R5" } };
 
-        for (uint32_t j = 0; j < data[i].cells_data.size(); ++j) {
-            ASSERT_EQ(data[i].cells_data[j].read_id, expected_read_ids[i][j]);
-            ASSERT_EQ(data[i].cells_data[j].base(), CharToInt[expected_bases[i][j]]);
-            ASSERT_EQ(data[i].cells_data[j].cell_id(), expected_cell_ids[i][j]);
+        for (uint32_t j = 0; j < data[i].size(); ++j) {
+            ASSERT_EQ(data[i].read_ids[j], expected_read_ids[i][j]);
+            ASSERT_EQ(data[i].base(j), CharToInt[expected_bases[i][j]]);
+            ASSERT_EQ(data[i].cell_id(j), expected_cell_ids[i][j]);
         }
     }
 
@@ -137,10 +138,10 @@ TEST(Reader, group_by_two) {
         std::vector<std::vector<uint32_t>> expected_read_ids
                 = { { 0, 1, 2, 3, 4 }, { 0, 1, 2, 3 }, { 0, 1, 2, 3, 4, 5 } };
 
-        for (uint32_t j = 0; j < data[i].cells_data.size(); ++j) {
-            ASSERT_EQ(data[i].cells_data[j].read_id, expected_read_ids[i][j]);
-            ASSERT_EQ(data[i].cells_data[j].base(), CharToInt[expected_bases[i][j]]);
-            ASSERT_EQ(data[i].cells_data[j].cell_id(), expected_cell_ids[i][j]);
+        for (uint32_t j = 0; j < data[i].size(); ++j) {
+            ASSERT_EQ(data[i].read_ids[j], expected_read_ids[i][j]);
+            ASSERT_EQ(data[i].base(j), CharToInt[expected_bases[i][j]]);
+            ASSERT_EQ(data[i].cell_id(j), expected_cell_ids[i][j]);
         }
     }
 
@@ -176,10 +177,10 @@ TEST(Reader, group_using_file) {
         std::vector<std::vector<uint32_t>> expected_read_ids
                 = { { 0, 1, 2, 3, 4 }, { 0, 1, 2, 3 }, { 0, 1, 2, 3, 4, 5 } };
 
-        for (uint32_t j = 0; j < data[i].cells_data.size(); ++j) {
-            ASSERT_EQ(data[i].cells_data[j].read_id, expected_read_ids[i][j]);
-            ASSERT_EQ(data[i].cells_data[j].base(), CharToInt[expected_bases[i][j]]);
-            ASSERT_EQ(data[i].cells_data[j].cell_id(), expected_cell_ids[i][j]);
+        for (uint32_t j = 0; j < data[i].size(); ++j) {
+            ASSERT_EQ(data[i].read_ids[j], expected_read_ids[i][j]);
+            ASSERT_EQ(data[i].base(j), CharToInt[expected_bases[i][j]]);
+            ASSERT_EQ(data[i].cell_id(j), expected_cell_ids[i][j]);
         }
     }
 

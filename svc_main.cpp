@@ -106,7 +106,7 @@ DEFINE_uint32(max_coverage,
               100,
               "Positions with higher coverage are considered anomalies and discarded");
 
-constexpr uint16_t NO_POS = std::numeric_limits<uint16_t>::max();
+constexpr uint16_t NO_POS = std::numeric_limits<uint16_t>::max() >> 2;
 
 std::vector<std::vector<PosData>> filter(const std::vector<std::vector<PosData>> &pos_data,
                                          const std::vector<uint16_t> &id_to_group,
@@ -120,17 +120,19 @@ std::vector<std::vector<PosData>> filter(const std::vector<std::vector<PosData>>
     for (uint32_t chr_idx = 0; chr_idx < pos_data.size(); ++chr_idx) {
         std::vector<PosData> positions;
         for (uint32_t pos_idx = 0; pos_idx < pos_data[chr_idx].size(); ++pos_idx) {
-            std::vector<CellData> cd;
-            for (uint32_t cell_idx = 0; cell_idx < pos_data[chr_idx][pos_idx].cells_data.size();
+            std::vector<uint32_t> read_ids;
+            std::vector<uint16_t> cell_ids_and_bases;
+            for (uint32_t cell_idx = 0; cell_idx < pos_data[chr_idx][pos_idx].read_ids.size();
                  ++cell_idx) {
-                uint16_t cell_id = pos_data[chr_idx][pos_idx].cells_data[cell_idx].cell_id();
+                uint16_t cell_id = pos_data[chr_idx][pos_idx].cell_id(cell_idx);
                 if (id_to_pos[id_to_group[cell_id]] == NO_POS) {
                     continue;
                 }
-                cd.push_back(pos_data[chr_idx][pos_idx].cells_data[cell_idx]);
+                read_ids.push_back(pos_data[chr_idx][pos_idx].read_ids[cell_idx]);
+                cell_ids_and_bases.push_back(pos_data[chr_idx][pos_idx].cell_ids_bases[cell_idx]);
             }
             uint16_t coverage;
-            PosData pd = { pos_data[chr_idx][pos_idx].position, cd };
+            PosData pd = { pos_data[chr_idx][pos_idx].position, read_ids, cell_ids_and_bases };
             if (is_significant(pd, seq_error_rate, &coverage)) {
                 positions.push_back(pd);
                 total_coverage += coverage;

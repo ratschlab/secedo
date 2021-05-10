@@ -26,9 +26,9 @@ TEST(EM, OneCell) {
  * they will have identical probabilities of belonging to either cluster.
  */
 TEST(EM, TwoCellsSame) {
-    CellData cell_data_a = { 1000, 0 << 2 | 1 }; // cell id '0' has a read of 'C'
-    CellData cell_data_b = { 1001, 1 << 2 | 1 }; // cell id '1' also has a read of 'C'
-    PosData one_pos = { 1234, { cell_data_a, cell_data_b } };
+    std::vector<uint32_t> read_ids = { 1000, 1001 };
+    std::vector<uint16_t> cell_ids_bases = { 0 << 2 | 1, 1 << 2 | 1 };
+    PosData one_pos = { 1234, read_ids, cell_ids_bases };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.3, 0.4 };
     expectation_maximization(pos_data, { 0, 1 }, 1, theta, &prob_cluster_b);
@@ -41,9 +41,9 @@ TEST(EM, TwoCellsSame) {
  * towards different clusters.
  */
 TEST(EM, TwoCellsDifferent) {
-    CellData cell_data_a = { 1000, 0<<2 | 1 }; // cell id '0' has a read of 'C'
-    CellData cell_data_b = { 1001, 1<< 2| 2 }; // cell id '1' has a read of 'G'
-    PosData one_pos = { 1234, { cell_data_a, cell_data_b } };
+    std::vector<uint32_t> read_ids = { 1000, 1001 };
+    std::vector<uint16_t> cell_ids_bases = { 0 << 2 | 1, 1 << 2 | 2 };
+    PosData one_pos = { 1234, read_ids, cell_ids_bases };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.01, 0.02 };
     expectation_maximization(pos_data, { 0, 1 }, 1, theta, &prob_cluster_b);
@@ -56,11 +56,9 @@ TEST(EM, TwoCellsDifferent) {
  * the same cluster, in the end the probabilities should converge towards the correct clusters.
  */
 TEST(EM, FourCellsTwoGroups22) {
-    CellData cell_data_a = { 1000, 0<<2 | 1 }; // cell id '0' has a read of 'C'
-    CellData cell_data_b = { 1001, 1 << 2 | 1 }; // cell id '1' also has a read of 'C'
-    CellData cell_data_c = { 1002, 2 << 2 | 2 }; // cell id '2' has a read of 'G'
-    CellData cell_data_d = { 1003, 3 << 2 | 2 }; // cell id '3' also has a read of 'G'
-    PosData one_pos = { 1234, { cell_data_a, cell_data_b, cell_data_c, cell_data_d } };
+    std::vector<uint32_t> read_ids = { 1000, 1001, 1002, 1003 };
+    std::vector<uint16_t> cell_ids_bases = { 0 << 2 | 1, 1 << 2 | 1, 2 << 2 | 2, 3 << 2 | 2   };
+    PosData one_pos = { 1234, read_ids, cell_ids_bases };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.9, 0.02, 0.03, 0.9 };
     expectation_maximization(pos_data, { 0, 1, 2, 3 }, 1, theta, &prob_cluster_b);
@@ -76,11 +74,9 @@ TEST(EM, FourCellsTwoGroups22) {
  * clusters.
  */
 TEST(EM, FourCellsTwoGroups31) {
-    CellData cell_data_a = { 1000, 0 << 2 |  2 }; // cell id '0' has a read of 'C'
-    CellData cell_data_b = { 1001, 1 << 2 |  1 }; // cell id '1' also has a read of 'C'
-    CellData cell_data_c = { 1002, 2 << 2 |  2 }; // cell id '2' has a read of 'G'
-    CellData cell_data_d = { 1003, 3 << 2 |  2 }; // cell id '3' also has a read of 'G'
-    PosData one_pos = { 1234, { cell_data_a, cell_data_b, cell_data_c, cell_data_d } };
+    std::vector<uint32_t> read_ids = { 1000, 1001, 1002, 1003 };
+    std::vector<uint16_t> cell_ids_bases = { 0 << 2 | 2, 1 << 2 | 1, 2 << 2 | 2, 3 << 2 | 2   };
+    PosData one_pos = { 1234, read_ids, cell_ids_bases };
     const std::vector<std::vector<PosData>> pos_data = { { one_pos, one_pos, one_pos } };
     std::vector<double> prob_cluster_b = { 0.9, 0.9, 0.03, 0.1 };
     expectation_maximization(pos_data, { 0, 1, 2, 3 }, 1, theta, &prob_cluster_b);

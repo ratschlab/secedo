@@ -32,6 +32,13 @@ constexpr uint32_t chromosome_lengths[]
             114'364'328, 101'991'189, 90'338'345,  83'257'441,  80'373'285,  58'617'616,
             64'444'167,  46'709'983,  50'818'468,  156'040'895, 57'227'415 };
 
+struct CellData {
+    uint32_t read_id;
+    uint16_t cell_id_and_base;
+
+    inline uint8_t base() { return cell_id_and_base & 3; }
+    inline uint16_t cell_id() { return cell_id_and_base >> 2; }
+};
 
 /**
  * Reads data between start_pos and end_pos from the specified BAM reader and places the result in
@@ -183,6 +190,18 @@ get_batches(const std::vector<std::filesystem::path> &input_files, uint32_t batc
     return result;
 }
 
+PosData create_pos_data(uint32_t pos, std::vector<CellData> cell_data) {
+    PosData result;
+    result.cell_ids_bases.resize(cell_data.size());
+    result.read_ids.resize(cell_data.size());
+    result.position = pos;
+    for (uint32_t i = 0; i <cell_data.size(); ++i) {
+        result.cell_ids_bases[i] = cell_data[i].cell_id_and_base;
+        result.read_ids[i] = cell_data[i].read_id;
+    }
+    return result;
+}
+
 std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_files,
                                  const std::filesystem::path &out_pileup,
                                  bool write_text_file,
@@ -265,7 +284,7 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
 
                 out_text << std::endl;
 
-                result.push_back({ start_pos + pos, data[pos] });
+                result.push_back(create_pos_data(start_pos + pos, data[pos]));
             }
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             uint16_t coverage = data_size[pos];
