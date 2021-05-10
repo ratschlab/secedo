@@ -156,9 +156,9 @@ read_pileup_bin(const std::string fname,
         std::vector<uint32_t> read_ids(coverage);
         std::vector<uint16_t> cell_ids_and_bases(coverage);
 
-        f.read(reinterpret_cast<char *>(read_ids.data()), read_ids.size() * sizeof(read_ids[0]));
+        f.read(reinterpret_cast<char *>(read_ids.data()), coverage * sizeof(read_ids[0]));
         f.read(reinterpret_cast<char *>(cell_ids_and_bases.data()),
-               cell_ids_and_bases.size() * sizeof(cell_ids_and_bases[0]));
+               coverage * sizeof(cell_ids_and_bases[0]));
 
         // report progress
         read_bytes = f.tellg();

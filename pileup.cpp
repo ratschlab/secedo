@@ -190,12 +190,12 @@ get_batches(const std::vector<std::filesystem::path> &input_files, uint32_t batc
     return result;
 }
 
-PosData create_pos_data(uint32_t pos, std::vector<CellData> cell_data) {
+PosData create_pos_data(uint32_t pos, std::vector<CellData> cell_data, uint32_t size) {
     PosData result;
-    result.cell_ids_bases.resize(cell_data.size());
-    result.read_ids.resize(cell_data.size());
+    result.cell_ids_bases.resize(size);
+    result.read_ids.resize(size);
     result.position = pos;
-    for (uint32_t i = 0; i < cell_data.size(); ++i) {
+    for (uint32_t i = 0; i < size; ++i) {
         result.cell_ids_bases[i] = cell_data[i].cell_id_and_base;
         result.read_ids[i] = cell_data[i].read_id;
     }
@@ -284,14 +284,14 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
 
                 out_text << std::endl;
 
-                result.push_back(create_pos_data(start_pos + pos, data[pos]));
+                result.push_back(create_pos_data(start_pos + pos, data[pos], data_size[pos]));
             }
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             uint16_t coverage = data_size[pos];
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
-            std::vector<uint32_t> read_ids(data[pos].size());
-            std::vector<uint32_t> cell_ids_and_bases(data[pos].size());
-            for (uint32_t i = 0; i < data[pos].size(); ++i) {
+            std::vector<uint32_t> read_ids(coverage);
+            std::vector<uint16_t> cell_ids_and_bases(coverage);
+            for (uint32_t i = 0; i < coverage; ++i) {
                 read_ids[i] = data[pos][i].read_id;
                 cell_ids_and_bases[i] = data[pos][i].cell_id_and_base;
             }
