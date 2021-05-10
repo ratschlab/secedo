@@ -195,7 +195,7 @@ PosData create_pos_data(uint32_t pos, std::vector<CellData> cell_data) {
     result.cell_ids_bases.resize(cell_data.size());
     result.read_ids.resize(cell_data.size());
     result.position = pos;
-    for (uint32_t i = 0; i <cell_data.size(); ++i) {
+    for (uint32_t i = 0; i < cell_data.size(); ++i) {
         result.cell_ids_bases[i] = cell_data[i].cell_id_and_base;
         result.read_ids[i] = cell_data[i].read_id;
     }
@@ -289,8 +289,16 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             uint16_t coverage = data_size[pos];
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
-            out_bin.write(reinterpret_cast<char *>(data[pos].data()),
-                          coverage * sizeof(data[pos][0]));
+            std::vector<uint32_t> read_ids(data[pos].size());
+            std::vector<uint32_t> cell_ids_and_bases(data[pos].size());
+            for (uint32_t i = 0; i < data[pos].size(); ++i) {
+                read_ids[i] = data[pos][i].read_id;
+                cell_ids_and_bases[i] = data[pos][i].cell_id_and_base;
+            }
+            out_bin.write(reinterpret_cast<char *>(read_ids.data()),
+                          coverage * sizeof(read_ids[0]));
+            out_bin.write(reinterpret_cast<char *>(cell_ids_and_bases.data()),
+                          coverage * sizeof(cell_ids_and_bases[0]));
         }
 
         for (uint32_t i = 0; i < MAX_INSERT_SIZE; ++i) {
