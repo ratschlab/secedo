@@ -126,7 +126,7 @@ bool read_bam_file(const uint16_t cell_id,
             if (current_coverage >= max_coverage) {
                 continue; // this position has suspiciously high coverage, treating as noise
             }
-            uint16_t cell_id_base = cell_id << 2 | base;
+            uint16_t cell_id_base = (cell_id << 2) | (base & 3);
             cell_datas[current_coverage] = { read_id, cell_id_base };
         }
     }
@@ -231,6 +231,7 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
     std::vector<std::atomic<uint16_t>> data_size(CHUNK_SIZE + MAX_INSERT_SIZE);
     std::for_each(data_size.begin(), data_size.end(), [](auto &v) { v = 0; });
 
+    uint32_t pos_count = 0;
     uint32_t start_pos = 0;
     // traverse in chunks of size CHUNK_SIZE until all data was read
     bool is_done = false;
@@ -245,11 +246,12 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
         }
 
         for (uint32_t pos = 0; pos < CHUNK_SIZE; ++pos) {
-            if (data_size[pos] < 2 || data_size[pos] >= max_coverage) {
+            uint16_t coverage = data_size[pos];
+            if (coverage < 2 || coverage >= max_coverage) {
                 continue; // positions with too low or too high coverage are ignored
             }
             bool all_same = true;
-            for (uint32_t i = 1; i < data_size[pos]; ++i) {
+            for (uint32_t i = 1; i < coverage; ++i) {
                 if (data[pos][i].base() != data[pos][0].base()) {
                     all_same = false;
                     break;
@@ -259,46 +261,43 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
             if (all_same) { // all bases are the same; boring
                 continue;
             }
+            pos_count++;
             uint32_t chromosome = chromosome_id + 1;
             // adding 1 to pos to emulate samtools, which is 1-based
             uint32_t position = start_pos + pos + 1;
-            if (write_text_file) {
-                out_text << chromosome << '\t' << position << '\t' << data_size[pos] << '\t';
-                std::sort(data[pos].begin(), data[pos].begin() + data_size[pos],
-                          [](auto &a, auto &b) { return a.cell_id() < b.cell_id(); });
 
-                for (uint32_t i = 0; i < data_size[pos]; ++i) {
+
+            PosData pd = create_pos_data(position, data[pos], coverage);
+            result.push_back(pd);
+
+            if (write_text_file) {
+                out_text << chromosome << '\t' << position << '\t' << coverage << '\t';
+                std::sort(data[pos].begin(), data[pos].begin() + coverage,
+                          [](CellData &a, CellData &b) { return a.cell_id() < b.cell_id(); });
+
+                for (uint32_t i = 0; i < coverage; ++i) {
                     out_text << IntToChar[data[pos][i].base()];
                 }
                 out_text << '\t';
-                for (uint32_t i = 0; i < data_size[pos] - 1U; ++i) {
+                for (uint32_t i = 0; i < coverage - 1U; ++i) {
                     out_text << data[pos][i].cell_id() << ",";
                 }
-                out_text << data[pos][data_size[pos] - 1].cell_id();
+                out_text << data[pos][coverage - 1].cell_id();
 
                 out_text << '\t';
-                for (uint32_t i = 0; i < data_size[pos] - 1U; ++i) {
+                for (uint32_t i = 0; i < coverage - 1U; ++i) {
                     out_text << data[pos][i].read_id << ",";
                 }
-                out_text << data[pos][data_size[pos] - 1].read_id;
+                out_text << data[pos][coverage - 1].read_id;
 
                 out_text << std::endl;
-
-                result.push_back(create_pos_data(start_pos + pos, data[pos], data_size[pos]));
             }
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
-            uint16_t coverage = data_size[pos];
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
-            std::vector<uint32_t> read_ids(coverage);
-            std::vector<uint16_t> cell_ids_and_bases(coverage);
-            for (uint32_t i = 0; i < coverage; ++i) {
-                read_ids[i] = data[pos][i].read_id;
-                cell_ids_and_bases[i] = data[pos][i].cell_id_and_base;
-            }
-            out_bin.write(reinterpret_cast<char *>(read_ids.data()),
-                          coverage * sizeof(read_ids[0]));
-            out_bin.write(reinterpret_cast<char *>(cell_ids_and_bases.data()),
-                          coverage * sizeof(cell_ids_and_bases[0]));
+            out_bin.write(reinterpret_cast<char *>(pd.read_ids.data()),
+                          coverage * sizeof(pd.read_ids[0]));
+            out_bin.write(reinterpret_cast<char *>(pd.cell_ids_bases.data()),
+                          coverage * sizeof(pd.cell_ids_bases[0]));
         }
 
         for (uint32_t i = 0; i < MAX_INSERT_SIZE; ++i) {
@@ -311,6 +310,6 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
         start_pos += CHUNK_SIZE;
         read_progress += 1;
     }
-
+    logger()->info("Written {} positions to {}.txt/.bin", pos_count, out_pileup);
     return result;
 }
