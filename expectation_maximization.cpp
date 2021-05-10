@@ -21,7 +21,7 @@ cluster_center(const PosData &pos_data, const std::vector<double> &prob_cluster,
     std::array<double, 4> center = { 0, 0, 0, 0 };
     // sum the bases over all cells belonging to the cluster(weighted by prob_cluster_a)
     for (const CellData &cd : pos_data.cells_data) {
-        center[cd.base] += prob_cluster[cd.cell_id];
+        center[cd.base()] += prob_cluster[cd.cell_id()];
     }
     // normalize the composition at each position
     double s = center[0] + center[1] + center[2] + center[3];
@@ -78,8 +78,8 @@ void maximization_step(const std::vector<double> &prob_cluster_b,
 
         // compute the log likelihoods given the new cluster centers
         for (const CellData &cd : pd.cells_data) {
-            log_likelihood_a->at(id_to_pos[cd.cell_id]) += center_a[cd.base];
-            log_likelihood_b->at(id_to_pos[cd.cell_id]) += center_b[cd.base];
+            log_likelihood_a->at(id_to_pos[cd.cell_id()]) += center_a[cd.base()];
+            log_likelihood_b->at(id_to_pos[cd.cell_id()]) += center_b[cd.base()];
         }
     }
 }

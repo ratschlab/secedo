@@ -123,7 +123,7 @@ std::vector<std::vector<PosData>> filter(const std::vector<std::vector<PosData>>
             std::vector<CellData> cd;
             for (uint32_t cell_idx = 0; cell_idx < pos_data[chr_idx][pos_idx].cells_data.size();
                  ++cell_idx) {
-                uint16_t cell_id = pos_data[chr_idx][pos_idx].cells_data[cell_idx].cell_id;
+                uint16_t cell_id = pos_data[chr_idx][pos_idx].cells_data[cell_idx].cell_id();
                 if (id_to_pos[id_to_group[cell_id]] == NO_POS) {
                     continue;
                 }

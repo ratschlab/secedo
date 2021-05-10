@@ -1,6 +1,5 @@
-#include "bam_reader.hpp"
+#include "pileup.hpp"
 
-#include "is_significant.hpp"
 #include "sequenced_data.hpp"
 #include "util/logger.hpp"
 #include "util/util.hpp"
@@ -46,6 +45,7 @@ bool read_bam_file(const uint16_t cell_id,
                    uint32_t start_pos,
                    uint32_t end_pos,
                    BamTools::BamReader &reader,
+                   std::ofstream &out_map,
                    std::vector<std::vector<CellData>> *data,
                    std::vector<std::atomic<uint16_t>> *data_size,
                    std::unordered_map<std::string, uint64_t> *read_name_to_id,
@@ -76,6 +76,7 @@ bool read_bam_file(const uint16_t cell_id,
         if (read_id_iter == read_name_to_id->end()) {
             read_id = (*last_read_id)++;
             (*read_name_to_id)[al.Name] = read_id;
+            out_map << al.Name << "\t" << read_id << std::endl;
         } else {
             read_id = read_id_iter->second;
         }
@@ -118,7 +119,8 @@ bool read_bam_file(const uint16_t cell_id,
             if (current_coverage >= max_coverage) {
                 continue; // this position has suspiciously high coverage, treating as noise
             }
-            cell_datas[current_coverage] = { read_id, cell_id, base };
+            uint16_t cell_id_base = cell_id << 2 | base;
+            cell_datas[current_coverage] = { read_id, cell_id_base };
         }
     }
 
@@ -137,6 +139,7 @@ bool read_bam_chunk(const std::vector<std::filesystem::path> &input_files,
                     uint32_t num_threads,
                     uint32_t start_pos,
                     uint32_t end_pos,
+                    std::ofstream &out_map,
                     std::vector<std::vector<CellData>> *data,
                     std::vector<std::atomic<uint16_t>> *data_size,
                     std::vector<std::unordered_map<std::string, uint64_t>> *read_name_to_id,
@@ -158,7 +161,7 @@ bool read_bam_chunk(const std::vector<std::filesystem::path> &input_files,
             continue;
         }
         is_done &= read_bam_file(batch_start + i, chromosome_id, max_coverage, min_base_quality,
-                                 start_pos, end_pos, *reader, data, data_size,
+                                 start_pos, end_pos, *reader, out_map, data, data_size,
                                  &(read_name_to_id->at(i)), last_read_id);
     }
 
@@ -180,8 +183,8 @@ get_batches(const std::vector<std::filesystem::path> &input_files, uint32_t batc
     return result;
 }
 
-std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &input_files,
-                                 const std::filesystem::path &outfile,
+std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_files,
+                                 const std::filesystem::path &out_pileup,
                                  bool write_text_file,
                                  uint32_t chromosome_id,
                                  uint32_t max_coverage,
@@ -191,13 +194,14 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &input
 
     logger()->trace("Allocating data structures...");
     std::atomic<uint64_t> last_read_id = 0; // used to map read names to shorter integer values
-    std::vector<std::unordered_map<std::string, uint64_t>> read_name_to_id(input_files.size());
+    std::vector<std::unordered_map<std::string, uint64_t>> read_name_to_id(bam_files.size());
 
     std::vector<std::vector<std::filesystem::path>> file_batches
-            = get_batches(input_files, MAX_OPEN_FILES);
+            = get_batches(bam_files, MAX_OPEN_FILES);
 
-    std::ofstream out_text(outfile.string() + ".txt");
-    std::ofstream out_bin(outfile.string() + ".bin", std::fstream::binary);
+    std::ofstream out_text(out_pileup.string() + ".txt");
+    std::ofstream out_bin(out_pileup.string() + ".bin", std::fstream::binary);
+    std::ofstream out_map(out_pileup.string() + ".map", std::fstream::binary);
 
     std::vector<PosData> result; // the final result containing the merged data
 
@@ -208,7 +212,7 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &input
     std::vector<std::atomic<uint16_t>> data_size(CHUNK_SIZE + MAX_INSERT_SIZE);
     std::for_each(data_size.begin(), data_size.end(), [](auto &v) { v = 0; });
 
-    uint64_t start_pos = 0;
+    uint32_t start_pos = 0;
     // traverse in chunks of size CHUNK_SIZE until all data was read
     bool is_done = false;
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
@@ -217,8 +221,8 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &input
         for (uint32_t i = 0; i < file_batches.size(); ++i) {
             is_done &= read_bam_chunk(file_batches[i], i * MAX_OPEN_FILES, chromosome_id,
                                       max_coverage, min_base_quality, num_threads, start_pos,
-                                      start_pos + CHUNK_SIZE, &data, &data_size, &read_name_to_id,
-                                      &last_read_id);
+                                      start_pos + CHUNK_SIZE, out_map, &data, &data_size,
+                                      &read_name_to_id, &last_read_id);
         }
 
         for (uint32_t pos = 0; pos < CHUNK_SIZE; ++pos) {
@@ -227,7 +231,7 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &input
             }
             bool all_same = true;
             for (uint32_t i = 1; i < data_size[pos]; ++i) {
-                if (data[pos][i].base != data[pos][0].base) {
+                if (data[pos][i].base() != data[pos][0].base()) {
                     all_same = false;
                     break;
                 }
@@ -238,20 +242,20 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &input
             }
             uint32_t chromosome = chromosome_id + 1;
             // adding 1 to pos to emulate samtools, which is 1-based
-            uint64_t position = start_pos + pos + 1;
+            uint32_t position = start_pos + pos + 1;
             if (write_text_file) {
                 out_text << chromosome << '\t' << position << '\t' << data_size[pos] << '\t';
                 std::sort(data[pos].begin(), data[pos].begin() + data_size[pos],
-                          [](auto &a, auto &b) { return a.cell_id < b.cell_id; });
+                          [](auto &a, auto &b) { return a.cell_id() < b.cell_id(); });
 
                 for (uint32_t i = 0; i < data_size[pos]; ++i) {
-                    out_text << IntToChar[data[pos][i].base];
+                    out_text << IntToChar[data[pos][i].base()];
                 }
                 out_text << '\t';
                 for (uint32_t i = 0; i < data_size[pos] - 1U; ++i) {
-                    out_text << data[pos][i].cell_id << ",";
+                    out_text << data[pos][i].cell_id() << ",";
                 }
-                out_text << data[pos][data_size[pos] - 1].cell_id;
+                out_text << data[pos][data_size[pos] - 1].cell_id();
 
                 out_text << '\t';
                 for (uint32_t i = 0; i < data_size[pos] - 1U; ++i) {
@@ -263,7 +267,6 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &input
 
                 result.push_back({ start_pos + pos, data[pos] });
             }
-            out_bin.write(reinterpret_cast<char *>(&chromosome), 1);
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             uint16_t coverage = data_size[pos];
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));

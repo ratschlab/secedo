@@ -19,6 +19,14 @@
  *    2. all the cell ids
  *    3. the longest DNA fragment length (this will help us later decide when a fragment is fully
  * processed)
+ *
+ * IMPLEMENTATION NOTE: We chose to read all pileup data into memory once, and then apply the
+ * filtering step in memory for each clustering step. A more economical approach is to apply the
+ * filtering (#is_significant()) when reading and only load into memory the positions that are
+ * significant for the current cluster. This would reduce memory usage by a factor of 20-30x (for
+ * the artificial dataset with 2500 cells the filtered data is 5GB vs 135GB) at the cost of having
+ * to read and re-filter all the data again at every sub-clustering step (about 12 minutes for 2500
+ * cells at coverage 0.04x and ETH's slow network disk).
  */
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t> read_pileup(
         const std::string fname,

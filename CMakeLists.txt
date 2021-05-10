@@ -62,6 +62,10 @@ file(GLOB variant_calling_files variant_calling.cpp variant_calling.cpp)
 add_library(lib_variant_calling ${variant_calling_files})
 target_link_libraries(lib_variant_calling util)
 
+file(GLOB pileup_files pileup.cpp pileup.cpp)
+add_library(pileup ${pileup_files})
+target_link_libraries(pileup util)
+
 add_executable(svc svc_main.cpp)
 target_link_libraries(svc lib_expectation_maximization lib_variant_calling lib_similarity_matrix
     lib_spectral_clustering util gflags spdlog::spdlog BamTools)
@@ -70,7 +74,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 add_executable(preprocess preprocess_main.cpp)
-target_link_libraries(preprocess util gflags spdlog::spdlog BamTools)
+target_link_libraries(preprocess pileup util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(preprocess stdc++fs)
 endif()

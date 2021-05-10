@@ -70,7 +70,7 @@ bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
 bool is_significant(const PosData &pos_data, double theta, uint16_t *coverage) {
     std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
     for (const auto &cd : pos_data.cells_data) {
-        base_count[cd.base]++;
+        base_count[cd.base()]++;
     }
     *coverage = base_count[0] + base_count[1] + base_count[2] + base_count[3];
     return is_significant(base_count, theta);

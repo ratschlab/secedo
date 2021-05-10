@@ -1,6 +1,5 @@
 #include "pileup_reader.hpp"
 
-#include "util/is_significant.hpp"
 #include "util/logger.hpp"
 #include "util/util.hpp"
 
@@ -42,7 +41,7 @@ read_pileup_text(const std::string fname,
         std::vector<std::string> splitLine = split(line, '\t');
 
         // 2nd column: position in chromosome
-        uint64_t position = std::stoll(splitLine[1]);
+        uint32_t position = std::stoll(splitLine[1]);
         // 4th column: bases/reads for the given position
         std::string bases = splitLine[3];
         // 5th column: cell ids the cell from which the reads are coming, comma separated
@@ -79,10 +78,10 @@ read_pileup_text(const std::string fname,
                 std::exit(1);
             }
 
-            cells_data.push_back(
-                    { read_ids_int[j], id_to_group.at(cell_ids[j]), CharToInt[(uint8_t)bases[j]] });
-            cells_data_ungrouped.push_back(
-                    { read_ids_int[j], cell_ids[j], CharToInt[(uint8_t)bases[j]] });
+            uint16_t cell_id_base = id_to_group.at(cell_ids[j]) << 2 | CharToInt[(uint8_t)bases[j]];
+            cells_data.push_back({ read_ids_int[j], cell_id_base });
+            cell_id_base = cell_ids[j] << 2 | CharToInt[(uint8_t)bases[j]];
+            cells_data_ungrouped.push_back({ read_ids_int[j], cell_id_base });
         }
         result.push_back({ position, cells_data });
 
@@ -95,8 +94,6 @@ read_pileup_text(const std::string fname,
 
         if (simplify) {
             uint16_t coverage = cells_data_ungrouped.size();
-            uint8_t chromosome = splitLine[0] == "X" ? 23 : std::stoi(splitLine[0]);
-            out_bin.write(reinterpret_cast<char *>(&chromosome), 1);
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
             out_bin.write(reinterpret_cast<char *>(cells_data_ungrouped.data()),
@@ -105,12 +102,19 @@ read_pileup_text(const std::string fname,
     }
 
     uint32_t max_length = 0;
+    uint32_t max_id = 0;
     for (const auto &[k, v] : id_stats) {
-        max_length = std::max(max_length, v.second - v.first);
+        uint32_t len = v.second - v.first;
+        if (max_length < len) {
+            max_length = len;
+            max_id = k;
+        }
     }
     logger()->trace(
-            "{}: found {} cell ids, {} after grouping, {} reads. Longest fragment is {} bases",
-            fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(), max_length);
+            "{}: found {} cell ids, {} after grouping, {} reads. "
+            "Longest fragment is {} with {} bases",
+            fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(), max_id,
+            max_length);
 
     return { result, all_cell_ids, max_length };
 }
@@ -139,14 +143,12 @@ read_pileup_bin(const std::string fname,
     uint64_t reported_bytes = 0;
 
     while (f.good()) {
-        uint8_t chromosome;
-        uint64_t position;
+        uint32_t position;
         uint16_t coverage;
-        f.read(reinterpret_cast<char *>(&chromosome), 1);
+        f.read(reinterpret_cast<char *>(&position), sizeof(position));
         if (!f.good()) {
             break;
         }
-        f.read(reinterpret_cast<char *>(&position), sizeof(position));
         f.read(reinterpret_cast<char *>(&coverage), sizeof(coverage));
 
         std::vector<CellData> cell_data(coverage);
@@ -166,16 +168,16 @@ read_pileup_bin(const std::string fname,
         }
 
         for (auto &cd : cell_data) {
-            all_cell_ids.insert(cd.cell_id);
-            if (cd.cell_id >= id_to_group.size()) {
+            all_cell_ids.insert(cd.cell_id());
+            if (cd.cell_id() >= id_to_group.size()) {
                 logger()->error(
                         "Cell id {} is too large. Increase --max_cell_count if using the default "
                         "mapping, or fix the mapping in --merge_file",
                         id_to_group.size());
                 std::exit(1);
             }
-            cd.cell_id = id_to_group[cd.cell_id];
-            all_cell_ids_grouped.insert(cd.cell_id);
+            cd.cell_id_base = id_to_group[cd.cell_id()] << 2 | cd.base();
+            all_cell_ids_grouped.insert(cd.cell_id());
         }
 
         PosData pd = { position, cell_data };

@@ -1,5 +1,5 @@
+#include "pileup.hpp"
 #include "sequenced_data.hpp"
-#include "util/bam_reader.hpp"
 #include "util/logger.hpp"
 #include "util/util.hpp"
 

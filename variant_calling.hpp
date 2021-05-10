@@ -71,10 +71,10 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
             std::array<uint32_t, 4> nbases_a;
             std::array<uint32_t, 4> nbases_b;
             for (const CellData &cd : pd.cells_data) {
-                if (cell_labels[cd.cell_id] <= 0.05) { // first cluster
-                    nbases_a[cd.base]++;
-                } else if (cell_labels[cd.cell_id] >= 0.95) {
-                    nbases_b[cd.base]++;
+                if (cell_labels[cd.cell_id()] <= 0.05) { // first cluster
+                    nbases_a[cd.base()]++;
+                } else if (cell_labels[cd.cell_id()] >= 0.95) {
+                    nbases_b[cd.base()]++;
                 }
             }
 

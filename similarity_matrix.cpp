@@ -395,9 +395,9 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
             // update active_reads with the reads from the current position
             for (const CellData &cd : pd.cells_data) {
                 auto read_it = active_reads.find(cd.read_id);
-                const char curr_base = cd.base;
+                const char curr_base = cd.base();
                 if (read_it == active_reads.end()) { // a new read just started
-                    Read read = { { curr_base }, cd.cell_id, { pd.position } };
+                    Read read = { { curr_base }, cd.cell_id(), { pd.position } };
                     active_reads[cd.read_id] = read;
                     active_keys.push_back(cd.read_id);
                 } else {
