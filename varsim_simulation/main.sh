@@ -232,8 +232,8 @@ function variant_calling() {
   command="${svc} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
            --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 100 | tee ${out_dir}/svc.log"
   echo "$command"
-
-  bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=8000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}"
+  
+  bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=20000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}"
 }
 
 # check the command-line arguments
