@@ -9,32 +9,37 @@ namespace {
 using namespace ::testing;
 
 bool is_significant_helper(const std::string &bases, double theta = 0.01) {
+    Filter filter;
     std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
     for (uint8_t c : bases) {
         base_count[CharToInt[c]]++;
     }
-    return is_significant(base_count, theta);
+    return filter.is_significant(base_count, theta);
 }
 
 TEST(LogFact, Zero) {
-    ASSERT_EQ(0, log_fact(0));
+    Filter filter;
+    ASSERT_EQ(0, filter.log_fact(0));
 }
 
 TEST(LogFact, One) {
-    ASSERT_EQ(0, log_fact(1));
+    Filter filter;
+    ASSERT_EQ(0, filter.log_fact(1));
 }
 
 TEST(LogFact, SomeValues) {
+    Filter filter;
     double values[] = { 0.69314718056, 1.79175946923, 3.17805383035, 4.78749174278 };
     for (uint32_t i = 0; i < 4; ++i) {
-        ASSERT_NEAR(values[i], log_fact(i + 2), 1e-10);
+        ASSERT_NEAR(values[i], filter.log_fact(i + 2), 1e-10);
     }
 }
 
 TEST(LogFact, LargeValues) {
+    Filter filter;
     double values[] = { 716.86, 722.01, 727.17, 732.33 };
     for (uint32_t i = 0; i < 4; ++i) {
-        ASSERT_NEAR(values[i], log_fact(i + 172), 1e-2);
+        ASSERT_NEAR(values[i], filter.log_fact(i + 172), 1e-2);
     }
 }
 
@@ -74,7 +79,8 @@ TEST(Preprocess, LengthAtLimitRoundUp) {
 }
 
 TEST(Filter, Empty) {
-    auto [pos_data, coverage] = filter({}, {}, {}, "", {}, 1);
+    Filter filter;
+    auto [pos_data, coverage] = filter.filter({}, {}, {}, "", {}, 1);
     ASSERT_TRUE(pos_data.empty());
 }
 
@@ -82,7 +88,8 @@ TEST(Filter, OnePosSignificant) {
     std::vector<uint32_t> read_ids = { 0, 5, 9 };
     std::vector<uint16_t> cell_ids_and_bases = { 1 << 2 | 0, 2 << 2 | 1, 3 << 2 | 2 };
     PosData pd = { 1, read_ids, cell_ids_and_bases };
-    auto [filtered, coverage] = filter({ { pd } }, { 0 }, { 0 }, "", 1e-3, 1);
+    Filter filter;
+    auto [filtered, coverage] = filter.filter({ { pd } }, { 0 }, { 0 }, "", 1e-3, 1);
     ASSERT_EQ(coverage, 3.0);
     std::vector<PosData> chromosome_data = { pd };
     ASSERT_THAT(filtered, ElementsAre(chromosome_data));
@@ -105,13 +112,15 @@ TEST(Filter, OnePosNotSignificant) {
     std::vector<uint16_t> cell_ids = { 1, 3, 5 };
     PosData pd = assemble(1, read_ids, cell_ids, bases);
 
-    auto [filtered, coverage] = filter({ { pd } }, { 0 }, { 0 }, "", 1e-3, 1);
+    Filter filter;
+    auto [filtered, coverage] = filter.filter({ { pd } }, { 0 }, { 0 }, "", 1e-3, 1);
     ASSERT_EQ(coverage, 0);
     ASSERT_EQ(1, filtered.size());
     ASSERT_TRUE(filtered[0].empty());
 }
 
 TEST(Filter, AllSignificant) {
+    logger()->set_level(spdlog::level::trace);
     std::vector<std::vector<PosData>> pos_data;
     for (uint32_t chr = 0; chr < 23; ++chr) {
         std::vector<uint32_t> read_ids = { 0, 5, 9 };
@@ -130,7 +139,8 @@ TEST(Filter, AllSignificant) {
 
     std::vector<std::vector<PosData>> filtered;
     double coverage;
-    std::tie(filtered, coverage) = filter(pos_data, id_to_group, id_to_pos, "", 1e-3, 2);
+    Filter filter;
+    std::tie(filtered, coverage) = filter.filter(pos_data, id_to_group, id_to_pos, "", 1e-3, 2);
     ASSERT_EQ(coverage, 3);
     ASSERT_EQ(23, filtered.size());
     ASSERT_EQ(filtered, pos_data);
@@ -149,7 +159,8 @@ TEST(Filter, NoneSignificant) {
     std::vector<uint32_t> id_to_pos(100);
     std::iota(id_to_pos.begin(), id_to_pos.end(), 0);
 
-    auto [filtered, coverage] = filter({ chromosome_data }, id_to_group, id_to_pos, "", 1e-3, 2);
+    Filter filter;
+    auto [filtered, coverage] = filter.filter({ chromosome_data }, id_to_group, id_to_pos, "", 1e-3, 2);
     ASSERT_EQ(coverage, 0);
     ASSERT_EQ(1, filtered.size());
     ASSERT_TRUE(filtered[0].empty());

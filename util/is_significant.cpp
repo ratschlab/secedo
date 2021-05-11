@@ -13,7 +13,7 @@ std::vector<double> Ks = { 0.872,   0.872,   0.872,   -1.238,  -1.358,   -5.749,
 
 std::vector<double> log_factorial;
 
-void init() {
+Filter::Filter() {
     log_factorial.reserve(171);
     log_factorial.push_back(1);
     for (uint32_t i = 1; i < 171; ++i) {
@@ -24,12 +24,7 @@ void init() {
     }
 }
 
-double log_fact(uint32_t n) {
-    static bool is_init = false;
-    if (!is_init) {
-        init();
-        is_init = true;
-    }
+double Filter::log_fact(uint32_t n) {
     return (n > 170) ? 0.5 * std::log(2 * M_PI * n) + n * std::log(n / M_E) : log_factorial.at(n);
 }
 
@@ -38,7 +33,7 @@ double round_nearest_even(double x) {
     return std::nearbyint(x);
 }
 
-bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
+bool Filter::is_significant(std::array<uint16_t, 4> &base_count, double theta) {
     double log_theta = std::log(theta / 3);
     double log_one_minus_theta = std::log(1 - theta);
 
@@ -70,7 +65,7 @@ bool is_significant(std::array<uint16_t, 4> &base_count, double theta) {
     return log_normalizing_coef + log_prob_homozygous < Ks.at(i);
 }
 
-bool is_significant(const PosData &pos_data, double theta, uint16_t *coverage) {
+bool Filter::is_significant(const PosData &pos_data, double theta, uint16_t *coverage) {
     std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         base_count[pos_data.base(i)]++;
@@ -80,19 +75,18 @@ bool is_significant(const PosData &pos_data, double theta, uint16_t *coverage) {
 }
 
 std::pair<std::vector<std::vector<PosData>>, double>
-filter(const std::vector<std::vector<PosData>> &pos_data,
-       const std::vector<uint16_t> &id_to_group,
-       const std::vector<uint32_t> &id_to_pos,
-       const std::string &marker,
-       double seq_error_rate,
-       uint32_t num_threads) {
+Filter::filter(const std::vector<std::vector<PosData>> &pos_data,
+               const std::vector<uint16_t> &id_to_group,
+               const std::vector<uint32_t> &id_to_pos,
+               const std::string &marker,
+               double seq_error_rate,
+               uint32_t num_threads) {
     std::vector<std::vector<PosData>> result(pos_data.size());
     // one per thread to avoid lock contention
     std::vector<uint32_t> coverage_chr(pos_data.size());
     // can be atomic, very little lock contention
     std::atomic<uint32_t> total_positions = 0;
-std::ignore = num_threads;
-//#pragma omp parallel for num_threads(num_threads)
+#pragma omp parallel for num_threads(num_threads)
     for (uint32_t chr_idx = 0; chr_idx < pos_data.size(); ++chr_idx) {
         std::vector<PosData> filtered_data;
         for (uint32_t pos_idx = 0; pos_idx < pos_data[chr_idx].size(); ++pos_idx) {

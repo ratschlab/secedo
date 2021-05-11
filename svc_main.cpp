@@ -151,8 +151,9 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
                        pos_to_id.size());
     }
     logger()->info("Filtering significant positions...");
+    Filter filter;
     auto [pos_data, coverage]
-            = filter(pds, id_to_group, id_to_pos, marker, seq_error_rate, num_threads);
+            = filter.filter(pds, id_to_group, id_to_pos, marker, seq_error_rate, num_threads);
     if (coverage < 9) {
         logger()->trace("Coverage of cluster {} is lower than 9. Stopping.", marker);
         return;
