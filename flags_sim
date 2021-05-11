@@ -1,6 +1,6 @@
 # parameters for spectral clustering
 --homozygous_prob 0.15
---seq_error_rate 0.01
+--seq_error_rate 0.001
 --mutation_rate 0.01
 
 # logging

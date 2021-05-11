@@ -205,7 +205,7 @@ function create_pileup() {
           echo "Found ${num_files} files for chromosome ${chromosome}"
           copy_command="echo Copying data...; mkdir ${scratch_dir}; cp ${source_files} ${scratch_dir}"
           command="echo Running pileup binary...; ${pileup} -i ${scratch_dir}/ -o ${out_dir}/chromosome --num_threads 20 \
-                  --log_level=trace --min_base_quality 13 --max_coverage 1000 \
+                  --log_level=trace --min_base_quality 30 --max_coverage 1000 \
                   --chromosomes ${chromosome} | tee ${log_dir}/pileup-${chromosome}.log"
           echo "Copy command: ${copy_command}"
           echo "Pileup command: $command"

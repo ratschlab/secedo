@@ -108,45 +108,69 @@ DEFINE_uint32(max_coverage,
 
 constexpr uint16_t NO_POS = std::numeric_limits<uint16_t>::max() >> 2;
 
+/**
+ * Filters the positions in #pos_data by keeping only the positions that are relevant (homozygous
+ * and not consistent with the null hypothesis of ‘all the cells have the same genotype at this
+ * position’)
+ * @param pos_data pileup data containing all positions where not all nucleotides are identical
+ * across all cells
+ * @param id_to_group of size n_cells maps cell ids to cell groups. Data from cells in the same
+ * group is treated as if it came from one cell. Used to artificially increase coverage when testing
+ * @param id_to_pos of size n_groups maps a cell id to its position in the similarity matrix as we
+ * subdivide into smaller and smaller clusters. At the beginning, this is the identity permutation.
+ * If a cell with id 'cell_id' is not in the current cluster, then id_to_pos[cell_id]==NO_POS. The
+ * position of a cell in the similarity matrix is given by id_to_pos[id_to_group[cell_id]].
+ * @param marker marks the current sub-cluster; for example AB means we are in the second
+ * sub-cluster (B) of the first cluster (A)
+ * @param seq_error_rate rate of the sequencer, e.g. 1e-3 if using Illumina reads with base
+ * quality >=30
+ * @return the positions in pos_data that are relevant for the current subcluster
+ */
 std::vector<std::vector<PosData>> filter(const std::vector<std::vector<PosData>> &pos_data,
                                          const std::vector<uint16_t> &id_to_group,
                                          const std::vector<uint32_t> &id_to_pos,
                                          const std::string &marker,
-                                         double seq_error_rate) {
-    std::vector<std::vector<PosData>> result;
-    uint32_t total_coverage = 0;
-    uint32_t total_positions = 0;
+                                         double seq_error_rate,
+                                         uint32_t num_threads) {
+    std::vector<std::vector<PosData>> result(pos_data.size());
+    // one per thread to avoid lock contention
+    std::vector<uint32_t> coverage_chr(pos_data.size());
+    // can be atomic, very little lock contention
+    std::atomic<uint32_t> total_positions = 0;
 
+#pragma omp parallel for num_threads(num_threads)
     for (uint32_t chr_idx = 0; chr_idx < pos_data.size(); ++chr_idx) {
         std::vector<PosData> positions;
         for (uint32_t pos_idx = 0; pos_idx < pos_data[chr_idx].size(); ++pos_idx) {
             std::vector<uint32_t> read_ids;
             std::vector<uint16_t> cell_ids_and_bases;
-            for (uint32_t cell_idx = 0; cell_idx < pos_data[chr_idx][pos_idx].read_ids.size();
-                 ++cell_idx) {
-                uint16_t cell_id = pos_data[chr_idx][pos_idx].cell_id(cell_idx);
-                if (id_to_pos[id_to_group[cell_id]] == NO_POS) {
+            const PosData &pd = pos_data[chr_idx][pos_idx];
+            std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
+            for (uint32_t cell_idx = 0; cell_idx < pd.size(); ++cell_idx) {
+                if (id_to_pos[id_to_group[pd.cell_id(cell_idx)]] == NO_POS) {
                     continue;
                 }
-                read_ids.push_back(pos_data[chr_idx][pos_idx].read_ids[cell_idx]);
-                cell_ids_and_bases.push_back(pos_data[chr_idx][pos_idx].cell_ids_bases[cell_idx]);
+                read_ids.push_back(pd.read_ids[cell_idx]);
+                cell_ids_and_bases.push_back(pd.cell_ids_bases[cell_idx]);
+                base_count[pd.base(cell_idx)]++;
             }
-            uint16_t coverage;
-            PosData pd = { pos_data[chr_idx][pos_idx].position, read_ids, cell_ids_and_bases };
-            if (is_significant(pd, seq_error_rate, &coverage)) {
-                positions.push_back(pd);
-                total_coverage += coverage;
+
+            if (is_significant(base_count, seq_error_rate)) {
+                coverage_chr[chr_idx] += read_ids.size();
+                positions.push_back(
+                        { pd.position, std::move(read_ids), std::move(cell_ids_and_bases) });
             }
         }
-        result.push_back(positions);
-        total_positions += positions.size();
+        result[chr_idx] = std::move(positions);
+        total_positions.fetch_add(positions.size());
     }
 
-    double coverage
+    uint32_t total_coverage = std::accumulate(coverage_chr.begin(), coverage_chr.end(), 0);
+    double avg_coverage
             = total_positions == 0 ? 0 : static_cast<double>(total_coverage) / total_positions;
-    logger()->trace("Avg coverage for cluster {}: {}. Total positions: {}", marker, coverage,
+    logger()->trace("Avg coverage for cluster {}: {}. Total positions: {}", marker, avg_coverage,
                     total_positions);
-    if (coverage < 9) {
+    if (avg_coverage < 9) {
         logger()->trace("Coverage of cluster {} is lower than 9. Stopping.", marker);
         return {};
     }
@@ -199,16 +223,17 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     }
     logger()->info("Filtering significant positions...");
     std::vector<std::vector<PosData>> pos_data
-            = filter(pds, id_to_group, id_to_pos, marker, seq_error_rate);
+            = filter(pds, id_to_group, id_to_pos, marker, seq_error_rate, num_threads);
 
-    logger()->info("Found {} significant positions out of {} total", pos_data.size(), pds.size());
     logger()->info("Computing similarity matrix...");
-    Matd sim_mat = computeSimilarityMatrix(pos_data, pos_to_id.size(), max_read_length, id_to_pos,
+    uint32_t n_cells_subcluster = pos_to_id.size();
+    uint32_t n_cells_total = id_to_group.size();
+    Matd sim_mat = computeSimilarityMatrix(pos_data, n_cells_subcluster, max_read_length, id_to_pos,
                                            mutation_rate, homozygous_rate, seq_error_rate,
                                            num_threads, FLAGS_o, marker, FLAGS_normalization);
 
     logger()->info("Performing spectral clustering...");
-    std::vector<double> cluster;
+    std::vector<double> cluster; // size n_cells
     Termination termination = parse_termination(FLAGS_termination);
     ClusteringType clustering_type = parse_clustering_type(FLAGS_clustering_type);
     bool is_done
@@ -217,8 +242,8 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
         return;
     }
 
-    std::vector<uint16_t> id_to_cluster(id_to_group.size());
-    for (uint16_t cell_id = 0; cell_id < id_to_group.size(); ++cell_id) {
+    std::vector<uint16_t> id_to_cluster(n_cells_total);
+    for (uint16_t cell_id = 0; cell_id < n_cells_total; ++cell_id) {
         uint16_t pos = id_to_pos[id_to_group[cell_id]];
         id_to_cluster[cell_id] = pos == NO_POS ? NO_POS : cluster[pos];
     }
@@ -228,7 +253,7 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     expectation_maximization(pos_data, id_to_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
                              &cluster);
 
-    for (uint16_t i = 0; i < id_to_group.size(); ++i) {
+    for (uint16_t i = 0; i < n_cells_total; ++i) {
         uint32_t pos = id_to_pos[id_to_group[i]];
         id_to_cluster[i] = pos == NO_POS ? NO_POS : cluster[pos];
     }
@@ -240,7 +265,7 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     std::vector<uint32_t> id_to_pos_a(id_to_pos.size(), NO_POS);
     std::vector<uint32_t> id_to_pos_b(id_to_pos.size(), NO_POS);
 
-    for (uint32_t cell_idx = 0; cell_idx < cluster.size(); ++cell_idx) {
+    for (uint32_t cell_idx = 0; cell_idx < n_cells_subcluster; ++cell_idx) {
         uint32_t cell_id = pos_to_id[cell_idx];
         if (cluster[cell_idx] < 0.05) {
             id_to_pos_a[cell_id] = pos_to_id_a.size();
