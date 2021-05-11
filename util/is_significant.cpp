@@ -82,7 +82,8 @@ Filter::filter(const std::vector<std::vector<PosData>> &pos_data,
     std::vector<uint32_t> coverage_chr(pos_data.size());
     // can be atomic, very little lock contention
     std::atomic<uint32_t> total_positions = 0;
-#pragma omp parallel for num_threads(num_threads)
+    std::ignore = num_threads;
+//#pragma omp parallel for num_threads(num_threads)
     for (uint32_t chr_idx = 0; chr_idx < pos_data.size(); ++chr_idx) {
         std::vector<PosData> filtered_data;
         for (uint32_t pos_idx = 0; pos_idx < pos_data[chr_idx].size(); ++pos_idx) {
