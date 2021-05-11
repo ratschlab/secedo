@@ -281,10 +281,10 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
         return; // TODO: hack - figure it out
     }
 
-    variant_call(pos_data, max_read_length, id_to_group, id_to_pos_a, pos_to_id_a, mutation_rate,
+    variant_call(pds, max_read_length, id_to_group, id_to_pos_a, pos_to_id_a, mutation_rate,
                  homozygous_rate, seq_error_rate, num_threads, out_dir, normalization,
                  marker + 'A');
-    variant_call(pos_data, max_read_length, id_to_group, id_to_pos_b, pos_to_id_b, mutation_rate,
+    variant_call(pds, max_read_length, id_to_group, id_to_pos_b, pos_to_id_b, mutation_rate,
                  homozygous_rate, seq_error_rate, num_threads, out_dir, normalization,
                  marker + 'B');
 }
