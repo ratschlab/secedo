@@ -47,30 +47,34 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 file(GLOB expectation_maximization_files expectation_maximization.cpp)
-add_library(lib_expectation_maximization ${expectation_maximization_files})
-target_link_libraries(lib_expectation_maximization util OpenMP::OpenMP_CXX)
+add_library(expectation_maximization ${expectation_maximization_files})
+target_link_libraries(expectation_maximization util OpenMP::OpenMP_CXX)
 
 file(GLOB similarity_matrix_files similarity_matrix.cpp)
 add_library(lib_similarity_matrix ${similarity_matrix_files})
 target_link_libraries(lib_similarity_matrix progress_bar util OpenMP::OpenMP_CXX)
 
 file(GLOB spectral_clustering_files spectral_clustering.cpp)
-add_library(lib_spectral_clustering ${spectral_clustering_files})
-target_link_libraries(lib_spectral_clustering armadillo util  OpenMP::OpenMP_CXX)
+add_library(spectral_clustering ${spectral_clustering_files})
+target_link_libraries(spectral_clustering armadillo util  OpenMP::OpenMP_CXX)
 
 file(GLOB variant_calling_files variant_calling.cpp variant_calling.cpp)
 add_library(lib_variant_calling ${variant_calling_files})
 target_link_libraries(lib_variant_calling util)
 
+file(GLOB pileup_files pileup.cpp pileup.cpp)
+add_library(pileup ${pileup_files})
+target_link_libraries(pileup util)
+
 add_executable(svc svc_main.cpp)
-target_link_libraries(svc lib_expectation_maximization lib_variant_calling lib_similarity_matrix
-    lib_spectral_clustering util gflags spdlog::spdlog BamTools)
+target_link_libraries(svc expectation_maximization lib_variant_calling lib_similarity_matrix
+    spectral_clustering util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(svc stdc++fs)
 endif()
 
 add_executable(preprocess preprocess_main.cpp)
-target_link_libraries(preprocess util gflags spdlog::spdlog BamTools)
+target_link_libraries(preprocess pileup util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(preprocess stdc++fs)
 endif()
@@ -86,7 +90,7 @@ target_compile_options(gtest PRIVATE -w)
 file(GLOB test_files "tests/*.cpp")
 
 add_executable(tests ${test_files})
-target_link_libraries(tests gtest_main gtest gmock lib_expectation_maximization lib_spectral_clustering)
+target_link_libraries(tests gtest_main gtest gmock expectation_maximization pileup spectral_clustering)
 target_include_directories(tests PRIVATE "include")
 
 gtest_discover_tests(tests)

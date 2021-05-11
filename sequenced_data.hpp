@@ -1,24 +1,32 @@
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <string>
 #include <vector>
 
-
-/**
- * One read for a given cell at a given (unknown) position.
- */
-struct CellData {
-    uint32_t read_id;
-    uint16_t cell_id;
-    uint8_t base;
-};
-
 /**
  * All the reads from all the cells for a given position.
- * Note that the position itself is not stored, as its never being used.
  */
 struct PosData {
-    uint64_t position;
-    std::vector<CellData> cells_data;
+    uint32_t position;
+    /** ids of all reads at this position */
+    std::vector<uint32_t> read_ids;
+    /**
+     * Cell ids and bases of all reads at this position. First 14 bits are the cell id, last 2 are
+     * the base
+     */
+    std::vector<uint16_t> cell_ids_bases;
+
+    inline uint16_t cell_id(uint32_t pos) const { return cell_ids_bases[pos] >> 2; }
+    inline uint8_t base(uint32_t pos) const { return cell_ids_bases[pos] & 3; }
+    inline uint32_t size() const {
+        assert(read_ids.size() == cell_ids_bases.size());
+        return read_ids.size();
+    }
+
+    bool operator==(const PosData &other) const {
+        return position == other.position && read_ids == other.read_ids
+                && cell_ids_bases == other.cell_ids_bases;
+    }
 };

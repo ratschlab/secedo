@@ -1,6 +1,5 @@
 #include "pileup_reader.hpp"
 
-#include "util/is_significant.hpp"
 #include "util/logger.hpp"
 #include "util/util.hpp"
 
@@ -14,8 +13,7 @@ std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup_text(const std::string fname,
                  const std::vector<uint16_t> &id_to_group,
                  const std::function<void(uint64_t)> &progress,
-                 uint32_t max_coverage,
-                 double sequencing_error_rate) {
+                 uint32_t max_coverage) {
     std::vector<PosData> result;
 
     std::ofstream out_bin(fname + ".bin", std::ios::binary);
@@ -43,7 +41,7 @@ read_pileup_text(const std::string fname,
         std::vector<std::string> splitLine = split(line, '\t');
 
         // 2nd column: position in chromosome
-        uint64_t position = std::stoll(splitLine[1]);
+        uint32_t position = std::stoll(splitLine[1]);
         // 4th column: bases/reads for the given position
         std::string bases = splitLine[3];
         // 5th column: cell ids the cell from which the reads are coming, comma separated
@@ -69,8 +67,8 @@ read_pileup_text(const std::string fname,
             read_ids_int[j] = id_map[read_ids[j]];
         }
 
-        std::vector<CellData> cells_data;
-        std::vector<CellData> cells_data_ungrouped;
+        std::vector<uint16_t> cell_ids_and_bases_grouped;
+        std::vector<uint16_t> cell_ids_and_bases;
         for (uint32_t j = 0; j < bases.size(); ++j) {
             if (cell_ids[j] > id_to_group.size()) {
                 logger()->error(
@@ -80,17 +78,12 @@ read_pileup_text(const std::string fname,
                 std::exit(1);
             }
 
-            cells_data.push_back(
-                    { read_ids_int[j], id_to_group.at(cell_ids[j]), CharToInt[(uint8_t)bases[j]] });
-            cells_data_ungrouped.push_back(
-                    { read_ids_int[j], cell_ids[j], CharToInt[(uint8_t)bases[j]] });
+            uint16_t cell_id_base = id_to_group.at(cell_ids[j]) << 2 | CharToInt[(uint8_t)bases[j]];
+            cell_ids_and_bases_grouped.push_back(cell_id_base);
+            cell_id_base = cell_ids[j] << 2 | CharToInt[(uint8_t)bases[j]];
+            cell_ids_and_bases.push_back(cell_id_base);
         }
-        PosData pd = { position, cells_data };
-        uint16_t coverage;
-        if (!is_significant(pd, sequencing_error_rate, &coverage)) {
-            continue;
-        }
-        result.push_back(pd);
+        result.push_back({ position, read_ids_int, cell_ids_and_bases_grouped });
 
         for (uint32_t j = 0; j < read_ids.size(); ++j) {
             if (id_stats.find(read_ids_int[j]) == id_stats.end()) {
@@ -100,22 +93,30 @@ read_pileup_text(const std::string fname,
         }
 
         if (simplify) {
-            uint8_t chromosome = splitLine[0] == "X" ? 23 : std::stoi(splitLine[0]);
-            out_bin.write(reinterpret_cast<char *>(&chromosome), 1);
+            uint16_t coverage = read_ids_int.size();
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
-            out_bin.write(reinterpret_cast<char *>(cells_data_ungrouped.data()),
-                          cells_data_ungrouped.size() * sizeof(cells_data_ungrouped[0]));
+            out_bin.write(reinterpret_cast<char *>(read_ids_int.data()),
+                          read_ids_int.size() * sizeof(read_ids_int[0]));
+            out_bin.write(reinterpret_cast<char *>(cell_ids_and_bases.data()),
+                          cell_ids_and_bases.size() * sizeof(cell_ids_and_bases[0]));
         }
     }
 
     uint32_t max_length = 0;
+    uint32_t max_id = 0;
     for (const auto &[k, v] : id_stats) {
-        max_length = std::max(max_length, v.second - v.first);
+        uint32_t len = v.second - v.first;
+        if (max_length < len) {
+            max_length = len;
+            max_id = k;
+        }
     }
     logger()->trace(
-            "{}: found {} cell ids, {} after grouping, {} reads. Longest fragment is {} bases",
-            fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(), max_length);
+            "{}: found {} cell ids, {} after grouping, {} reads. "
+            "Longest fragment is {} with {} bases",
+            fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(), max_id,
+            max_length);
 
     return { result, all_cell_ids, max_length };
 }
@@ -124,8 +125,7 @@ std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup_bin(const std::string fname,
                 const std::vector<uint16_t> &id_to_group,
                 const std::function<void(uint64_t)> &progress,
-                uint32_t max_coverage,
-                double sequencing_error_rate) {
+                uint32_t max_coverage) {
     std::vector<PosData> result;
 
     if (!std::filesystem::exists(fname)) {
@@ -145,19 +145,20 @@ read_pileup_bin(const std::string fname,
     uint64_t reported_bytes = 0;
 
     while (f.good()) {
-        uint8_t chromosome;
-        uint64_t position;
+        uint32_t position;
         uint16_t coverage;
-        f.read(reinterpret_cast<char *>(&chromosome), 1);
+        f.read(reinterpret_cast<char *>(&position), sizeof(position));
         if (!f.good()) {
             break;
         }
-        f.read(reinterpret_cast<char *>(&position), sizeof(position));
         f.read(reinterpret_cast<char *>(&coverage), sizeof(coverage));
 
-        std::vector<CellData> cell_data(coverage);
+        std::vector<uint32_t> read_ids(coverage);
+        std::vector<uint16_t> cell_ids_and_bases(coverage);
 
-        f.read(reinterpret_cast<char *>(cell_data.data()), cell_data.size() * sizeof(cell_data[0]));
+        f.read(reinterpret_cast<char *>(read_ids.data()), coverage * sizeof(read_ids[0]));
+        f.read(reinterpret_cast<char *>(cell_ids_and_bases.data()),
+               coverage * sizeof(cell_ids_and_bases[0]));
 
         // report progress
         read_bytes = f.tellg();
@@ -171,26 +172,25 @@ read_pileup_bin(const std::string fname,
             continue;
         }
 
-        for (auto &cd : cell_data) {
-            all_cell_ids.insert(cd.cell_id);
-            if (cd.cell_id >= id_to_group.size()) {
+        for (uint32_t i = 0; i < read_ids.size(); ++i) {
+            uint16_t cell_id = cell_ids_and_bases[i] >> 2;
+            all_cell_ids.insert(cell_id);
+            if (cell_id >= id_to_group.size()) {
                 logger()->error(
                         "Cell id {} is too large. Increase --max_cell_count if using the default "
                         "mapping, or fix the mapping in --merge_file",
                         id_to_group.size());
                 std::exit(1);
             }
-            cd.cell_id = id_to_group[cd.cell_id];
-            all_cell_ids_grouped.insert(cd.cell_id);
+            uint8_t base = cell_ids_and_bases[i] & 3;
+            cell_ids_and_bases[i] = id_to_group[cell_id] << 2 | base;
+            all_cell_ids_grouped.insert(cell_id);
         }
 
-        PosData pd = { position, cell_data };
-        if (!is_significant(pd, sequencing_error_rate, &coverage)) {
-            continue;
-        }
+        PosData pd = { position, read_ids, cell_ids_and_bases };
 
-        for (uint32_t j = 0; j < cell_data.size(); ++j) {
-            uint32_t read_id = cell_data[j].read_id;
+        for (uint32_t j = 0; j < read_ids.size(); ++j) {
+            uint32_t read_id = read_ids[j];
             if (id_stats.find(read_id) != id_stats.end()) {
                 id_stats[read_id] = { id_stats[read_id].first, position };
             } else {
@@ -201,26 +201,30 @@ read_pileup_bin(const std::string fname,
     }
 
     uint32_t max_length = 0;
+    uint32_t max_id = 0;
     for (const auto &[k, v] : id_stats) {
-        max_length = std::max(max_length, v.second - v.first);
+        uint32_t len = v.second - v.first;
+        if (max_length < len) {
+            max_length = len;
+            max_id = k;
+        }
     }
-
     logger()->trace(
-            "{}: found {} cell ids, {} after grouping, {} reads. Longest fragment is {} bases",
-            fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(), max_length);
+            "{}: found {} cell ids, {} after grouping, {} reads. "
+            "Longest fragment is {} with {} bases",
+            fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(), max_id,
+            max_length);
 
     return { result, all_cell_ids, max_length };
 }
 
 std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup(const std::string fname,
-            double sequencing_error_rate,
             const std::vector<uint16_t> &id_to_group,
             const std::function<void(uint64_t)> &progress,
             uint32_t max_coverage) {
-    return ends_with(fname, ".bin")
-            ? read_pileup_bin(fname, id_to_group, progress, max_coverage, sequencing_error_rate)
-            : read_pileup_text(fname, id_to_group, progress, max_coverage, sequencing_error_rate);
+    return ends_with(fname, ".bin") ? read_pileup_bin(fname, id_to_group, progress, max_coverage)
+                                    : read_pileup_text(fname, id_to_group, progress, max_coverage);
 }
 
 

@@ -205,7 +205,7 @@ function create_pileup() {
           echo "Found ${num_files} files for chromosome ${chromosome}"
           copy_command="echo Copying data...; mkdir ${scratch_dir}; cp ${source_files} ${scratch_dir}"
           command="echo Running pileup binary...; ${pileup} -i ${scratch_dir}/ -o ${out_dir}/chromosome --num_threads 20 \
-                  --log_level=trace --min_base_quality 13 --max_coverage 1000 --seq_error_rate 0.001 \
+                  --log_level=trace --min_base_quality 30 --max_coverage 1000 \
                   --chromosomes ${chromosome} | tee ${log_dir}/pileup-${chromosome}.log"
           echo "Copy command: ${copy_command}"
           echo "Pileup command: $command"
@@ -233,7 +233,7 @@ function variant_calling() {
            --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 100 | tee ${out_dir}/svc.log"
   echo "$command"
 
-  bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=8000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}"
+  bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=20000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}"
 }
 
 # check the command-line arguments
