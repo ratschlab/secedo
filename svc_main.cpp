@@ -157,12 +157,11 @@ std::vector<std::vector<PosData>> filter(const std::vector<std::vector<PosData>>
 
             if (is_significant(base_count, seq_error_rate)) {
                 coverage_chr[chr_idx] += read_ids.size();
-                positions.push_back(
-                        { pd.position, std::move(read_ids), std::move(cell_ids_and_bases) });
+                positions.push_back({ pd.position, read_ids, cell_ids_and_bases });
             }
         }
-        result[chr_idx] = std::move(positions);
         total_positions.fetch_add(positions.size());
+        result[chr_idx] = std::move(positions);
     }
 
     uint32_t total_coverage = std::accumulate(coverage_chr.begin(), coverage_chr.end(), 0);
