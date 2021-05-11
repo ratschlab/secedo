@@ -5,13 +5,9 @@
 #include <cfenv>
 #include <numeric>
 
-// thresholds K to use for pre-processing; values for coverage 10, 20, 30, ... 200
-// always the largest values for any tumour proportion, rounded up to one decimal place
-std::vector<double> Ks = { 0.872,   0.872,   0.872,   -1.238,  -1.358,   -5.749,  -10.139,
-                           -13.912, -25.998, -33.936, -34.469, -54.084,  -44.453, -56.842,
-                           -63.352, -88.297, -90.711, -96.841, -115.730, -112.601 };
-
-std::vector<double> log_factorial;
+std::vector<double> Filter::Ks = { 0.872,   0.872,   0.872,   -1.238,  -1.358,   -5.749,  -10.139,
+                                   -13.912, -25.998, -33.936, -34.469, -54.084,  -44.453, -56.842,
+                                   -63.352, -88.297, -90.711, -96.841, -115.730, -112.601 };
 
 Filter::Filter() {
     log_factorial.reserve(171);

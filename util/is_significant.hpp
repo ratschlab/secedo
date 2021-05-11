@@ -11,6 +11,13 @@
 constexpr uint16_t NO_POS = std::numeric_limits<uint16_t>::max() >> 2;
 
 class Filter {
+  private:
+    // thresholds K to use for pre-processing; values for coverage 10, 20, 30, ... 200
+    // always the largest values for any tumour proportion, rounded up to one decimal place
+    static std::vector<double> Ks;
+
+    std::vector<double> log_factorial;
+
   public:
     Filter();
 
