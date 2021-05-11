@@ -24,4 +24,9 @@ struct PosData {
         assert(read_ids.size() == cell_ids_bases.size());
         return read_ids.size();
     }
+
+    bool operator==(const PosData &other) const {
+        return position == other.position && read_ids == other.read_ids
+                && cell_ids_bases == other.cell_ids_bases;
+    }
 };

@@ -1,6 +1,9 @@
 #include "is_significant.hpp"
 
+#include "util/logger.hpp"
+
 #include <cfenv>
+#include <numeric>
 
 // thresholds K to use for pre-processing; values for coverage 10, 20, 30, ... 200
 // always the largest values for any tumour proportion, rounded up to one decimal place
@@ -74,4 +77,51 @@ bool is_significant(const PosData &pos_data, double theta, uint16_t *coverage) {
     }
     *coverage = base_count[0] + base_count[1] + base_count[2] + base_count[3];
     return is_significant(base_count, theta);
+}
+
+std::pair<std::vector<std::vector<PosData>>, double>
+filter(const std::vector<std::vector<PosData>> &pos_data,
+       const std::vector<uint16_t> &id_to_group,
+       const std::vector<uint32_t> &id_to_pos,
+       const std::string &marker,
+       double seq_error_rate,
+       uint32_t num_threads) {
+    std::vector<std::vector<PosData>> result(pos_data.size());
+    // one per thread to avoid lock contention
+    std::vector<uint32_t> coverage_chr(pos_data.size());
+    // can be atomic, very little lock contention
+    std::atomic<uint32_t> total_positions = 0;
+std::ignore = num_threads;
+//#pragma omp parallel for num_threads(num_threads)
+    for (uint32_t chr_idx = 0; chr_idx < pos_data.size(); ++chr_idx) {
+        std::vector<PosData> filtered_data;
+        for (uint32_t pos_idx = 0; pos_idx < pos_data[chr_idx].size(); ++pos_idx) {
+            std::vector<uint32_t> read_ids;
+            std::vector<uint16_t> cell_ids_and_bases;
+            const PosData &pd = pos_data[chr_idx][pos_idx];
+            std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
+            for (uint32_t cell_idx = 0; cell_idx < pd.size(); ++cell_idx) {
+                if (id_to_pos[id_to_group[pd.cell_id(cell_idx)]] == NO_POS) {
+                    continue;
+                }
+                read_ids.push_back(pd.read_ids[cell_idx]);
+                cell_ids_and_bases.push_back(pd.cell_ids_bases[cell_idx]);
+                base_count[pd.base(cell_idx)]++;
+            }
+
+            if (is_significant(base_count, seq_error_rate)) {
+                coverage_chr[chr_idx] += read_ids.size();
+                filtered_data.push_back({ pd.position, read_ids, cell_ids_and_bases });
+            }
+        }
+        total_positions.fetch_add(filtered_data.size());
+        result[chr_idx] = std::move(filtered_data);
+    }
+
+    uint32_t total_coverage = std::accumulate(coverage_chr.begin(), coverage_chr.end(), 0);
+    double avg_coverage
+            = total_positions == 0 ? 0 : static_cast<double>(total_coverage) / total_positions;
+    logger()->trace("Avg coverage for cluster {}: {}. Total positions: {}", marker, avg_coverage,
+                    total_positions);
+    return { result, avg_coverage };
 }
