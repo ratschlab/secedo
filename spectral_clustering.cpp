@@ -176,8 +176,18 @@ bool spectral_clustering(const Matd &similarity,
     double aic2 = aic(gmm2, cell_coord);
     double bic2 = bic(gmm2, cell_coord);
 
-    logger()->trace("Avg log-likelihood for GMM 1/2 {}/{}\taic 1/2 {}/{}\tbic 1/2 {}/{}",
-                    gmm1.avg_log_p(cell_coord), gmm2.avg_log_p(cell_coord), aic1, aic2, bic1, bic2);
+    // GMM with 3 components
+    arma::gmm_full gmm3;
+
+    bool status3 = gmm3.learn(cell_coord, 3 /* components */, arma::eucl_dist, arma::random_subset,
+                              10, 5, 1e-10, false);
+
+    double aic3 = aic(gmm3, cell_coord);
+    double bic3 = bic(gmm3, cell_coord);
+
+    logger()->trace("Avg log-likelihood for GMM 1/2/3 {}/{}\taic 1/2/3 {}/{}\tbic 1/2/3 {}/{}",
+                    gmm1.avg_log_p(cell_coord), gmm2.avg_log_p(cell_coord),
+                    gmm3.avg_log_p(cell_coord), aic1, aic2, aic3, bic1, bic2, bic3);
 
     // TODO: investigate using gmm with tied variances as in the Python version
 
@@ -227,8 +237,10 @@ bool spectral_clustering(const Matd &similarity,
         }
     }
 
-    // stop if either we couldn't fit the 2-component GMM or if the 1-component GMM fits better
-    bool is_done = !status2 || termination == Termination::AIC ? aic1 < aic2 : bic1 < bic2;
+    // stop if either we couldn't fit the 2/3-component GMMs or if the 1-component GMM fits better
+    bool is_done = (!status2 && !status3) || termination == Termination::AIC
+            ? (aic1 < aic2 && aic1 < aic3)
+            : (bic1 < bic2 && bic1 < bic3);
     if (is_done) {
         logger()->trace("Simple Gaussian Model matches data better - stopping the clustering");
     } else {
