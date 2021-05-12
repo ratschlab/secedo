@@ -1,7 +1,7 @@
 # Simulates data using Varsim+dwgsim, aligns it, piles it up and runs variant calling on it
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
-coverage=0.04  # read coverage for each cell
+coverage=0.05  # read coverage for each cell
 cov="cov${coverage#*.}x"  # e.g. cov01x for coverage 0.01x
 n_cells=500 # number of healthy and tumor cells in each group
 n_tumor=4 # how many tumor cell types to generate
