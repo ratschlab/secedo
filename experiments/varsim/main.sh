@@ -22,6 +22,9 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # note the use of --disable_sim; this means that no reads are generated using Varsim (because it's slow and error
 # prone). Instead we generate the reads ourself directly using art_illumina in the next step
 function generate_cell_patterns() {
+  if [ $CONDA_DEFAULT_ENV != "py2" ]; then
+    echo "Varsim needs python2. Please activate py2 environment using `conda activate py2`"
+  fi
   module load jdk # varsim doesn't work with openjdk
   out_dir=${base_dir}/genomes
   mkdir -p  ${out_dir}
@@ -72,11 +75,12 @@ function generate_cell_patterns() {
             --disable_sim \
             --simulator_executable ${out_dir}/empty_file \
             --out_dir ${out_dir} \
-            --log_dir ${out_dir}/logs --work_dir ${out_dir}/tmp --sv_insert_seq ${out_dir}/empty_file"
+            --log_dir ${out_dir}/logs-tumor-${i} \
+            --sv_insert_seq ${out_dir}/empty_file"
 
     echo "Executing: ${command}"
 
-    # takes about 15 minutes
+    # takes about 15 minutes / 500 cells cov 0.05x
     bsub  -K -J "sim-tumor-${i}" -W 1:00 -n 10 -R "rusage[mem=20000]" -R "span[hosts=1]"  -oo "${out_dir}/logs/tumor-${i}.lsf.log" "${command}" &
   done
 
