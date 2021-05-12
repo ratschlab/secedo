@@ -93,7 +93,7 @@ function generate_reads() {
   step=100
 
   art_illumina="/cluster/work/grlab/projects/projects2019-supervario/art_bin_MountRainier/art_illumina"
-  gen_reads="python3 ${code_dir}/varsim_simulation/generate_reads.py"
+  gen_reads="python3 ${code_dir}/experiments/varsim/generate_reads.py"
   scratch_dir="/scratch/svc"
 
   out_dir="${base_dir}/${cov}/healthy"
@@ -160,7 +160,7 @@ function map_reads() {
       cmd="${cmd}; bowtie2 -p 20 -x ${base_dir}/genomes/ref_index/GRCh38 -1 $file1 -2 $file2 \
            | samtools view -h -b -f 0x2 -F 0x500 - \
            | samtools sort -@ 10 -o ${bam_file}; samtools index ${bam_file}; \
-           ${code_dir}/varsim_simulation/split.sh ${bam_file} ${base_dir}/${cov}"
+           ${code_dir}/experiments/varsim/split.sh ${bam_file} ${base_dir}/${cov}"
     done
     # echo "${cmd}"
     bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${logs_dir}/bowtie-healthy-${i}.lsf.log" "${cmd}" &
@@ -178,7 +178,7 @@ function map_reads() {
           cmd="${cmd}; bowtie2 -p 20 -x ${base_dir}/genomes/ref_index/GRCh38 -1 $file1 -2 $file2 \
               | samtools view -h -b -f 0x2 -F 0x500 - \
               | samtools sort -@ 10 -o ${bam_file}; samtools index ${bam_file}; \
-              ${code_dir}/varsim_simulation/split.sh ${bam_file} ${base_dir}/${cov}"
+              ${code_dir}/experiments/varsim/split.sh ${bam_file} ${base_dir}/${cov}"
         done
         # echo "${cmd}"
         bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${logs_dir}/bowtie-tumor-${i}.lsf.log" "${cmd}" &
