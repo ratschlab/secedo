@@ -55,13 +55,14 @@ function generate_cell_patterns() {
     while [ ! -f ${healthy_vcf} ]; do sleep 10; echo -n .;  done;
     echo "done"
   fi
-
-  for i in $(seq 3 "${n_tumor}"); do # TODO: set back to 1
+  # TODO: replace --reference with ${base_dir}/genomes/GRCh38_new.fa to generate tumor cells based on the healthy
+  # cells. Here we are simulating tumor cells that have 40K SNPs in common but only differ among themselves with 20K
+  for i in $(seq 2 "${n_tumor}"); do # TODO: set back to 1
     command="time python2 ${base_dir}/varsim-0.8.4/varsim_somatic.py \
-            --reference ${base_dir}/genomes/GRCh38_new.fa \
-            --id tumor-${i} \
+            --reference ${base_dir}/genomes/tumor-20K-1.fa \
+            --id tumor-20K-${i} \
             --seed ${i} \
-            --som_num_snp 40000 \
+            --som_num_snp 20000 \
             --som_num_ins 250 \
             --som_num_del 250 \
             --som_num_mnp 200 \
@@ -115,7 +116,7 @@ function generate_reads() {
 
   for tumor_type in $(seq 1 "${n_tumor}"); do
     out_prefix=${out_dir}/tumor_${tumor_type}_
-    fasta="tumor-${tumor_type}.fa"
+    fasta="tumor-20K-${tumor_type}.fa"
 
     for batch in $(seq 0 ${step} $((n_cells-1))); do
       cmd="echo Copying data...; mkdir -p ${scratch_dir}; cp ${base_dir}/genomes/${fasta} ${scratch_dir}"
