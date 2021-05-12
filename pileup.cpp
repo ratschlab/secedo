@@ -90,7 +90,11 @@ bool read_bam_file(const uint16_t cell_id,
         uint32_t offset = 0; // if the CIGAR string contains inserts, we need to adjust the offset
         uint32_t del_offset = 0;
         uint32_t cigar_idx = 0;
-        uint32_t cigar_end = al.CigarData[0].Length;
+        // skip soft/hard clips
+        while(al.CigarData[cigar_idx].Type == 'H' || al.CigarData[cigar_idx].Type == 'S') {
+            cigar_idx++;
+        }
+        uint32_t cigar_end = al.CigarData[cigar_idx].Length;
         for (uint32_t i = 0; i < al.AlignedBases.size() - offset; ++i) {
             // check if we stepped outside the current CIGAR chunk
             while (i >= cigar_end) { // TODO: write a test for this

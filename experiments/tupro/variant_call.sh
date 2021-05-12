@@ -1,4 +1,5 @@
-# Simulates data using Varsim+dwgsim, aligns it, piles it up and runs variant calling on it
+# Splits aligned BAM files by chromosome, creates 23 pileup files distributed on 23 machines and then runs
+# variant calling
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/sliceB/processed_files"
 bam_dir="${base_dir}/aligned_cells"
@@ -17,19 +18,21 @@ function split_bams() {
   echo "Found ${n_cells} cells"
 
 
-  step=10
+  step=100
   mkdir -p "${split_dir}"
   logs_dir="${split_dir}/logs"
   mkdir -p ${logs_dir}
 
   for idx in $(seq 0 ${step} $((n_cells-1))); do
+    echo "Processing files ${idx}->$((idx+step-1))..."
     cmd="echo hello"
     for i in $(seq "${idx}" $((idx+step-1))); do
-      bam_file=${files[i]}
-      cmd="${code_dir}/varsim_simulation/split.sh ${bam_file} ${split_dir}"
+      bam_file=${files[${i}]}
+      cmd="${cmd}; ${code_dir}/experiments/tupro/split.sh ${bam_file} ${split_dir} | tee ${logs_dir}/split-${i}.log"
     done
-    echo "${cmd}"
-    bsub -K -J "bt-${i}" -W 2:00 -n 1 -R "rusage[mem=8000]" -R "span[hosts=1]"  -oo "${logs_dir}/split-${i}.lsf.log" "${cmd}" &
+    # echo "${cmd}"
+    bsub -K -J "split-${i}" -W 1:00 -n 1 -R "rusage[mem=8000]" -R "span[hosts=1]" \
+        -oo "${logs_dir}/split-${i}.lsf.log" "${cmd}" &
   done
 
   wait
@@ -71,8 +74,8 @@ function variant_calling() {
   module load openblas
   svc="${code_dir}/build/svc"
   flagfile="${code_dir}/flags_breast"
-  out_dir="${work_dir}/svc/"
-  log_dir="${work_dir}/logs/"
+  out_dir="${base_dir}/svc/"
+  log_dir="${out_dir}/logs/"
   mkdir -p "${log_dir}"
   command="${svc} -i ${pileup_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
            --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 100 | tee ${log_dir}/svc.log"
@@ -83,7 +86,7 @@ function variant_calling() {
 
 # check the command-line arguments
 if [ "$#" -ne 1 ]; then
-            echo_err "Usage: main.sh <start_step>"
+            echo "Usage: main.sh <start_step>"
             echo "start_step=1 -> Split aligned BAMs by chromosome (~10 mins)"
             echo "start_step=2 -> Create pileup files (one per chromosome) (~10 mins)"
             echo "start_step=3 -> Run variant calling (~20 mins/cluster)"
