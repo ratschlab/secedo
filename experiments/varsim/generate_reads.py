@@ -60,6 +60,10 @@ if __name__ == '__main__':
                     logger.info(f'File {idx} generated successfully')
                 else:
                     logger.info(f'Generation for {idx} failed. Re-trying')
+                    process_list.append((execute_art(idx, args.id_prefix, args.seed_offset, args.art, args.coverage,
+                                                     args.out),
+                                         idx))
+                    continue
                 if cur_idx < args.stop:
                     process_list.append(
                         (execute_art(cur_idx, args.id_prefix, args.seed_offset, args.art, args.coverage, args.out),
