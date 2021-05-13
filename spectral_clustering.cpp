@@ -185,9 +185,10 @@ bool spectral_clustering(const Matd &similarity,
     double aic3 = aic(gmm3, cell_coord);
     double bic3 = bic(gmm3, cell_coord);
 
-    logger()->trace("Avg log-likelihood for GMM 1/2/3 {}/{}\taic 1/2/3 {}/{}\tbic 1/2/3 {}/{}",
-                    gmm1.avg_log_p(cell_coord), gmm2.avg_log_p(cell_coord),
-                    gmm3.avg_log_p(cell_coord), aic1, aic2, aic3, bic1, bic2, bic3);
+    logger()->trace(
+            "Avg log-likelihood for GMM 1/2/3 {}/{}/{}\taic 1/2/3 {}/{}/{}\tbic 1/2/3 {}/{}/{}",
+            gmm1.avg_log_p(cell_coord), gmm2.avg_log_p(cell_coord), gmm3.avg_log_p(cell_coord),
+            aic1, aic2, aic3, bic1, bic2, bic3);
 
     // TODO: investigate using gmm with tied variances as in the Python version
 
