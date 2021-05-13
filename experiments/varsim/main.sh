@@ -78,10 +78,10 @@ function generate_cell_patterns() {
             --normal_vcf ${healthy_vcf} \
             --disable_sim \
             --simulator_executable ${out_dir}/empty_file \
-            --out_dir ${out_dir} \
+            --out_dir ${out_dir}/tumor${i}/ \
             --log_dir ${out_dir}/logs/logs-tumor-${i} \
             --sv_insert_seq ${out_dir}/empty_file; \
-             echo [$(date)] Finished] | tee 2>&1 ${out_dir}/logs/tumor-${i}.log"
+             echo Finished | tee -a ${out_dir}/logs/tumor-${i}.log"
 
     echo "[$(date)] Executing: ${command}" | tee "${out_dir}/logs/tumor-${i}.log"
 
