@@ -126,7 +126,7 @@ function generate_reads() {
 
   for tumor_type in $(seq 1 "${n_tumor}"); do
     out_prefix=${out_dir}/tumor_${tumor_type}_
-    fasta="tumor-20K-${tumor_type}/tumor-20K-${tumor_type}.fa"
+    fasta="tumor-20K-${tumor_type}.fa"
 
     for batch in $(seq 0 ${step} $((n_cells-1))); do
       cmd="echo [$(date)] Copying data...; mkdir -p ${scratch_dir}; cp ${base_dir}/genomes/${fasta} ${scratch_dir}"
