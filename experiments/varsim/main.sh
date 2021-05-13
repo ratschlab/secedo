@@ -80,9 +80,10 @@ function generate_cell_patterns() {
             --simulator_executable ${out_dir}/empty_file \
             --out_dir ${out_dir} \
             --log_dir ${out_dir}/logs/logs-tumor-${i} \
-            --sv_insert_seq ${out_dir}/empty_file | tee 2>&1 ${out_dir}/logs/tumor-${i}.log"
+            --sv_insert_seq ${out_dir}/empty_file; \
+             echo [$(date)] Finished] | tee 2>&1 ${out_dir}/logs/tumor-${i}.log"
 
-    echo "[$(date)] Executing: ${command} | tee ${out_dir}/logs/tumor-${i}.log"
+    echo "[$(date)] Executing: ${command}" | tee "${out_dir}/logs/tumor-${i}.log"
 
     # takes about 15 minutes / 500 cells cov 0.05x
     bsub  -K -J "tumor-${i}-templ" -W 1:00 -n 10 -R "rusage[mem=20000]" -R "span[hosts=1]"  \
@@ -248,7 +249,7 @@ function variant_calling() {
 
 # check the command-line arguments
 if [ "$#" -ne 1 ]; then
-            echo_err "Usage: main.sh <start_step>"
+            echo "Usage: main.sh <start_step>"
             echo "start_step=1 -> Generate genomes for healthy/tumor cells (~30 mins)"
             echo "start_step=2 -> Generate reads for healthy/tumor cells (~20 mins)"
             echo "start_step=3 -> Align reads against the human genome (~10 mins)"
