@@ -138,7 +138,7 @@ bool spectral_clustering(const Matd &similarity,
     f << eigenvalues(0ull, std::min(20ull, eigenvalues.n_cols - 1ull));
     f.close();
 
-    // print the second and third smallest eigenVectors
+    // write the eigenvectors to a file (useful for visualization)
     if (eigenvectors.n_cols > 2) {
         f.open(out_dir + "sim_mat_eigenvectors" + marker + ".csv");
         f << eigenvectors << std::endl;
@@ -227,13 +227,20 @@ bool spectral_clustering(const Matd &similarity,
                     ev.row(i) = ev.row(i) / norm;
                 }
             }
-            ev = ev.t(); // kmeans expects each column to be one sample
+            f.open(out_dir + "sim_mat_eigenvectors_norm" + marker + ".csv");
+            f << ev << std::endl;
+            f.close();
+            ev = ev.t(); // k-means expects each column to be one sample
             arma::mat means;
             arma::kmeans(means, ev, 2, arma::random_spread, 10 /* iterations */, false);
             for (uint32_t i = 0; i < similarity.rows(); ++i) {
-                (*cluster)[i] = arma::norm(means.col(0) - ev.col(i))
+                cluster->at(i) = arma::norm(means.col(0) - ev.col(i))
                         > arma::norm(means.col(1) - ev.col(i));
             }
+
+            f.open(out_dir + "centroids" + marker + ".csv");
+            f << means << std::endl;
+            f.close();
             break;
         }
     }
