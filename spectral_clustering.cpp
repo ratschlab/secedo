@@ -217,7 +217,9 @@ bool spectral_clustering(const Matd &similarity,
         case ClusteringType::SPECTRAL6: {
             uint64_t col_idx = clustering == ClusteringType::SPECTRAL2 ? 2 : 5;
             // TODO: this is totally weird, but it works better if considering the zeroth column,
-            // at lest in the tests
+            // at lest in the tests. Maybe this comment from scikit.SpectralClustering is relevant:
+            // "The first eigenvector is constant only for fully connected graphs and should be kept
+            // for spectral clustering"
             arma::mat ev = eigenvectors.cols(
                     0, std::min(col_idx, static_cast<uint64_t>(eigenvectors.n_cols - 1)));
             // normalize each row
@@ -232,7 +234,7 @@ bool spectral_clustering(const Matd &similarity,
             f.close();
             ev = ev.t(); // k-means expects each column to be one sample
             arma::mat means;
-            arma::kmeans(means, ev, 2, arma::random_spread, 10 /* iterations */, false);
+            arma::kmeans(means, ev, 2, arma::random_spread, 100 /* iterations */, false);
             for (uint32_t i = 0; i < similarity.rows(); ++i) {
                 cluster->at(i) = arma::norm(means.col(0) - ev.col(i))
                         > arma::norm(means.col(1) - ev.col(i));
