@@ -234,7 +234,10 @@ bool spectral_clustering(const Matd &similarity,
             f.close();
             ev = ev.t(); // k-means expects each column to be one sample
             arma::mat means;
-            arma::kmeans(means, ev, 2, arma::random_spread, 100 /* iterations */, false);
+            bool status = arma::kmeans(means, ev, 2, arma::random_spread, 100 /* iterations */, true);
+            if (!status) {
+                logger()->error("K-means clustering failed.");
+            }
             for (uint32_t i = 0; i < similarity.rows(); ++i) {
                 cluster->at(i) = arma::norm(means.col(0) - ev.col(i))
                         > arma::norm(means.col(1) - ev.col(i));
