@@ -44,7 +44,7 @@ std::vector<uint32_t> kmeans(const arma::mat &points, uint32_t K, uint32_t max_i
         while (true) {
             uint32_t index = rand() % n_points;
 
-            if (!used_pointIds.contains(index)) {
+            if (used_pointIds.find(index) == used_pointIds.end()) {
                 used_pointIds.insert(index);
                 centroids[i] = points.row(i);
                 break;
