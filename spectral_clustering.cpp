@@ -1,5 +1,6 @@
 #include "spectral_clustering.hpp"
 
+#include "util/kmeans.hpp"
 #include "util/logger.hpp"
 #include "util/util.hpp"
 
@@ -135,7 +136,7 @@ bool spectral_clustering(const Matd &similarity,
 
     // save the first 20 eigenvalues
     std::ofstream f(out_dir + "sim_mat_eigenvalues" + marker + ".csv");
-    f << eigenvalues(0ull, std::min(20ull, eigenvalues.n_cols - 1ull));
+    f << eigenvalues.cols(0ull, std::min(20ull, eigenvalues.n_cols - 1ull));
     f.close();
 
     // write the eigenvectors to a file (useful for visualization)
@@ -215,7 +216,7 @@ bool spectral_clustering(const Matd &similarity,
         }
         case ClusteringType::SPECTRAL2:
         case ClusteringType::SPECTRAL6: {
-            uint64_t col_idx = clustering == ClusteringType::SPECTRAL2 ? 2 : 5;
+            uint64_t col_idx = clustering == ClusteringType::SPECTRAL2 ? 2 : 3; //TODO: undo
             // TODO: this is totally weird, but it works better if considering the zeroth column,
             // at lest in the tests. Maybe this comment from scikit.SpectralClustering is relevant:
             // "The first eigenvector is constant only for fully connected graphs and should be kept
@@ -234,7 +235,7 @@ bool spectral_clustering(const Matd &similarity,
             f.close();
             ev = ev.t(); // k-means expects each column to be one sample
             arma::mat means;
-            bool status = arma::kmeans(means, ev, 2, arma::random_spread, 100 /* iterations */, true);
+            bool status = arma::kmeans(means, ev, 2, arma::random_spread, 100 /* iterations */, false);
             if (!status) {
                 logger()->error("K-means clustering failed.");
             }

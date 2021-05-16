@@ -41,7 +41,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/bamtools EXCLUDE_FROM_ALL)
 
 file(GLOB util_files util/*.cpp)
 add_library(util ${util_files})
-target_link_libraries(util spdlog::spdlog BamTools progress_bar OpenMP::OpenMP_CXX)
+target_link_libraries(util spdlog::spdlog armadillo BamTools progress_bar OpenMP::OpenMP_CXX)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(util stdc++fs)
 endif()
