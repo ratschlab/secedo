@@ -46,6 +46,14 @@ std::vector<std::filesystem::path> get_files(const std::filesystem::path &path,
     return result;
 }
 
+bool starts_with(std::string const &value, std::string const &prefix) {
+    if (prefix.size() > value.size()) {
+        return false;
+    }
+    return std::equal(prefix.begin(), prefix.end(), value.begin());
+}
+
+
 bool ends_with(std::string const &value, std::string const &ending) {
     if (ending.size() > value.size()) {
         return false;
@@ -100,7 +108,7 @@ std::vector<std::vector<uint32_t>> read_positions(const std::string &file) {
     std::ifstream f(file);
     uint32_t pos_count = 0;
     while (std::getline(f, line)) {
-        if (line.starts_with('#')) {
+        if (starts_with(line, "#")) {
             continue;
             ;
         }
