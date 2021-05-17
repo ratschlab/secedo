@@ -165,6 +165,14 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     Filter filter;
     auto [pos_data, coverage]
             = filter.filter(pds, id_to_group, id_to_pos, marker, seq_error_rate, num_threads);
+    std::ofstream filtered(std::filesystem::path(out_dir) / ("significant_positions" + marker));
+    for(uint32_t i = 0; i < pos_data.size(); ++i) {
+        for (uint32_t j = 0; i < pos_data[i].size(); ++j) {
+            filtered << int_to_chr[i] << '\t' << pos_data[i][j].position << std::endl;
+        }
+    }
+    filtered.close();
+
     if (coverage < 9) {
         logger()->trace("Coverage of cluster {} is lower than 9. Stopping.", marker);
         return;

@@ -131,6 +131,9 @@ std::vector<std::vector<uint32_t>> read_positions(const std::string &file) {
         result[chromosome].push_back(pos);
         pos_count++;
     }
+    for (auto& v : result) {
+        std::sort(v.begin(), v.end());
+    }
     logger()->info("Found a total of  {} positions in {} chromosomes", pos_count, result.size());
     return result;
 }
