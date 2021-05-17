@@ -60,6 +60,8 @@ Matd laplacian(const Matd &a);
  * @param clustering the clustering variant to use
  * @param termination the criteria to use as a stopping criterion, e.g. the criterion to decide if
  * dividing into 2 clusters explains the data better than using a single cluster
+ * @param use_arma_kmeans if true, use the armadillo library for clustering, otherwise use our own
+ * primitive k-means clustering, which assigns a higher weight to the Fiedler vector
  * @param cluster a vector of size similarity.size(), with values 0 or 1 assigning clusters to each
  * point
  * @return true if clustering into 2 groups explains the data better, false otherwise
@@ -69,4 +71,5 @@ bool spectral_clustering(const Matd &similarity,
                          const Termination &termination,
                          const std::string &out_dir,
                          const std::string &marker,
+                         bool use_arma_kmeans,
                          std::vector<double> *cluster);

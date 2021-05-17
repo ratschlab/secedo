@@ -66,11 +66,11 @@ TEST(kmeans, TwoClustersRandom) {
 TEST(kmeans, TwoClustersSpectralClustering) {
     ifstream f("data/kmeans.csv");
     std::string line;
-    arma::mat points(2500, 3);
+    arma::mat points(2500, 5);
     uint32_t l = 0;
     while (std::getline(f, line)) {
         std::vector<double> point = double_split(line, ' ');
-        for (uint32_t c = 0; c < 3 /*point.size()*/; ++c) {
+        for (uint32_t c = 0; c < 5 /*point.size()*/; ++c) {
             points(l, c) = point[c];
         }
         l++;
@@ -78,6 +78,17 @@ TEST(kmeans, TwoClustersSpectralClustering) {
 
     std::vector<uint32_t> clusters = kmeans(points, 2, 100, 10);
 
+    std::ofstream out("/tmp/kmeans.out");
+    for(uint32_t i = 0; i < 2500; ++i) {
+        if (clusters[i] == 0) {
+            out << points.row(i);
+        }
+    }
+    for(uint32_t i = 0; i < 2500; ++i) {
+        if (clusters[i] == 1) {
+           out << points.row(i);
+        }
+    }
     for (uint32_t i = 1; i < 500; ++i) {
         ASSERT_EQ(clusters[0], clusters[i]) << "Point " << i;
     }

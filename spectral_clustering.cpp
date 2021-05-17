@@ -117,6 +117,7 @@ bool spectral_clustering(const Matd &similarity,
                          const Termination &termination,
                          const std::string &out_dir,
                          const std::string &marker,
+                         bool use_arma_kmeans,
                          std::vector<double> *cluster) {
     cluster->resize(similarity.rows());
 
@@ -233,19 +234,28 @@ bool spectral_clustering(const Matd &similarity,
             f.open(out_dir + "sim_mat_eigenvectors_norm" + marker + ".csv");
             f << ev << std::endl;
             f.close();
-            ev = ev.t(); // k-means expects each column to be one sample
-            arma::mat means;
-            bool status = arma::kmeans(means, ev, 2, arma::random_spread, 100 /* iterations */, false);
-            if (!status) {
-                logger()->error("K-means clustering failed.");
-            }
-            for (uint32_t i = 0; i < similarity.rows(); ++i) {
-                cluster->at(i) = arma::norm(means.col(0) - ev.col(i))
-                        > arma::norm(means.col(1) - ev.col(i));
-            }
 
-            f.open(out_dir + "centroids" + marker + ".csv");
-            f << means << std::endl;
+            if (use_arma_kmeans) {
+                ev = ev.t(); // k-means expects each column to be one sample
+                arma::mat means;
+                bool status = arma::kmeans(means, ev, 2, arma::random_spread, 100 /* iterations */,
+                                           false);
+                if (!status) {
+                    logger()->error("K-means clustering failed.");
+                }
+                for (uint32_t i = 0; i < similarity.rows(); ++i) {
+                    cluster->at(i) = arma::norm(means.col(0) - ev.col(i))
+                            > arma::norm(means.col(1) - ev.col(i));
+                }
+
+                f.open(out_dir + "centroids" + marker + ".csv");
+                f << means << std::endl;
+            } else {
+                std::vector<uint32_t> labels = kmeans(ev, 2, 100, 10);
+                for (uint32_t i = 0; i < similarity.rows(); ++i) {
+                    cluster->at(i) = labels[i];
+                }
+            }
             f.close();
             break;
         }

@@ -106,6 +106,12 @@ DEFINE_uint32(max_coverage,
               100,
               "Positions with higher coverage are considered anomalies and discarded");
 
+DEFINE_bool(
+        arma_kmeans,
+        false,
+        "Whether to use Armadillo's k-means implementation or our own (which is very simple, but "
+        "it weights the Fiedler vector higher, reducing the effect of the curse of dimensionality");
+
 /**
  * Recursively divides cells into 2 sub-clusters until a termination criteria is met.
  * N - number of cells
@@ -170,8 +176,8 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     std::vector<double> cluster; // size n_cells
     Termination termination = parse_termination(FLAGS_termination);
     ClusteringType clustering_type = parse_clustering_type(FLAGS_clustering_type);
-    bool is_done
-            = spectral_clustering(sim_mat, clustering_type, termination, FLAGS_o, marker, &cluster);
+    bool is_done = spectral_clustering(sim_mat, clustering_type, termination, FLAGS_o, marker,
+                                       FLAGS_arma_kmeans, &cluster);
     if (is_done) {
         return;
     }

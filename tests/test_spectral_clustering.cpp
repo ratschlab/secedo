@@ -9,7 +9,8 @@
 namespace {
 using namespace testing;
 
-class SpectralClustering : public testing::TestWithParam<std::pair<ClusteringType, Termination>> {};
+class SpectralClustering
+    : public testing::TestWithParam<std::tuple<ClusteringType, Termination, bool>> {};
 
 TEST(Laplacian, SomeMatrix) {
     Matd a(3, 3, { 0, .5, .2, .5, 0, .5, .2, .5, 0 });
@@ -25,7 +26,7 @@ TEST(Laplacian, SomeMatrix) {
 }
 
 TEST_P(SpectralClustering, OneCluster) {
-    auto [clustering, termination] = GetParam();
+    auto [clustering, termination, use_arma_kmeans] = GetParam();
     std::default_random_engine generator(1243);
     uint32_t count_done = 0;
     for (uint32_t trial = 0; trial < 3; ++trial) {
@@ -43,7 +44,8 @@ TEST_P(SpectralClustering, OneCluster) {
             }
         }
 
-        if (spectral_clustering(similarity, clustering, termination, "./", "", &cluster)) {
+        if (spectral_clustering(similarity, clustering, termination, "./", "", use_arma_kmeans,
+                                &cluster)) {
             count_done++;
         }
     }
@@ -52,7 +54,7 @@ TEST_P(SpectralClustering, OneCluster) {
 }
 
 TEST_P(SpectralClustering, TwoClusters) {
-    auto [clustering, termination] = GetParam();
+    auto [clustering, termination, use_arma_kmeans] = GetParam();
 
     std::default_random_engine generator;
     std::uniform_int_distribution<uint32_t> dissimilar(0, 5);
@@ -86,7 +88,8 @@ TEST_P(SpectralClustering, TwoClusters) {
         }
     }
 
-    bool done = spectral_clustering(similarity, clustering, termination, "./", "", &cluster);
+    bool done = spectral_clustering(similarity, clustering, termination, "./", "", use_arma_kmeans,
+                                    &cluster);
 
     ASSERT_FALSE(done); // the split should be successful
     for (uint32_t i = 0; i < half - 1; ++i) {
@@ -99,7 +102,7 @@ TEST_P(SpectralClustering, TwoClusters) {
 }
 
 TEST_P(SpectralClustering, ThreeClusters) {
-    auto [clustering, termination] = GetParam();
+    auto [clustering, termination, use_arma_kmeans] = GetParam();
     if (clustering == ClusteringType::GMM_ASSIGN || clustering == ClusteringType::GMM_PROB
         || clustering == ClusteringType::SPECTRAL2) {
         return; // GMM doesn't work well on this data
@@ -119,7 +122,8 @@ TEST_P(SpectralClustering, ThreeClusters) {
                       0, 0, 0, 0, 0, 100,
                       0, 0, 0, 0, 100, 0 });
     // clang-format on
-    bool done = spectral_clustering(similarity, clustering, termination, "./", "", &cluster);
+    bool done = spectral_clustering(similarity, clustering, termination, "./", "", use_arma_kmeans,
+                                    &cluster);
 
     ASSERT_FALSE(done); // we clearly have 2 clusters
     ASSERT_THAT(std::vector(cluster.begin(), cluster.begin() + 4), Each(cluster[0]));
@@ -130,13 +134,21 @@ TEST_P(SpectralClustering, ThreeClusters) {
 INSTANTIATE_TEST_SUITE_P(
         Method,
         SpectralClustering,
-        ::testing::Values(std::make_pair(ClusteringType::SPECTRAL2, Termination::AIC),
-                          std::make_pair(ClusteringType::FIEDLER, Termination::AIC),
-                          std::make_pair(ClusteringType::GMM_ASSIGN, Termination::AIC),
-                          std::make_pair(ClusteringType::GMM_PROB, Termination::AIC),
-                          std::make_pair(ClusteringType::SPECTRAL2, Termination::BIC),
-                          std::make_pair(ClusteringType::FIEDLER, Termination::BIC),
-                          std::make_pair(ClusteringType::GMM_PROB, Termination::BIC),
-                          std::make_pair(ClusteringType::GMM_ASSIGN, Termination::BIC)));
+        ::testing::Values(std::make_tuple(ClusteringType::SPECTRAL2, Termination::AIC, false),
+                          std::make_tuple(ClusteringType::FIEDLER, Termination::AIC, false),
+                          std::make_tuple(ClusteringType::GMM_ASSIGN, Termination::AIC, false),
+                          std::make_tuple(ClusteringType::GMM_PROB, Termination::AIC, false),
+                          std::make_tuple(ClusteringType::SPECTRAL2, Termination::BIC, false),
+                          std::make_tuple(ClusteringType::FIEDLER, Termination::BIC, false),
+                          std::make_tuple(ClusteringType::GMM_PROB, Termination::BIC, false),
+                          std::make_tuple(ClusteringType::GMM_ASSIGN, Termination::BIC, false),
+                          std::make_tuple(ClusteringType::SPECTRAL2, Termination::AIC, true),
+                          std::make_tuple(ClusteringType::FIEDLER, Termination::AIC, true),
+                          std::make_tuple(ClusteringType::GMM_ASSIGN, Termination::AIC, true),
+                          std::make_tuple(ClusteringType::GMM_PROB, Termination::AIC, true),
+                          std::make_tuple(ClusteringType::SPECTRAL2, Termination::BIC, true),
+                          std::make_tuple(ClusteringType::FIEDLER, Termination::BIC, true),
+                          std::make_tuple(ClusteringType::GMM_PROB, Termination::BIC, true),
+                          std::make_tuple(ClusteringType::GMM_ASSIGN, Termination::BIC, true)));
 
 } // namespace
