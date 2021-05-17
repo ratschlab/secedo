@@ -270,6 +270,8 @@ int main(int argc, char *argv[]) {
                     FLAGS_pos_file, positions.size(), input_files.size());
             std::exit(1);
         }
+    } else {
+        positions.resize(input_files.size());
     }
 
     uint64_t total_size = 0;
