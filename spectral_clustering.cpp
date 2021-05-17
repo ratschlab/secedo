@@ -217,7 +217,7 @@ bool spectral_clustering(const Matd &similarity,
         }
         case ClusteringType::SPECTRAL2:
         case ClusteringType::SPECTRAL6: {
-            uint64_t col_idx = clustering == ClusteringType::SPECTRAL2 ? 2 : 3; //TODO: undo
+            uint64_t col_idx = clustering == ClusteringType::SPECTRAL2 ? 2 : 6;
             // TODO: this is totally weird, but it works better if considering the zeroth column,
             // at lest in the tests. Maybe this comment from scikit.SpectralClustering is relevant:
             // "The first eigenvector is constant only for fully connected graphs and should be kept
