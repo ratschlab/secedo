@@ -173,3 +173,6 @@ std::vector<std::filesystem::path> get_files(const std::filesystem::path &path,
                                              const std::string &extension);
 
 bool ends_with(std::string const &value, std::string const &ending);
+
+
+std::vector<std::vector<uint32_t>> read_positions(const std::string& file);

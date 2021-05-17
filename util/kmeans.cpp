@@ -69,10 +69,7 @@ kmeans(const arma::mat &points, uint32_t K, uint32_t max_iter, uint32_t num_trie
             }
         }
 
-        logger()->trace("Initialized {} clusters", centroids.size());
-
         for (uint32_t iter = 0; iter < max_iter; ++iter) {
-            logger()->trace("Iteration {}/{}", iter, max_iter);
             bool done = true;
 
             // Add all points to their nearest cluster

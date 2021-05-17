@@ -112,6 +112,11 @@ DEFINE_bool(
         "Whether to use Armadillo's k-means implementation or our own (which is very simple, but "
         "it weights the Fiedler vector higher, reducing the effect of the curse of dimensionality");
 
+DEFINE_string(pos_file,
+              "",
+              "When present, only consider positions in this file. The file must have 2 columns, "
+              "first one is chromosome id, second is position.");
+
 /**
  * Recursively divides cells into 2 sub-clusters until a termination criteria is met.
  * N - number of cells
@@ -251,8 +256,20 @@ int main(int argc, char *argv[]) {
     }
 
     if (input_files.empty()) {
-        logger()->info("No input files found in {}. Bailing out.", FLAGS_i);
+        logger()->info("No input files found in {}. Nothing to do.", FLAGS_i);
         std::exit(0);
+    }
+
+    std::vector<std::vector<uint32_t>> positions;
+    if (!FLAGS_pos_file.empty()) {
+        positions = read_positions(FLAGS_pos_file);
+        if (positions.size() < input_files.size()) {
+            //TODO: this won't work for the Y chromosome
+            logger()->error(
+                    "Number of chromosomes in {} ({}) does not match number of input files ({})",
+                    FLAGS_pos_file, positions.size(), input_files.size());
+            std::exit(1);
+        }
     }
 
     uint64_t total_size = 0;
@@ -272,7 +289,7 @@ int main(int argc, char *argv[]) {
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(
                 input_files[i], id_to_group,
                 [&read_progress](uint32_t progress) { read_progress += progress; },
-                FLAGS_max_coverage);
+                FLAGS_max_coverage, positions[i]);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
 

@@ -46,10 +46,8 @@ std::vector<std::filesystem::path> get_files(const std::filesystem::path &path,
     return result;
 }
 
-bool ends_with(std::string const &value, std::string const &ending)
-{
-    if (ending.size() > value.size())
-    {
+bool ends_with(std::string const &value, std::string const &ending) {
+    if (ending.size() > value.size()) {
         return false;
     }
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
@@ -77,9 +75,49 @@ Matd read_mat(const std::string &name) {
         return Matd();
     }
     Matd result(values.size(), values[0].size());
-    for(uint32_t r = 0; r < values.size(); ++r) {
+    for (uint32_t r = 0; r < values.size(); ++r) {
         std::copy(values[r].begin(), values[r].end(), result.row(r));
     }
     return result;
 }
 
+uint8_t chr_to_idx(const std::string &chr) {
+    if (chr == "X" || chr == "Y") {
+        return 22;
+    }
+    return std::stoi(chr) - 1;
+}
+
+std::vector<std::vector<uint32_t>> read_positions(const std::string &file) {
+    if (!std::filesystem::exists(file)) {
+        logger()->error("Could not file positions file: {}", file);
+        std::exit(1);
+    }
+    logger()->info("Reading valid positions...");
+
+    std::vector<std::vector<uint32_t>> result;
+    std::string line;
+    std::ifstream f(file);
+    uint32_t pos_count = 0;
+    while (std::getline(f, line)) {
+        if (line.starts_with('#')) {
+            continue;
+            ;
+        }
+        std::istringstream iss(line);
+
+        std::string chromosome_str;
+        std::getline(iss, chromosome_str, '\t');
+        uint32_t chromosome = chr_to_idx(chromosome_str);
+        std::string pos_str;
+        std::getline(iss, pos_str, '\t');
+        uint32_t pos = std::stoul(pos_str);
+        if (chromosome >= result.size()) {
+            result.resize(chromosome + 1);
+        }
+        result[chromosome].push_back(pos);
+        pos_count++;
+    }
+    logger()->info("Found a total of  {} positions in {} chromosomes", pos_count, result.size());
+    return result;
+}
