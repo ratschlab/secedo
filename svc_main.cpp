@@ -244,7 +244,7 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
 
 //TODO(ddanciu): this is brittle - just write the chromosome id into the binary pileup file
 uint32_t get_chromosome(const std::filesystem::path &filename) {
-    std::string fname = filename.filename().replace_extension();
+    std::string fname = filename.filename().replace_extension().replace_extension();
     std::vector<std::string> parts = split(fname, '_');
     if (parts.size() != 2) {
         logger()->error("Invalid pileup filename. Must be <bla>_chromosome.*");
