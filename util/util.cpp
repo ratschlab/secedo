@@ -90,8 +90,10 @@ Matd read_mat(const std::string &name) {
 }
 
 uint8_t chr_to_idx(const std::string &chromosome) {
-    if (chromosome == "X" || chromosome == "Y") {
+    if (chromosome == "X") {
         return 22;
+    } else  if (chromosome == "Y") {
+        return 23;
     }
     if (!std::all_of(chromosome.begin(), chromosome.end(), ::isdigit)) {
         return 255;
@@ -119,6 +121,9 @@ std::vector<std::vector<uint32_t>> read_positions(const std::string &file) {
         std::string chromosome_str;
         std::getline(iss, chromosome_str, '\t');
         uint32_t chromosome = chr_to_idx(chromosome_str);
+        if (chromosome > 23) {
+            continue;
+        }
         std::string pos_str;
         std::getline(iss, pos_str, '\t');
         uint32_t pos = std::stoul(pos_str);
