@@ -305,6 +305,9 @@ int main(int argc, char *argv[]) {
 
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
     read_progress.SetFrequencyUpdate(total_size / 100);
+    for (uint32_t i = 0; i < pos_data.size(); ++i) {
+        logger()->trace("Pairing {} with {}", input_files[i], get_chromosome(input_files[i]));
+    }
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(
