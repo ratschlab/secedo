@@ -36,20 +36,6 @@ DEFINE_uint32(max_coverage,
               "Positions with higher coverage are considered anomalies and discarded during "
               "preprocessing (also at clustering time)");
 
-uint32_t chromosome_to_id(const std::string &chromosome) {
-    char *p;
-    uint32_t converted = strtol(chromosome.c_str(), &p, 10);
-    if (*p) {
-        if (chromosome != "X" && chromosome != "Y") {
-            logger()->error("Invalid chromosome: {}. Must be 1..22, X, Y", chromosome);
-            std::exit(1);
-        }
-        return (chromosome == "X") ? 22 : 23;
-    } else {
-        return converted - 1;
-    }
-}
-
 //============================================================================
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
