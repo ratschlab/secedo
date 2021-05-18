@@ -67,19 +67,20 @@ TEST_P(SpectralClustering, TwoClusters) {
     // other
     Matd similarity = Matd::zeros(num_cells, num_cells);
 
+    // set everything to dissimilar first
     for (uint32_t i = 0; i < num_cells; ++i) {
         for (uint32_t j = 0; j < i; ++j) {
-            // 1st cluster
-            similarity(i, j) = dissimilar(generator); // + noise(generator);
+            similarity(i, j) = dissimilar(generator);
             similarity(j, i) = similarity(i, j);
         }
     }
 
+    // set first half to similar
     const uint32_t half = num_cells / 2;
     for (uint32_t i = 0; i < half; ++i) {
         for (uint32_t j = 0; j < i; ++j) {
             // 1st cluster
-            similarity(i, j) = similar(generator); // + noise(generator);
+            similarity(i, j) = similar(generator);
             similarity(j, i) = similarity(i, j);
 
             // 2nd cluster

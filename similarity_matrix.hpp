@@ -35,7 +35,8 @@ enum class Normalization {
  * simply the identity. At subsequent clustering steps, it maps the cells in the cluster to
  * 0..cell_count.
  * @param mutation_rate estimated mutation rate
- * @param heterozygous_rate estimated probability that a loci is heterozygous
+ * @param homozygous_rate estimated probability that a loci is homozygous (it wasn't filtered
+ * correctly due to sequencing errors being mistaken for heterozygosity)
  * @param seq_error_rate estimated error rate in the sequencing technology
  * @param num_threads number of threads to use for parallelizing the computation
  * @param mpileup_file a file that contains all the reads from all the cells at a
@@ -50,7 +51,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t max_fragment_length,
                              const std::vector<uint32_t> &cell_id_to_cell_idx,
                              double mutation_rate,
-                             double heterozygous_rate,
+                             double homozygous_rate,
                              double seq_error_rate,
                              const uint32_t num_threads,
                              const std::string &out_dir,
