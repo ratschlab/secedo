@@ -180,3 +180,5 @@ bool ends_with(std::string const &value, std::string const &ending);
 
 
 std::vector<std::vector<uint32_t>> read_positions(const std::string &file);
+
+uint32_t chromosome_to_id(const std::string &chromosome);

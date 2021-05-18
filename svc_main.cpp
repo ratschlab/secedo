@@ -242,6 +242,17 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
                  marker + 'B');
 }
 
+//TODO(ddanciu): this is brittle - just write the chromosome id into the binary pileup file
+uint32_t get_chromosome(const std::filesystem::path &filename) {
+    std::string fname = filename.filename().replace_extension();
+    std::vector<std::string> parts = split(fname, '_');
+    if (parts.size() != 2) {
+        logger()->error("Invalid pileup filename. Must be <bla>_chromosome.*");
+        std::exit(1);
+    }
+    return chromosome_to_id(parts[1]);
+}
+
 //============================================================================
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -299,7 +310,7 @@ int main(int argc, char *argv[]) {
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(
                 input_files[i], id_to_group,
                 [&read_progress](uint32_t progress) { read_progress += progress; },
-                FLAGS_max_coverage, positions[i]);
+                FLAGS_max_coverage, positions[get_chromosome(input_files[i])]);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
 

@@ -119,9 +119,6 @@ std::vector<std::vector<uint32_t>> read_positions(const std::string &file) {
         std::string chromosome_str;
         std::getline(iss, chromosome_str, '\t');
         uint32_t chromosome = chr_to_idx(chromosome_str);
-        if (chromosome > 22) {
-            continue;
-        }
         std::string pos_str;
         std::getline(iss, pos_str, '\t');
         uint32_t pos = std::stoul(pos_str);
@@ -136,4 +133,18 @@ std::vector<std::vector<uint32_t>> read_positions(const std::string &file) {
     }
     logger()->info("Found a total of  {} positions in {} chromosomes", pos_count, result.size());
     return result;
+}
+
+uint32_t chromosome_to_id(const std::string &chromosome) {
+    char *p;
+    uint32_t converted = strtol(chromosome.c_str(), &p, 10);
+    if (*p) {
+        if (chromosome != "X" && chromosome != "Y") {
+            logger()->error("Invalid chromosome: {}. Must be 1..22, X, Y", chromosome);
+            std::exit(1);
+        }
+        return (chromosome == "X") ? 22 : 23;
+    } else {
+        return converted - 1;
+    }
 }
