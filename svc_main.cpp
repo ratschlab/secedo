@@ -128,6 +128,16 @@ uint32_t get_chromosome(const std::filesystem::path &filename) {
     return chromosome_to_id(parts[1]);
 }
 
+std::string chr_id_to_str(uint32_t chr_id) {
+    if (chr_id < 22) {
+        return std::to_string(chr_id + 1);
+    }
+    if (chr_id == 22)
+        return "X";
+    assert(chr_id == 23);
+    return "Y";
+}
+
 /**
  * Recursively divides cells into 2 sub-clusters until a termination criteria is met.
  * N - number of cells
@@ -180,7 +190,7 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         const uint32_t chromosome = get_chromosome(input_files[i]);
         for (uint32_t j = 0; j < pos_data[i].size(); ++j) {
-            filtered << chromosome << '\t' << pos_data[i][j].position << std::endl;
+            filtered << chr_id_to_str(chromosome) << '\t' << pos_data[i][j].position << std::endl;
         }
     }
     filtered.close();
