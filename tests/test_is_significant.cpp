@@ -65,7 +65,8 @@ TEST(Preprocess, AtLimit) {
 
 TEST(Preprocess, TwoSigmasAwayTrue) {
     std::string bases
-            = "GGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            = "GGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+              "A"
               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     ASSERT_TRUE(is_significant_helper(bases, 0.01));
 }
@@ -75,6 +76,11 @@ TEST(Preprocess, TwoSigmasAwayFalse) {
             = "GGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     ASSERT_FALSE(is_significant_helper(bases, 0.01));
+}
+
+TEST(Preprocess, Paradox) {
+    std::string bases = "GGGA";
+    ASSERT_FALSE(is_significant_helper(bases, 0.001));
 }
 
 
@@ -90,7 +96,7 @@ TEST(Preprocess, LengthAtLimitRoundDown) {
 /** Make sure we round the length of the string properly (for computing the proper threshold K),
  * i.e. length 55 in this case should generate index 5 (because we emulate rounding to nearest even
  */
-//TEST(Preprocess, LengthAtLimitRoundUp) {
+// TEST(Preprocess, LengthAtLimitRoundUp) {
 //    std::string bases = "GGGGGGGGGGGGGTGGGGGGGGGGGAGGGGGGGGGGGGGGGTGGGGGGGGGGGGG";
 //    ASSERT_FALSE(is_significant_helper(bases, 0.001));
 //}

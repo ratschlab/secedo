@@ -15,9 +15,7 @@ const double log_6 = std::log(6);
 
 
 Filter::Filter(double theta)
-    : theta(theta),
-      log_theta(std::log(theta / 3)),
-      log_one_minus_theta(std::log(1 - theta)) {
+    : theta(theta), log_theta(std::log(theta / 3)), log_one_minus_theta(std::log(1 - theta)) {
     log_factorial.reserve(171);
     log_factorial.push_back(1);
     for (uint32_t i = 1; i < 171; ++i) {
@@ -59,12 +57,17 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
         return false;
     }
 
-    if (is_two_sigmas_away(coverage, base_count)) {
-        return true;
+    if (base_count[2] + base_count[1] + base_count[0] < 3) { // not convincing
+        return false;
     }
 
+//    if (is_two_sigmas_away(coverage, base_count)) {
+//        return true;
+//    }
+
     // choose K threshold for the closest coverage, rounding to nearest even to emulate Python
-    uint32_t threshold_idx = std::clamp(round_nearest_even((coverage / 10.)) - 1, 0., 19.);
+    uint32_t threshold_idx
+            = static_cast<uint32_t>(std::clamp(round_nearest_even((coverage / 10.)) - 1, 0., 19.));
 
     // the multinomial coefficient
     double log_multinomial_coeff = log_fact(coverage) - log_fact(base_count[0])
@@ -79,7 +82,7 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
     log_prob_homozygous += log_0998;
     // the normalizing coefficient (normalizing for read depth)
     double log_normalizing_coef = log_fact(coverage + 3) - log_6 - log_fact(coverage);
-    return log_normalizing_coef + log_prob_homozygous < Ks.at(threshold_idx);
+    return log_normalizing_coef + log_prob_homozygous < 1.25*Ks.at(threshold_idx);
 }
 
 bool Filter::is_significant(const PosData &pos_data, uint16_t *coverage) {
