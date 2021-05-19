@@ -238,13 +238,21 @@ function variant_calling() {
   input_dir="${work_dir}/pileups"
   svc="${code_dir}/build/svc"
   flagfile="${code_dir}/flags_sim"
-  out_dir="${work_dir}/svc/"
-  mkdir -p "${out_dir}"
-  command="${svc} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
-           --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 1000 | tee ${out_dir}/svc.log"
-  echo "$command"
+  for hprob in 0.15 0.05; do
+    for seq_error_rate in 0.01 0.001; do
+      out_dir="${work_dir}/svc_${hprob#*.}_${seq_error_rate#*.}/"
+      mkdir -p "${out_dir}"
+      command="${svc} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
+             --homozygous_prob=${hprob} --seq_error_rate=${seq_error_rate} \
+             --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 1000 | tee ${out_dir}/svc.log"
+             #       --pos_file=${base_dir}/cosmic/cosmic.vcf \
+      echo "$command"
 
-  bsub -K -J "svc" -W 03:00 -n 20 -R "rusage[mem=20000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}"
+      bsub -K -J "svc" -W 03:00 -n 20 -R "rusage[mem=10000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}" &
+    done
+  done
+
+  wait
 }
 
 # check the command-line arguments
