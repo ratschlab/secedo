@@ -273,6 +273,12 @@ int main(int argc, char *argv[]) {
     std::vector<uint16_t> id_to_group
             = get_grouping(FLAGS_merge_count, FLAGS_merge_file, FLAGS_max_cell_count);
 
+    std::vector<std::string> chromosomes_str = split(FLAGS_chromosomes, ',');
+    std::vector<uint32_t> chromsome_ids;
+    for (const auto &chr : chromosomes_str) {
+        chromsome_ids.push_back(chromosome_to_id(chr));
+    }
+
     std::vector<std::filesystem::path> input_files = { FLAGS_i };
     // if the input is a directory, get all pileup files in the directory
     if (std::filesystem::is_directory(FLAGS_i)) {
@@ -321,10 +327,15 @@ int main(int argc, char *argv[]) {
     }
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
+        uint32_t chromosome_id = get_chromosome(input_files[i]);
+        if (std::find(chromsome_ids.begin(), chromsome_ids.end(), chromosome_id)
+            == chromsome_ids.end()) {
+            continue;
+        }
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(
                 input_files[i], id_to_group,
                 [&read_progress](uint32_t progress) { read_progress += progress; },
-                FLAGS_max_coverage, positions[get_chromosome(input_files[i])]);
+                FLAGS_max_coverage, positions[chromosome_id]);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
 
