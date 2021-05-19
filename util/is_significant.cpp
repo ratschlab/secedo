@@ -38,7 +38,7 @@ double round_nearest_even(double x) {
 }
 
 bool Filter::is_two_sigmas_away(uint32_t coverage, std::array<uint16_t, 4> &base_count) {
-    return base_count[3] > 2 * base_count[2]
+    return base_count[3] > 2 * base_count[2] && base_count[2] > 2
             && base_count[2] > (coverage * theta) + 2 * sqrt(coverage * theta * (1 - theta));
 }
 
