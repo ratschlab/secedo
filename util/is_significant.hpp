@@ -18,15 +18,11 @@ class Filter {
 
     std::vector<double> log_factorial;
 
+    double theta;
     double log_theta;
     double log_one_minus_theta;
-    double log_half_minus_theta3;
 
-    bool prob_homozgyous(std::array<uint16_t, 4> &base_count);
-
-    bool prob_heterozygous(std::array<uint16_t, 4> &base_count);
-
-    bool is_homozygous_significant(std::array<uint16_t, 4> &base_count);
+    bool is_two_sigmas_away(uint32_t coverage, std::array<uint16_t, 4> &base_count);
 
   public:
     /**

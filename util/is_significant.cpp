@@ -15,9 +15,9 @@ const double log_6 = std::log(6);
 
 
 Filter::Filter(double theta)
-    : log_theta(std::log(theta / 3)),
-      log_one_minus_theta(std::log(1 - theta)),
-      log_half_minus_theta3(std::log(0.5 - theta / 3)) {
+    : theta(theta),
+      log_theta(std::log(theta / 3)),
+      log_one_minus_theta(std::log(1 - theta)) {
     log_factorial.reserve(171);
     log_factorial.push_back(1);
     for (uint32_t i = 1; i < 171; ++i) {
@@ -37,39 +37,29 @@ double round_nearest_even(double x) {
     return std::nearbyint(x);
 }
 
-bool Filter::prob_homozgyous(std::array<uint16_t, 4> &base_count) {
-    return log_theta * base_count[2] + log_one_minus_theta * base_count[3]
-            + log_fact(base_count[3] + base_count[2]) - log_fact(base_count[3])
-            - log_fact(base_count[2]);
+bool Filter::is_two_sigmas_away(uint32_t coverage, std::array<uint16_t, 4> &base_count) {
+    return base_count[3] > 2 * base_count[2]
+            && base_count[2] > (coverage * theta) + 2 * sqrt(coverage * theta * (1 - theta));
 }
 
-bool Filter::prob_heterozygous(std::array<uint16_t, 4> &base_count) {
-    return log_half_minus_theta3 * base_count[2] + log_half_minus_theta3 * base_count[3]
-            + log_fact(base_count[3] + base_count[2]) - log_fact(base_count[3])
-            - log_fact(base_count[2]);
-}
-
-bool Filter::is_homozygous_significant(std::array<uint16_t, 4> &base_count) {
-    return prob_heterozygous(base_count) < 0.05 && prob_homozgyous(base_count) > 0.95;
-}
 
 bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
     // total coverage
     uint32_t coverage = base_count[0] + base_count[1] + base_count[2] + base_count[3];
 
     // if there are no reads or if we have just one base, do not keep
-    if (coverage == 0) {
+    if (coverage < 2) {
         return false;
     }
 
     // sort base_count; sorts in ascending order
     std::sort(base_count.begin(), base_count.end());
 
-    if (base_count[2] == 0) {
+    if (base_count[2] == 0) { // all bases are the same
         return false;
     }
 
-    if (is_homozygous_significant(base_count)) {
+    if (is_two_sigmas_away(coverage, base_count)) {
         return true;
     }
 

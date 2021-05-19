@@ -63,12 +63,20 @@ TEST(Preprocess, AtLimit) {
     ASSERT_TRUE(is_significant_helper(bases, 0.001));
 }
 
-TEST(Preprocess, Why) {
+TEST(Preprocess, TwoSigmasAwayTrue) {
     std::string bases
             = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAGAAAAAAAAAAGAGAAAAAGAAAAAAAAAAAAAAGAGGGAAAAAAAAAAG"
               "AGAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAGAAA";
-    ASSERT_TRUE(is_significant_helper(bases, 0.0001));
+    ASSERT_TRUE(is_significant_helper(bases, 0.01));
 }
+
+TEST(Preprocess, TwoSigmasAwayFalse) {
+    std::string bases
+            = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAGAAAAAAAAAAGAGAAAAAGAAAAAAAAAAAAAAGAGGGAAAAAAAAAAG"
+              "AGAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAGAAA";
+    ASSERT_TRUE(is_significant_helper(bases, 0.01));
+}
+
 
 /** Make sure we round the length of the string properly (for computing the proper threshold K),
  * i.e. length 65 in this case should generate index 5 */
@@ -77,13 +85,15 @@ TEST(Preprocess, LengthAtLimitRoundDown) {
     ASSERT_TRUE(is_significant_helper(bases, 0.001));
 }
 
+// this test is removed, as we stopped emulating the python version after introducing
+// is_two_sigmas_away()
 /** Make sure we round the length of the string properly (for computing the proper threshold K),
  * i.e. length 55 in this case should generate index 5 (because we emulate rounding to nearest even
  */
-TEST(Preprocess, LengthAtLimitRoundUp) {
-    std::string bases = "GGGGGGGGGGGGGTGGGGGGGGGGGAGGGGGGGGGGGGGGGTGGGGGGGGGGGGG";
-    ASSERT_FALSE(is_significant_helper(bases, 0.001));
-}
+//TEST(Preprocess, LengthAtLimitRoundUp) {
+//    std::string bases = "GGGGGGGGGGGGGTGGGGGGGGGGGAGGGGGGGGGGGGGGGTGGGGGGGGGGGGG";
+//    ASSERT_FALSE(is_significant_helper(bases, 0.001));
+//}
 
 PosData assemble(uint32_t pos,
                  std::vector<uint32_t> read_ids,
