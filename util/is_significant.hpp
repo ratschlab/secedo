@@ -18,19 +18,31 @@ class Filter {
 
     std::vector<double> log_factorial;
 
+    double log_theta;
+    double log_one_minus_theta;
+    double log_half_minus_theta3;
+
+    bool prob_homozgyous(std::array<uint16_t, 4> &base_count);
+
+    bool prob_heterozygous(std::array<uint16_t, 4> &base_count);
+
+    bool is_homozygous_significant(std::array<uint16_t, 4> &base_count);
+
   public:
-    Filter();
+    /**
+     * @param theta sequencing error rate (e.g. ~0.01 on Illumina machines with phred > 20)
+     */
+    Filter(double theta);
 
     /**
      * Decides if a given position is worth keeping, i.e. it will be useful in distinguishing cell
      * genotypes.
      * @param base_count counts of A,C,G, and T in the pooled data at a fixed position
-     * @param theta sequencing error rate (e.g. ~0.01 on Illumina machines)
      * @return true if the position is kept
      */
-    bool is_significant(std::array<uint16_t, 4> &base_count, double theta);
+    bool is_significant(std::array<uint16_t, 4> &base_count);
 
-    bool is_significant(const PosData &pos_data, double theta, uint16_t *coverage);
+    bool is_significant(const PosData &pos_data, uint16_t *coverage);
 
     /**
      * Filters the positions in #pos_data by keeping only the positions that are relevant
@@ -48,8 +60,6 @@ class Filter {
      * id_to_pos[id_to_group[cell_id]].
      * @param marker marks the current sub-cluster; for example AB means we are in the second
      * sub-cluster (B) of the first cluster (A)
-     * @param seq_error_rate rate of the sequencer, e.g. 1e-3 if using Illumina reads with base
-     * quality >=30
      * @return the positions in pos_data that are relevant for the current subcluster and the
      * average coverage of the subcluster
      */
@@ -58,7 +68,6 @@ class Filter {
            const std::vector<uint16_t> &id_to_group,
            const std::vector<uint32_t> &id_to_pos,
            const std::string &marker,
-           double seq_error_rate,
            uint32_t num_threads);
 
     /**

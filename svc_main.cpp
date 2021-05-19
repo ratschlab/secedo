@@ -117,6 +117,17 @@ DEFINE_string(pos_file,
               "When present, only consider positions in this file. The file must have 2 columns, "
               "first one is chromosome id, second is position.");
 
+// TODO(ddanciu): this is brittle - just write the chromosome id into the binary pileup file
+uint32_t get_chromosome(const std::filesystem::path &filename) {
+    std::string fname = filename.filename().replace_extension().replace_extension();
+    std::vector<std::string> parts = split(fname, '_');
+    if (parts.size() != 2) {
+        logger()->error("Invalid pileup filename. Must be <bla>_chromosome.*");
+        std::exit(1);
+    }
+    return chromosome_to_id(parts[1]);
+}
+
 /**
  * Recursively divides cells into 2 sub-clusters until a termination criteria is met.
  * N - number of cells
@@ -146,6 +157,7 @@ DEFINE_string(pos_file,
  * sub-cluster (B) of the first cluster (A)
  */
 void variant_call(const std::vector<std::vector<PosData>> &pds,
+                  const std::vector<std::filesystem::path> &input_files,
                   uint32_t max_read_length,
                   const std::vector<uint16_t> &id_to_group,
                   const std::vector<uint32_t> &id_to_pos,
@@ -162,13 +174,13 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
                        pos_to_id.size());
     }
     logger()->info("Filtering significant positions...");
-    Filter filter;
-    auto [pos_data, coverage]
-            = filter.filter(pds, id_to_group, id_to_pos, marker, seq_error_rate, num_threads);
+    Filter filter(seq_error_rate);
+    auto [pos_data, coverage] = filter.filter(pds, id_to_group, id_to_pos, marker, num_threads);
     std::ofstream filtered(std::filesystem::path(out_dir) / ("significant_positions" + marker));
-    for(uint32_t i = 0; i < pos_data.size(); ++i) {
+    for (uint32_t i = 0; i < pos_data.size(); ++i) {
+        const uint32_t chromosome = get_chromosome(input_files[i]);
         for (uint32_t j = 0; j < pos_data[i].size(); ++j) {
-            filtered << int_to_chr[i] << '\t' << pos_data[i][j].position << std::endl;
+            filtered << chromosome << '\t' << pos_data[i][j].position << std::endl;
         }
     }
     filtered.close();
@@ -234,23 +246,12 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
         return; // TODO: hack - figure it out
     }
 
-    variant_call(pds, max_read_length, id_to_group, id_to_pos_a, pos_to_id_a, mutation_rate,
-                 homozygous_rate, seq_error_rate, num_threads, out_dir, normalization,
-                 marker + 'A');
-    variant_call(pds, max_read_length, id_to_group, id_to_pos_b, pos_to_id_b, mutation_rate,
-                 homozygous_rate, seq_error_rate, num_threads, out_dir, normalization,
-                 marker + 'B');
-}
-
-//TODO(ddanciu): this is brittle - just write the chromosome id into the binary pileup file
-uint32_t get_chromosome(const std::filesystem::path &filename) {
-    std::string fname = filename.filename().replace_extension().replace_extension();
-    std::vector<std::string> parts = split(fname, '_');
-    if (parts.size() != 2) {
-        logger()->error("Invalid pileup filename. Must be <bla>_chromosome.*");
-        std::exit(1);
-    }
-    return chromosome_to_id(parts[1]);
+    variant_call(pds, input_files, max_read_length, id_to_group, id_to_pos_a, pos_to_id_a,
+                 mutation_rate, homozygous_rate, seq_error_rate, num_threads, out_dir,
+                 normalization, marker + 'A');
+    variant_call(pds, input_files, max_read_length, id_to_group, id_to_pos_b, pos_to_id_b,
+                 mutation_rate, homozygous_rate, seq_error_rate, num_threads, out_dir,
+                 normalization, marker + 'B');
 }
 
 //============================================================================
@@ -283,7 +284,7 @@ int main(int argc, char *argv[]) {
     if (!FLAGS_pos_file.empty()) {
         positions = read_positions(FLAGS_pos_file);
         if (positions.size() < input_files.size()) {
-            //TODO: this won't work for the Y chromosome
+            // TODO: this won't work for the Y chromosome
             logger()->error(
                     "Number of chromosomes in {} ({}) does not match number of input files ({})",
                     FLAGS_pos_file, positions.size(), input_files.size());
@@ -340,7 +341,7 @@ int main(int argc, char *argv[]) {
     std::vector<uint32_t> cell_id_map(num_groups);
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 
-    variant_call(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
+    variant_call(pos_data, input_files, max_read_length, id_to_group, cell_id_map, cell_id_map,
                  FLAGS_mutation_rate, FLAGS_homozygous_prob, FLAGS_seq_error_rate,
                  FLAGS_num_threads, FLAGS_o, FLAGS_normalization, "");
 

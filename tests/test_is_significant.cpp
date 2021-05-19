@@ -9,26 +9,26 @@ namespace {
 using namespace ::testing;
 
 bool is_significant_helper(const std::string &bases, double theta = 0.01) {
-    Filter filter;
+    Filter filter(theta);
     std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
     for (uint8_t c : bases) {
         base_count[CharToInt[c]]++;
     }
-    return filter.is_significant(base_count, theta);
+    return filter.is_significant(base_count);
 }
 
 TEST(LogFact, Zero) {
-    Filter filter;
+    Filter filter(0.01);
     ASSERT_EQ(0, filter.log_fact(0));
 }
 
 TEST(LogFact, One) {
-    Filter filter;
+    Filter filter(0.01);
     ASSERT_EQ(0, filter.log_fact(1));
 }
 
 TEST(LogFact, SomeValues) {
-    Filter filter;
+    Filter filter(0.01);
     double values[] = { 0.69314718056, 1.79175946923, 3.17805383035, 4.78749174278 };
     for (uint32_t i = 0; i < 4; ++i) {
         ASSERT_NEAR(values[i], filter.log_fact(i + 2), 1e-10);
@@ -36,7 +36,7 @@ TEST(LogFact, SomeValues) {
 }
 
 TEST(LogFact, LargeValues) {
-    Filter filter;
+    Filter filter(0.01);
     double values[] = { 716.86, 722.01, 727.17, 732.33 };
     for (uint32_t i = 0; i < 4; ++i) {
         ASSERT_NEAR(values[i], filter.log_fact(i + 172), 1e-2);
@@ -61,6 +61,13 @@ TEST(Preprocess, Cov59TwoDifferent) {
 TEST(Preprocess, AtLimit) {
     std::string bases = "CcccccccCcccCCCCcaCcccCccACccccCCCcCcCCCC";
     ASSERT_TRUE(is_significant_helper(bases, 0.001));
+}
+
+TEST(Preprocess, Why) {
+    std::string bases
+            = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAGAAAAAAAAAAGAGAAAAAGAAAAAAAAAAAAAAGAGGGAAAAAAAAAAG"
+              "AGAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAGAAA";
+    ASSERT_TRUE(is_significant_helper(bases, 0.0001));
 }
 
 /** Make sure we round the length of the string properly (for computing the proper threshold K),
@@ -90,8 +97,8 @@ PosData assemble(uint32_t pos,
 }
 
 TEST(Filter, Empty) {
-    Filter filter;
-    auto [pos_data, coverage] = filter.filter({}, {}, {}, "", {}, 1);
+    Filter filter(1e-3);
+    auto [pos_data, coverage] = filter.filter({}, {}, {}, "", 1);
     ASSERT_TRUE(pos_data.empty());
 }
 
@@ -101,8 +108,8 @@ TEST(Filter, OnePosSignificant) {
     std::vector<uint16_t> cell_ids = { 0, 1, 2 };
 
     PosData pd = assemble(1, read_ids, cell_ids, bases);
-    Filter filter;
-    auto [filtered, coverage] = filter.filter({ { pd } }, { 0, 1, 2 }, { 0, 1, 2 }, "", 1e-3, 1);
+    Filter filter(1e-3);
+    auto [filtered, coverage] = filter.filter({ { pd } }, { 0, 1, 2 }, { 0, 1, 2 }, "", 1);
     ASSERT_EQ(coverage, 3.0);
     std::vector<PosData> chromosome_data = { pd };
     ASSERT_THAT(filtered, ElementsAre(chromosome_data));
@@ -114,8 +121,8 @@ TEST(Filter, OnePosNotSignificant) {
     std::vector<uint16_t> cell_ids = { 0, 1, 2 };
     PosData pd = assemble(1, read_ids, cell_ids, bases);
 
-    Filter filter;
-    auto [filtered, coverage] = filter.filter({ { pd } }, { 0, 1, 2 }, { 0, 1, 2 }, "", 1e-3, 1);
+    Filter filter(1e-3);
+    auto [filtered, coverage] = filter.filter({ { pd } }, { 0, 1, 2 }, { 0, 1, 2 }, "", 1);
     ASSERT_EQ(coverage, 0);
     ASSERT_EQ(1, filtered.size());
     ASSERT_TRUE(filtered[0].empty());
@@ -141,8 +148,8 @@ TEST(Filter, AllSignificant) {
 
     std::vector<std::vector<PosData>> filtered;
     double coverage;
-    Filter filter;
-    std::tie(filtered, coverage) = filter.filter(pos_data, id_to_group, id_to_pos, "", 1e-3, 2);
+    Filter filter(1e-3);
+    std::tie(filtered, coverage) = filter.filter(pos_data, id_to_group, id_to_pos, "", 2);
     ASSERT_EQ(coverage, 3);
     ASSERT_EQ(23, filtered.size());
     ASSERT_EQ(filtered, pos_data);
@@ -161,9 +168,8 @@ TEST(Filter, NoneSignificant) {
     std::vector<uint32_t> id_to_pos(10);
     std::iota(id_to_pos.begin(), id_to_pos.end(), 0);
 
-    Filter filter;
-    auto [filtered, coverage]
-            = filter.filter({ chromosome_data }, id_to_group, id_to_pos, "", 1e-3, 2);
+    Filter filter(1e-3);
+    auto [filtered, coverage] = filter.filter({ chromosome_data }, id_to_group, id_to_pos, "", 2);
     ASSERT_EQ(coverage, 0);
     ASSERT_EQ(1, filtered.size());
     ASSERT_TRUE(filtered[0].empty());
