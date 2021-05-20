@@ -78,17 +78,6 @@ TEST(kmeans, TwoClustersSpectralClustering) {
 
     std::vector<uint32_t> clusters = KMeans().run(points, 2, 100, 10);
 
-    std::ofstream out("/tmp/kmeans.out");
-    for(uint32_t i = 0; i < 2500; ++i) {
-        if (clusters[i] == 0) {
-            out << points.row(i);
-        }
-    }
-    for(uint32_t i = 0; i < 2500; ++i) {
-        if (clusters[i] == 1) {
-           out << points.row(i);
-        }
-    }
     for (uint32_t i = 1; i < 500; ++i) {
         ASSERT_EQ(clusters[0], clusters[i]) << "Point " << i;
     }
