@@ -211,9 +211,9 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     std::vector<double> cluster; // size n_cells
     Termination termination = parse_termination(FLAGS_termination);
     ClusteringType clustering_type = parse_clustering_type(FLAGS_clustering_type);
-    bool is_done = spectral_clustering(sim_mat, clustering_type, termination, FLAGS_o, marker,
-                                       FLAGS_arma_kmeans, &cluster);
-    if (is_done) {
+    uint32_t num_clusters = spectral_clustering(sim_mat, clustering_type, termination, FLAGS_o,
+                                                marker, FLAGS_arma_kmeans, &cluster);
+    if (num_clusters == 1) {
         return;
     }
 
@@ -224,44 +224,46 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     }
     write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), id_to_cluster);
 
-    logger()->info("Performing clustering refinement via expectation maximization...");
-    expectation_maximization(pos_data, id_to_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
-                             &cluster);
-
-    for (uint16_t i = 0; i < n_cells_total; ++i) {
-        uint32_t pos = id_to_pos[id_to_group[i]];
-        id_to_cluster[i] = pos == NO_POS ? NO_POS : cluster[pos];
+    if (num_clusters == 2) {
+        logger()->info("Performing clustering refinement via expectation maximization...");
+        expectation_maximization(pos_data, id_to_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
+                                 &cluster);
+        for (uint16_t i = 0; i < n_cells_total; ++i) {
+            uint32_t pos = id_to_pos[id_to_group[i]];
+            id_to_cluster[i] = pos == NO_POS ? NO_POS : cluster[pos];
+        }
+        write_vec(std::filesystem::path(out_dir) / ("expectation_maximization" + marker),
+                  id_to_cluster);
+    } else {
+        logger()->info("Skipping clustering refinement via expectation maximization...");
     }
-    write_vec(std::filesystem::path(out_dir) / ("expectation_maximization" + marker),
-              id_to_cluster);
 
-    std::vector<uint32_t> pos_to_id_a;
-    std::vector<uint32_t> pos_to_id_b;
-    std::vector<uint32_t> id_to_pos_a(id_to_pos.size(), NO_POS);
-    std::vector<uint32_t> id_to_pos_b(id_to_pos.size(), NO_POS);
+    std::vector<std::vector<uint32_t>> pos_to_id_new(num_clusters);
+    std::vector<std::vector<uint32_t>> id_to_pos_new(
+            num_clusters, std::vector<uint32_t>(id_to_pos.size(), NO_POS));
 
     for (uint32_t cell_idx = 0; cell_idx < n_cells_subcluster; ++cell_idx) {
         uint32_t cell_id = pos_to_id[cell_idx];
-        if (cluster[cell_idx] < 0.05) {
-            id_to_pos_a[cell_id] = pos_to_id_a.size();
-            pos_to_id_a.push_back(cell_id);
-        } else if (cluster[cell_idx] > 0.95) {
-            id_to_pos_b[cell_id] = pos_to_id_b.size();
-            pos_to_id_b.push_back(cell_id);
+        for (uint32_t c = 0; c < num_clusters; ++c) {
+            if (std::abs(cluster[cell_idx] - c) < 0.05) {
+                id_to_pos_new[c][cell_id] = pos_to_id_new[c].size();
+                pos_to_id_new[c].push_back(cell_id);
+            }
         }
     }
 
-    if (pos_to_id_a.size() < 30 || pos_to_id_b.size() < 30) {
-        logger()->trace("Cluster size is too small. Stopping.");
-        return; // TODO: hack - figure it out
+    for (uint32_t c = 0; c < num_clusters; ++c) {
+        if (pos_to_id_new[c].size() < 30) {
+            logger()->trace("Cluster {} size is too small. Stopping.", c);
+            return; // TODO: hack - figure it out
+        }
     }
 
-    variant_call(pds, input_files, max_read_length, id_to_group, id_to_pos_a, pos_to_id_a,
-                 mutation_rate, homozygous_rate, seq_error_rate, num_threads, out_dir,
-                 normalization, marker + 'A');
-    variant_call(pds, input_files, max_read_length, id_to_group, id_to_pos_b, pos_to_id_b,
-                 mutation_rate, homozygous_rate, seq_error_rate, num_threads, out_dir,
-                 normalization, marker + 'B');
+    for (uint32_t c = 0; c < num_clusters; ++c) {
+        variant_call(pds, input_files, max_read_length, id_to_group, id_to_pos_new[c],
+                     pos_to_id_new[c], mutation_rate, homozygous_rate, seq_error_rate, num_threads,
+                     out_dir, normalization, marker + static_cast<char>('A' + c));
+    }
 }
 
 //============================================================================

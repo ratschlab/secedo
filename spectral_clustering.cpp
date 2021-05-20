@@ -164,7 +164,7 @@ uint32_t spectral_clustering(const Matd &similarity,
     constexpr uint32_t max_clusters = 4;
 
     // the first 3 eigenvectors (including trivial), used for the k-means classification
-    arma::mat ev
+    arma::mat eigenv
             = eigenvectors.cols(0, std::min(2U, static_cast<uint32_t>(eigenvectors.n_cols - 1)));
 
     std::vector<arma::gmm_full> gmms(max_clusters);
@@ -182,7 +182,7 @@ uint32_t spectral_clustering(const Matd &similarity,
         bics[i] = bic(gmms[i], cell_coord);
         gmm_probs[i] = gmms[i].avg_log_p(cell_coord);
         KMeans kmeans;
-        kmeans.run(ev, i + 1, 100, 10);
+        kmeans.run(eigenv, i + 1, 100, 10);
         inertia[i] = kmeans.inertia();
     }
 
@@ -254,14 +254,23 @@ uint32_t spectral_clustering(const Matd &similarity,
                                            100 /* iterations */, false);
                 if (!status) {
                     logger()->error("K-means clustering failed.");
-                }
-                for (uint32_t i = 0; i < similarity.rows(); ++i) {
-                    cluster->at(i) = arma::norm(means.col(0) - ev.col(i))
-                            > arma::norm(means.col(1) - ev.col(i));
-                }
+                } else {
+                    for (uint32_t i = 0; i < similarity.rows(); ++i) {
+                        double min_dist = arma::norm(means.col(0) - ev.col(i));
+                        uint32_t idx = 0;
+                        for (uint32_t c = 1; c < cluster_count; ++c) {
+                            double dist = arma::norm(means.col(c) - ev.col(i));
+                            if (dist < min_dist) {
+                                min_dist = dist;
+                                idx = c;
+                            }
+                        }
+                        cluster->at(i) = idx;
+                    }
 
-                f.open(out_dir + "centroids" + marker + ".csv");
-                f << means << std::endl;
+                    f.open(out_dir + "centroids" + marker + ".csv");
+                    f << means << std::endl;
+                }
             } else {
                 KMeans kmeans;
                 std::vector<uint32_t> labels = kmeans.run(ev, cluster_count, 100, 10);
@@ -281,11 +290,10 @@ uint32_t spectral_clustering(const Matd &similarity,
     if (is_done) {
         logger()->trace("Simple Gaussian Model matches data better - stopping the clustering");
         return 1;
-    } else {
-        for (uint32_t i = 0; i < max_clusters; ++i) {
-            uint32_t count = std::count(cluster->begin(), cluster->end(), i);
-            logger()->trace("Cluster {} has {} cells", i + 1, count);
-        }
+    }
+    for (uint32_t i = 0; i < max_clusters; ++i) {
+        uint32_t count = std::count(cluster->begin(), cluster->end(), i);
+        logger()->trace("Cluster {} has {} cells", i + 1, count);
     }
     return cluster_count;
 }
