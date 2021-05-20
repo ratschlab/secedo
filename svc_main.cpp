@@ -38,8 +38,8 @@ DEFINE_uint32(num_threads, 8, "Number of threads to use");
 DEFINE_string(labels_file, "", "Input file containing labels");
 
 DEFINE_string(chromosomes,
-              "The chromosomes on which to run the algorithm",
-              "1,2,3,4,5,6,7,8,9,10,11,12,13.14,15,16,17,18,19,20,21,22,X,Y");
+              "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X",
+              "The chromosomes on which to run the algorithm");
 
 DEFINE_string(log_level,
               "trace",
@@ -106,6 +106,38 @@ DEFINE_uint32(max_coverage,
               100,
               "Positions with higher coverage are considered anomalies and discarded");
 
+DEFINE_bool(
+        arma_kmeans,
+        false,
+        "Whether to use Armadillo's k-means implementation or our own (which is very simple, but "
+        "it weights the Fiedler vector higher, reducing the effect of the curse of dimensionality");
+
+DEFINE_string(pos_file,
+              "",
+              "When present, only consider positions in this file. The file must have 2 columns, "
+              "first one is chromosome id, second is position.");
+
+// TODO(ddanciu): this is brittle - just write the chromosome id into the binary pileup file
+uint32_t get_chromosome(const std::filesystem::path &filename) {
+    std::string fname = filename.filename().replace_extension().replace_extension();
+    std::vector<std::string> parts = split(fname, '_');
+    if (parts.size() != 2) {
+        logger()->error("Invalid pileup filename. Must be <bla>_chromosome.*");
+        std::exit(1);
+    }
+    return chromosome_to_id(parts[1]);
+}
+
+std::string chr_id_to_str(uint32_t chr_id) {
+    if (chr_id < 22) {
+        return std::to_string(chr_id + 1);
+    }
+    if (chr_id == 22)
+        return "X";
+    assert(chr_id == 23);
+    return "Y";
+}
+
 /**
  * Recursively divides cells into 2 sub-clusters until a termination criteria is met.
  * N - number of cells
@@ -135,6 +167,7 @@ DEFINE_uint32(max_coverage,
  * sub-cluster (B) of the first cluster (A)
  */
 void variant_call(const std::vector<std::vector<PosData>> &pds,
+                  const std::vector<std::filesystem::path> &input_files,
                   uint32_t max_read_length,
                   const std::vector<uint16_t> &id_to_group,
                   const std::vector<uint32_t> &id_to_pos,
@@ -151,9 +184,17 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
                        pos_to_id.size());
     }
     logger()->info("Filtering significant positions...");
-    Filter filter;
-    auto [pos_data, coverage]
-            = filter.filter(pds, id_to_group, id_to_pos, marker, seq_error_rate, num_threads);
+    Filter filter(seq_error_rate);
+    auto [pos_data, coverage] = filter.filter(pds, id_to_group, id_to_pos, marker, num_threads);
+    std::ofstream filtered(std::filesystem::path(out_dir) / ("significant_positions" + marker));
+    for (uint32_t i = 0; i < pos_data.size(); ++i) {
+        const uint32_t chromosome = get_chromosome(input_files[i]);
+        for (uint32_t j = 0; j < pos_data[i].size(); ++j) {
+            filtered << chr_id_to_str(chromosome) << '\t' << pos_data[i][j].position << std::endl;
+        }
+    }
+    filtered.close();
+
     if (coverage < 9) {
         logger()->trace("Coverage of cluster {} is lower than 9. Stopping.", marker);
         return;
@@ -170,9 +211,9 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     std::vector<double> cluster; // size n_cells
     Termination termination = parse_termination(FLAGS_termination);
     ClusteringType clustering_type = parse_clustering_type(FLAGS_clustering_type);
-    bool is_done
-            = spectral_clustering(sim_mat, clustering_type, termination, FLAGS_o, marker, &cluster);
-    if (is_done) {
+    uint32_t num_clusters = spectral_clustering(sim_mat, clustering_type, termination, FLAGS_o,
+                                                marker, FLAGS_arma_kmeans, &cluster);
+    if (num_clusters == 1) {
         return;
     }
 
@@ -183,44 +224,46 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     }
     write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), id_to_cluster);
 
-    logger()->info("Performing clustering refinement via expectation maximization...");
-    expectation_maximization(pos_data, id_to_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
-                             &cluster);
-
-    for (uint16_t i = 0; i < n_cells_total; ++i) {
-        uint32_t pos = id_to_pos[id_to_group[i]];
-        id_to_cluster[i] = pos == NO_POS ? NO_POS : cluster[pos];
+    if (num_clusters == 2) {
+        logger()->info("Performing clustering refinement via expectation maximization...");
+        expectation_maximization(pos_data, id_to_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
+                                 &cluster);
+        for (uint16_t i = 0; i < n_cells_total; ++i) {
+            uint32_t pos = id_to_pos[id_to_group[i]];
+            id_to_cluster[i] = pos == NO_POS ? NO_POS : cluster[pos];
+        }
+        write_vec(std::filesystem::path(out_dir) / ("expectation_maximization" + marker),
+                  id_to_cluster);
+    } else {
+        logger()->info("Skipping clustering refinement via expectation maximization...");
     }
-    write_vec(std::filesystem::path(out_dir) / ("expectation_maximization" + marker),
-              id_to_cluster);
 
-    std::vector<uint32_t> pos_to_id_a;
-    std::vector<uint32_t> pos_to_id_b;
-    std::vector<uint32_t> id_to_pos_a(id_to_pos.size(), NO_POS);
-    std::vector<uint32_t> id_to_pos_b(id_to_pos.size(), NO_POS);
+    std::vector<std::vector<uint32_t>> pos_to_id_new(num_clusters);
+    std::vector<std::vector<uint32_t>> id_to_pos_new(
+            num_clusters, std::vector<uint32_t>(id_to_pos.size(), NO_POS));
 
     for (uint32_t cell_idx = 0; cell_idx < n_cells_subcluster; ++cell_idx) {
         uint32_t cell_id = pos_to_id[cell_idx];
-        if (cluster[cell_idx] < 0.05) {
-            id_to_pos_a[cell_id] = pos_to_id_a.size();
-            pos_to_id_a.push_back(cell_id);
-        } else if (cluster[cell_idx] > 0.95) {
-            id_to_pos_b[cell_id] = pos_to_id_b.size();
-            pos_to_id_b.push_back(cell_id);
+        for (uint32_t c = 0; c < num_clusters; ++c) {
+            if (std::abs(cluster[cell_idx] - c) < 0.05) {
+                id_to_pos_new[c][cell_id] = pos_to_id_new[c].size();
+                pos_to_id_new[c].push_back(cell_id);
+            }
         }
     }
 
-    if (pos_to_id_a.size() < 30 || pos_to_id_b.size() < 30) {
-        logger()->trace("Cluster size is too small. Stopping.");
-        return; // TODO: hack - figure it out
+    for (uint32_t c = 0; c < num_clusters; ++c) {
+        if (pos_to_id_new[c].size() < 30) {
+            logger()->trace("Cluster {} size is too small. Stopping.", c);
+            return; // TODO: hack - figure it out
+        }
     }
 
-    variant_call(pds, max_read_length, id_to_group, id_to_pos_a, pos_to_id_a, mutation_rate,
-                 homozygous_rate, seq_error_rate, num_threads, out_dir, normalization,
-                 marker + 'A');
-    variant_call(pds, max_read_length, id_to_group, id_to_pos_b, pos_to_id_b, mutation_rate,
-                 homozygous_rate, seq_error_rate, num_threads, out_dir, normalization,
-                 marker + 'B');
+    for (uint32_t c = 0; c < num_clusters; ++c) {
+        variant_call(pds, input_files, max_read_length, id_to_group, id_to_pos_new[c],
+                     pos_to_id_new[c], mutation_rate, homozygous_rate, seq_error_rate, num_threads,
+                     out_dir, normalization, marker + static_cast<char>('A' + c));
+    }
 }
 
 //============================================================================
@@ -231,6 +274,12 @@ int main(int argc, char *argv[]) {
 
     std::vector<uint16_t> id_to_group
             = get_grouping(FLAGS_merge_count, FLAGS_merge_file, FLAGS_max_cell_count);
+
+    std::vector<std::string> chromosomes_str = split(FLAGS_chromosomes, ',');
+    std::vector<uint32_t> chromsome_ids;
+    for (const auto &chr : chromosomes_str) {
+        chromsome_ids.push_back(chromosome_to_id(chr));
+    }
 
     std::vector<std::filesystem::path> input_files = { FLAGS_i };
     // if the input is a directory, get all pileup files in the directory
@@ -245,8 +294,22 @@ int main(int argc, char *argv[]) {
     }
 
     if (input_files.empty()) {
-        logger()->info("No input files found in {}. Bailing out.", FLAGS_i);
+        logger()->info("No input files found in {}. Nothing to do.", FLAGS_i);
         std::exit(0);
+    }
+
+    std::vector<std::vector<uint32_t>> positions;
+    if (!FLAGS_pos_file.empty()) {
+        positions = read_positions(FLAGS_pos_file);
+        if (positions.size() < input_files.size()) {
+            // TODO: this won't work for the Y chromosome
+            logger()->error(
+                    "Number of chromosomes in {} ({}) does not match number of input files ({})",
+                    FLAGS_pos_file, positions.size(), input_files.size());
+            std::exit(1);
+        }
+    } else {
+        positions.resize(input_files.size());
     }
 
     uint64_t total_size = 0;
@@ -261,12 +324,20 @@ int main(int argc, char *argv[]) {
 
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
     read_progress.SetFrequencyUpdate(total_size / 100);
+    for (uint32_t i = 0; i < pos_data.size(); ++i) {
+        logger()->trace("Pairing {} with {}", input_files[i], get_chromosome(input_files[i]));
+    }
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
+        uint32_t chromosome_id = get_chromosome(input_files[i]);
+        if (std::find(chromsome_ids.begin(), chromsome_ids.end(), chromosome_id)
+            == chromsome_ids.end()) {
+            continue;
+        }
         std::tie(pos_data[i], cell_ids[i], max_read_lengths[i]) = read_pileup(
                 input_files[i], id_to_group,
                 [&read_progress](uint32_t progress) { read_progress += progress; },
-                FLAGS_max_coverage);
+                FLAGS_max_coverage, positions[chromosome_id]);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
 
@@ -293,7 +364,7 @@ int main(int argc, char *argv[]) {
     std::vector<uint32_t> cell_id_map(num_groups);
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 
-    variant_call(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
+    variant_call(pos_data, input_files, max_read_length, id_to_group, cell_id_map, cell_id_map,
                  FLAGS_mutation_rate, FLAGS_homozygous_prob, FLAGS_seq_error_rate,
                  FLAGS_num_threads, FLAGS_o, FLAGS_normalization, "");
 

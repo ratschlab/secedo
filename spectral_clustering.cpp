@@ -1,5 +1,6 @@
 #include "spectral_clustering.hpp"
 
+#include "util/kmeans.hpp"
 #include "util/logger.hpp"
 #include "util/util.hpp"
 
@@ -111,12 +112,13 @@ double bic(const arma::gmm_full &gmm, const arma::mat &data) {
     return num_params(gmm) * std::log(data.n_cols) - 2 * data.n_cols * gmm.avg_log_p(data);
 }
 
-bool spectral_clustering(const Matd &similarity,
-                         const ClusteringType &clustering,
-                         const Termination &termination,
-                         const std::string &out_dir,
-                         const std::string &marker,
-                         std::vector<double> *cluster) {
+uint32_t spectral_clustering(const Matd &similarity,
+                             const ClusteringType &clustering,
+                             const Termination &termination,
+                             const std::string &out_dir,
+                             const std::string &marker,
+                             bool use_arma_kmeans,
+                             std::vector<double> *cluster) {
     cluster->resize(similarity.rows());
 
     // compute graph Laplacian, the eigenvalues and eigenvectors
@@ -135,10 +137,10 @@ bool spectral_clustering(const Matd &similarity,
 
     // save the first 20 eigenvalues
     std::ofstream f(out_dir + "sim_mat_eigenvalues" + marker + ".csv");
-    f << eigenvalues(0ull, std::min(20ull, eigenvalues.n_cols - 1ull));
+    f << eigenvalues.cols(0ull, std::min(20ull, eigenvalues.n_cols - 1ull));
     f.close();
 
-    // print the second and third smallest eigenVectors
+    // write the eigenvectors to a file (useful for visualization)
     if (eigenvectors.n_cols > 2) {
         f.open(out_dir + "sim_mat_eigenvectors" + marker + ".csv");
         f << eigenvectors << std::endl;
@@ -156,47 +158,60 @@ bool spectral_clustering(const Matd &similarity,
         return true; // one single cluster, done
     }
 
-    // the first 5 non-trivial eigenvectors
+    // the first 5 non-trivial eigenvectors used for GMM
     arma::mat cell_coord = eigenvectors.cols(1, std::min(5ull, eigenvectors.n_cols - 1)).t();
-    // std::cout << cell_coord << std::endl << std::endl;
-    // GMM with 1 component
-    arma::gmm_full gmm1;
-    gmm1.learn(cell_coord, 1 /* components */, arma::eucl_dist, arma::random_subset, 10, 5, 1e-10,
-               false);
 
-    double aic1 = aic(gmm1, cell_coord);
-    double bic1 = bic(gmm1, cell_coord);
+    constexpr uint32_t max_clusters = 4;
 
-    // GMM with 2 components
-    arma::gmm_full gmm2;
+    // the first 3 eigenvectors (including trivial), used for the k-means classification
+    arma::mat eigenv
+            = eigenvectors.cols(0, std::min(2U, static_cast<uint32_t>(eigenvectors.n_cols - 1)));
 
-    bool status2 = gmm2.learn(cell_coord, 2 /* components */, arma::eucl_dist, arma::random_subset,
-                              10, 5, 1e-10, false);
+    std::vector<arma::gmm_full> gmms(max_clusters);
+    std::vector<double> aics(max_clusters);
+    std::vector<double> bics(max_clusters);
+    std::vector<double> gmm_probs(max_clusters);
+    std::vector<double> inertia(max_clusters);
+    std::vector<double> gaps(max_clusters - 1);
+    std::vector<bool> statuses(max_clusters);
 
-    double aic2 = aic(gmm2, cell_coord);
-    double bic2 = bic(gmm2, cell_coord);
+    for (uint32_t i = 0; i < max_clusters; ++i) {
+        statuses[i] = gmms[i].learn(cell_coord, i + 1 /* components */, arma::eucl_dist,
+                                    arma::random_subset, 10, 5, 1e-10, false);
+        aics[i] = aic(gmms[i], cell_coord);
+        bics[i] = bic(gmms[i], cell_coord);
+        gmm_probs[i] = gmms[i].avg_log_p(cell_coord);
+        KMeans kmeans;
+        kmeans.run(eigenv, i + 1, 100, 10);
+        inertia[i] = kmeans.inertia();
+    }
 
-    // GMM with 3 components
-    arma::gmm_full gmm3;
+    for (uint32_t i = 1; i < max_clusters; ++i) {
+        gaps[i - 1] = inertia[i - 1] - inertia[i];
+    }
+    uint32_t cluster_count = 2;
+    for (uint32_t i = 1; i < max_clusters - 1; ++i) {
+        if (gaps[i] > 0.75 * gaps[i - 1]) {
+            cluster_count = i + 2;
+        } else {
+            break;
+        }
+    }
 
-    bool status3 = gmm3.learn(cell_coord, 3 /* components */, arma::eucl_dist, arma::random_subset,
-                              10, 5, 1e-10, false);
+    logger()->trace(
+            "Avg log-likelihood for GMM 1/2/3/4 {}/{}/{}/{}\taic 1/2/3/4 {}/{}/{}/{}\tbic 1/2/3/4 "
+            "{}/{}/{}/{}",
+            gmm_probs[0], gmm_probs[1], gmm_probs[2], gmm_probs[3], aics[0], aics[1], aics[2],
+            aics[3], bics[0], bics[1], bics[2], bics[3]);
 
-    double aic3 = aic(gmm3, cell_coord);
-    double bic3 = bic(gmm3, cell_coord);
-
-    logger()->trace("Avg log-likelihood for GMM 1/2/3 {}/{}\taic 1/2/3 {}/{}\tbic 1/2/3 {}/{}",
-                    gmm1.avg_log_p(cell_coord), gmm2.avg_log_p(cell_coord),
-                    gmm3.avg_log_p(cell_coord), aic1, aic2, aic3, bic1, bic2, bic3);
-
-    // TODO: investigate using gmm with tied variances as in the Python version
+    logger()->trace("Attempting to cluster into {} clusters", cluster_count);
 
     switch (clustering) {
         case ClusteringType::GMM_ASSIGN:
-            *cluster = get_assignments(gmm2, cell_coord, 0);
+            *cluster = get_assignments(gmms[1], cell_coord, 0);
             break;
         case ClusteringType::GMM_PROB:
-            *cluster = get_probabilities(gmm2, cell_coord, 0);
+            *cluster = get_probabilities(gmms[1], cell_coord, 0);
             break;
         case ClusteringType::FIEDLER: {
             // TODO: use the min-sparsity cut described in
@@ -214,11 +229,13 @@ bool spectral_clustering(const Matd &similarity,
         }
         case ClusteringType::SPECTRAL2:
         case ClusteringType::SPECTRAL6: {
-            uint64_t col_idx = clustering == ClusteringType::SPECTRAL2 ? 2 : 5;
             // TODO: this is totally weird, but it works better if considering the zeroth column,
-            // at lest in the tests
+            // at lest in the tests. Maybe this comment from scikit.SpectralClustering is relevant:
+            // "The first eigenvector is constant only for fully connected graphs and should be kept
+            // for spectral clustering"
+            uint32_t col_idx = clustering == ClusteringType::SPECTRAL2 ? 2 : 2;
             arma::mat ev = eigenvectors.cols(
-                    0, std::min(col_idx, static_cast<uint64_t>(eigenvectors.n_cols - 1)));
+                    0, std::min(col_idx, static_cast<uint32_t>(eigenvectors.n_cols - 1)));
             // normalize each row
             for (uint32_t i = 0; i < ev.n_rows; ++i) {
                 double norm = arma::norm(ev.row(i));
@@ -226,27 +243,57 @@ bool spectral_clustering(const Matd &similarity,
                     ev.row(i) = ev.row(i) / norm;
                 }
             }
-            ev = ev.t(); // kmeans expects each column to be one sample
-            arma::mat means;
-            arma::kmeans(means, ev, 2, arma::random_spread, 10 /* iterations */, false);
-            for (uint32_t i = 0; i < similarity.rows(); ++i) {
-                (*cluster)[i] = arma::norm(means.col(0) - ev.col(i))
-                        > arma::norm(means.col(1) - ev.col(i));
+            f.open(out_dir + "sim_mat_eigenvectors_norm" + marker + ".csv");
+            f << ev << std::endl;
+            f.close();
+
+            if (use_arma_kmeans) {
+                ev = ev.t(); // k-means expects each column to be one sample
+                arma::mat means;
+                bool status = arma::kmeans(means, ev, cluster_count, arma::random_spread,
+                                           100 /* iterations */, false);
+                if (!status) {
+                    logger()->error("K-means clustering failed.");
+                } else {
+                    for (uint32_t i = 0; i < similarity.rows(); ++i) {
+                        double min_dist = arma::norm(means.col(0) - ev.col(i));
+                        uint32_t idx = 0;
+                        for (uint32_t c = 1; c < cluster_count; ++c) {
+                            double dist = arma::norm(means.col(c) - ev.col(i));
+                            if (dist < min_dist) {
+                                min_dist = dist;
+                                idx = c;
+                            }
+                        }
+                        cluster->at(i) = idx;
+                    }
+
+                    f.open(out_dir + "centroids" + marker + ".csv");
+                    f << means << std::endl;
+                }
+            } else {
+                KMeans kmeans;
+                std::vector<uint32_t> labels = kmeans.run(ev, cluster_count, 100, 10);
+                for (uint32_t i = 0; i < similarity.rows(); ++i) {
+                    cluster->at(i) = labels[i];
+                }
             }
+            f.close();
             break;
         }
     }
 
     // stop if either we couldn't fit the 2/3-component GMMs or if the 1-component GMM fits better
-    bool is_done = (!status2 && !status3) || termination == Termination::AIC
-            ? (aic1 < aic2 && aic1 < aic3)
-            : (bic1 < bic2 && bic1 < bic3);
+    bool is_done = (!statuses[1] && !statuses[2] && !statuses[3]) || termination == Termination::AIC
+            ? (aics[0] < aics[1] && aics[0] < aics[2] && aics[0] < aics[3])
+            : (bics[0] < bics[1] && bics[0] < bics[2] && aics[0] < aics[3]);
     if (is_done) {
         logger()->trace("Simple Gaussian Model matches data better - stopping the clustering");
-    } else {
-        uint32_t count = std::count(cluster->begin(), cluster->end(), 0);
-        logger()->trace("First cluster has {} cells, second cluster has {} cells", count,
-                        cluster->size() - count);
+        return 1;
     }
-    return is_done;
+    for (uint32_t i = 0; i < max_clusters; ++i) {
+        uint32_t count = std::count(cluster->begin(), cluster->end(), i);
+        logger()->trace("Cluster {} has {} cells", i + 1, count);
+    }
+    return cluster_count;
 }

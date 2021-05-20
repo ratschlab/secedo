@@ -21,7 +21,11 @@ constexpr uint8_t CharToInt[128]
             5, 5, 5, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 5, 1, 5, 5, 5, 2,
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 };
 
-constexpr char IntToChar[4] = {'A', 'C', 'G', 'T'};
+const std::string int_to_chr[24]
+        = { "1",  "2",  "3",  "4",  "5",  "6",  "7",  "8",  "9",  "10", "11", "12",
+            "13", "14", "15", "16", "17", "18", "19", "20", "21", "X",  "Y" };
+
+constexpr char IntToChar[4] = { 'A', 'C', 'G', 'T' };
 
 template <typename T>
 using Vec2 = std::vector<std::vector<T>>;
@@ -173,3 +177,8 @@ std::vector<std::filesystem::path> get_files(const std::filesystem::path &path,
                                              const std::string &extension);
 
 bool ends_with(std::string const &value, std::string const &ending);
+
+
+std::vector<std::vector<uint32_t>> read_positions(const std::string &file);
+
+uint32_t chromosome_to_id(const std::string &chromosome);

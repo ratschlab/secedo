@@ -1,8 +1,8 @@
 # parameters for spectral clustering
---homozygous_prob 0.5
---seq_error_rate 0.001
---mutation_rate 0.01
+--homozygous_prob=0.5
+--seq_error_rate=0.001
+--mutation_rate=0.01
 
 # logging
---log_level trace
+--log_level=trace
 

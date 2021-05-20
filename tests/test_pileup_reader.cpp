@@ -87,24 +87,47 @@ TEST(Reader, three_rows) {
     ASSERT_EQ(3, data.size());
 
     std::vector<uint64_t> expected_positions = { 1, 2, 3 };
+    std::vector<std::vector<uint16_t>> expected_cell_ids
+            = { { 1, 3 }, { 1, 3, 2 }, { 1, 2, 3, 9, 4 } };
+    std::vector<std::vector<uint8_t>> expected_bases
+            = { { 'C', 'A' }, { 'A', 'C', 'T' }, { 'A', 'A', 'A', 'C', 'A' } };
+    std::vector<std::vector<uint32_t>> expected_read_ids
+            = { { 0, 1 }, { 0, 1, 2 }, { 0, 2, 1, 3, 4 } };
 
     for (uint32_t i : { 0, 1, 2 }) {
         ASSERT_EQ(expected_positions[i], data[i].position);
-
-
-        std::vector<std::vector<uint16_t>> expected_cell_ids
-                = { { 1, 3 }, { 1, 3, 2 }, { 1, 2, 3, 9, 4 } };
-        std::vector<std::vector<uint8_t>> expected_bases
-                = { { 'C', 'A' }, { 'A', 'C', 'T' }, { 'A', 'A', 'A', 'C', 'A' } };
-        std::vector<std::vector<uint32_t>> expected_read_ids
-                = { { 0, 1 }, { 0, 1, 2 }, { 0, 2, 1, 3, 4 } };
-        //{ { "R1", "R2" }, { "R1", "R2", "R3" }, { "R1", "R3", "R2", "R4", "R5" } };
 
         for (uint32_t j = 0; j < data[i].size(); ++j) {
             ASSERT_EQ(data[i].read_ids[j], expected_read_ids[i][j]);
             ASSERT_EQ(data[i].base(j), CharToInt[expected_bases[i][j]]);
             ASSERT_EQ(data[i].cell_id(j), expected_cell_ids[i][j]);
         }
+    }
+
+    check_binary("data/three_rows.pileup.bin", 1, "", data, cell_ids, max_len);
+}
+
+TEST(Reader, filter_positions) {
+    std::vector<PosData> data;
+    std::unordered_set<uint32_t> cell_ids;
+    uint32_t max_len;
+    std::tie(data, cell_ids, max_len) = read_pileup("data/three_rows.pileup", get_grouping(),
+                                                    [](uint32_t) {}, 100U, { 0, 2, 9, 11 });
+    std::vector<uint16_t> all_cell_ids = { 1, 2, 3 };
+    ASSERT_THAT(cell_ids, UnorderedElementsAreArray(all_cell_ids));
+
+    ASSERT_EQ(1, data.size());
+
+    std::vector<std::vector<uint16_t>> expected_cell_ids = { { 1, 3, 2 } };
+    std::vector<std::vector<uint8_t>> expected_bases = { { 'A', 'C', 'T' } };
+    std::vector<std::vector<uint32_t>> expected_read_ids = { { 0, 1, 2 } };
+
+    ASSERT_EQ(2, data[0].position);
+
+    for (uint32_t j = 0; j < data[0].size(); ++j) {
+        ASSERT_EQ(data[0].read_ids[j], expected_read_ids[0][j]);
+        ASSERT_EQ(data[0].base(j), CharToInt[expected_bases[0][j]]);
+        ASSERT_EQ(data[0].cell_id(j), expected_cell_ids[0][j]);
     }
 
     check_binary("data/three_rows.pileup.bin", 1, "", data, cell_ids, max_len);

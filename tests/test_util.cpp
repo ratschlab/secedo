@@ -1,8 +1,11 @@
 #include "util/util.hpp"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace {
+using namespace ::testing;
+
 TEST(MatReadWrite, Empty) {
     Matd empty;
     write_mat("test", empty);
@@ -30,4 +33,29 @@ TEST(MatReadWrite, Idempotent) {
         }
     }
 }
+
+TEST(ReadPositions, SomeData) {
+    std::vector<std::vector<uint32_t>> positions = read_positions("data/cosmic_small.vcf");
+    std::vector<std::vector<uint32_t>> expected_pos
+            = { { 65797, 66373, 66814, 69224, 69345, 69486, 69518, 69538, 69559, 69569, 69598,
+                  69666 },
+                {},
+                {},
+                {},
+                {},
+                {},
+                {},
+                {},
+                {},
+                { 7197537, 7197566, 7197575, 7197584, 7197593, 7197616 },
+                {
+                        2133595,
+                        2133597,
+                        2133605,
+                        2133606,
+                } };
+    ASSERT_EQ(11, positions.size());
+    ASSERT_EQ(positions, expected_pos);
+}
+
 } // namespace

@@ -13,7 +13,8 @@ std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup_text(const std::string fname,
                  const std::vector<uint16_t> &id_to_group,
                  const std::function<void(uint64_t)> &progress,
-                 uint32_t max_coverage) {
+                 uint32_t max_coverage,
+                 const std::vector<uint32_t> &positions) {
     std::vector<PosData> result;
 
     std::ofstream out_bin(fname + ".bin", std::ios::binary);
@@ -32,6 +33,7 @@ read_pileup_text(const std::string fname,
     std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> id_stats;
     uint32_t id_count = 0;
     uint64_t read_bytes = 0;
+    uint32_t  pos_idx = 0;
     // process position by position
     while (std::getline(f, line)) {
         read_bytes = (line.size() + 1);
@@ -49,6 +51,19 @@ read_pileup_text(const std::string fname,
 
         if (cell_ids.size() > max_coverage) {
             continue;
+        }
+
+        if (!positions.empty()) {
+            while(pos_idx < positions.size() && positions[pos_idx] < position) {
+                pos_idx++;
+            }
+            if (pos_idx == positions.size()) {
+                break; // all valid positions were read
+            }
+            if (positions[pos_idx] > position) {
+                continue;
+            }
+            assert(positions[pos_idx] == position);
         }
 
         for (const uint16_t id : cell_ids) {
@@ -125,7 +140,8 @@ std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup_bin(const std::string fname,
                 const std::vector<uint16_t> &id_to_group,
                 const std::function<void(uint64_t)> &progress,
-                uint32_t max_coverage) {
+                uint32_t max_coverage,
+                const std::vector<uint32_t> &positions) {
     std::vector<PosData> result;
 
     if (!std::filesystem::exists(fname)) {
@@ -143,6 +159,7 @@ read_pileup_bin(const std::string fname,
 
     uint64_t read_bytes = 0;
     uint64_t reported_bytes = 0;
+    uint32_t pos_idx = 0;
 
     while (f.good()) {
         uint32_t position;
@@ -170,6 +187,19 @@ read_pileup_bin(const std::string fname,
 
         if (coverage > max_coverage) {
             continue;
+        }
+
+        if (!positions.empty()) {
+            while(pos_idx < positions.size() && positions[pos_idx] < position) {
+                pos_idx++;
+            }
+            if (pos_idx == positions.size()) {
+                break; // all valid positions were read
+            }
+            if (positions[pos_idx] > position) {
+                continue;
+            }
+            assert(positions[pos_idx] == position);
         }
 
         for (uint32_t i = 0; i < read_ids.size(); ++i) {
@@ -222,9 +252,10 @@ std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
 read_pileup(const std::string fname,
             const std::vector<uint16_t> &id_to_group,
             const std::function<void(uint64_t)> &progress,
-            uint32_t max_coverage) {
-    return ends_with(fname, ".bin") ? read_pileup_bin(fname, id_to_group, progress, max_coverage)
-                                    : read_pileup_text(fname, id_to_group, progress, max_coverage);
+            uint32_t max_coverage,
+            const std::vector<uint32_t> positions) {
+    return ends_with(fname, ".bin") ? read_pileup_bin(fname, id_to_group, progress, max_coverage, positions)
+                                    : read_pileup_text(fname, id_to_group, progress, max_coverage, positions);
 }
 
 

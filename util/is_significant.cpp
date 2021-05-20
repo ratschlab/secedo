@@ -9,7 +9,13 @@ std::vector<double> Filter::Ks = { 0.872,   0.872,   0.872,   -1.238,  -1.358,  
                                    -13.912, -25.998, -33.936, -34.469, -54.084,  -44.453, -56.842,
                                    -63.352, -88.297, -90.711, -96.841, -115.730, -112.601 };
 
-Filter::Filter() {
+const double log_1_4 = std::log(1. / 4);
+const double log_0998 = std::log(0.998);
+const double log_6 = std::log(6);
+
+
+Filter::Filter(double theta)
+    : theta(theta), log_theta(std::log(theta / 3)), log_one_minus_theta(std::log(1 - theta)) {
     log_factorial.reserve(171);
     log_factorial.push_back(1);
     for (uint32_t i = 1; i < 171; ++i) {
@@ -29,22 +35,40 @@ double round_nearest_even(double x) {
     return std::nearbyint(x);
 }
 
-bool Filter::is_significant(std::array<uint16_t, 4> &base_count, double theta) {
-    double log_theta = std::log(theta / 3);
-    double log_one_minus_theta = std::log(1 - theta);
+bool Filter::is_two_sigmas_away(uint32_t coverage, std::array<uint16_t, 4> &base_count) {
+    return base_count[3] > 2 * base_count[2] && base_count[2] > 2
+            && base_count[2] > (coverage * theta) + 3 * sqrt(coverage * theta * (1 - theta));
+}
 
-    // sort base_count; sorts in ascending order
-    std::sort(base_count.begin(), base_count.end());
+
+bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
     // total coverage
     uint32_t coverage = base_count[0] + base_count[1] + base_count[2] + base_count[3];
 
-    // choose K for the closest coverage, rounding to nearest even to emulate Python
-    uint32_t i = std::clamp(round_nearest_even((coverage / 10.)) - 1, 0., 19.);
-
     // if there are no reads or if we have just one base, do not keep
-    if (coverage == 0 || base_count[2] == 0) {
+    if (coverage < 2) {
         return false;
     }
+
+    // sort base_count; sorts in ascending order
+    std::sort(base_count.begin(), base_count.end());
+
+    if (base_count[2] == 0) { // all bases are the same
+        return false;
+    }
+
+    if (base_count[2] + base_count[1] + base_count[0] < 3) { // not convincing
+        return false;
+    }
+
+//    if (is_two_sigmas_away(coverage, base_count)) {
+//        return true;
+//    }
+
+    // choose K threshold for the closest coverage, rounding to nearest even to emulate Python
+    uint32_t threshold_idx
+            = static_cast<uint32_t>(std::clamp(round_nearest_even((coverage / 10.)) - 1, 0., 19.));
+
     // the multinomial coefficient
     double log_multinomial_coeff = log_fact(coverage) - log_fact(base_count[0])
             - log_fact(base_count[1]) - log_fact(base_count[2]) - log_fact(base_count[3]);
@@ -53,21 +77,21 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count, double theta) {
             + (coverage - base_count[3]) * log_theta;
     // add prior on the most probable genotype (1/4, because all four homozygous genotypes are
     // equally likely)
-    log_prob_homozygous += std::log(1. / 4);
+    log_prob_homozygous += log_1_4;
     // add prior on null hypothesis (0.998)
-    log_prob_homozygous += std::log(0.998);
+    log_prob_homozygous += log_0998;
     // the normalizing coefficient (normalizing for read depth)
-    double log_normalizing_coef = log_fact(coverage + 3) - std::log(6) - log_fact(coverage);
-    return log_normalizing_coef + log_prob_homozygous < Ks.at(i);
+    double log_normalizing_coef = log_fact(coverage + 3) - log_6 - log_fact(coverage);
+    return log_normalizing_coef + log_prob_homozygous < 1.25*Ks.at(threshold_idx);
 }
 
-bool Filter::is_significant(const PosData &pos_data, double theta, uint16_t *coverage) {
+bool Filter::is_significant(const PosData &pos_data, uint16_t *coverage) {
     std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         base_count[pos_data.base(i)]++;
     }
     *coverage = base_count[0] + base_count[1] + base_count[2] + base_count[3];
-    return is_significant(base_count, theta);
+    return is_significant(base_count);
 }
 
 std::pair<std::vector<std::vector<PosData>>, double>
@@ -75,7 +99,6 @@ Filter::filter(const std::vector<std::vector<PosData>> &pos_data,
                const std::vector<uint16_t> &id_to_group,
                const std::vector<uint32_t> &id_to_pos,
                const std::string &marker,
-               double seq_error_rate,
                uint32_t num_threads) {
     std::vector<std::vector<PosData>> result(pos_data.size());
     // one per thread to avoid lock contention
@@ -100,7 +123,7 @@ Filter::filter(const std::vector<std::vector<PosData>> &pos_data,
                 base_count[pd.base(cell_idx)]++;
             }
 
-            if (is_significant(base_count, seq_error_rate)) {
+            if (is_significant(base_count)) {
                 coverage_chr[chr_idx] += read_ids.size();
                 filtered_data.push_back({ pd.position, read_ids, cell_ids_and_bases });
             }

@@ -14,6 +14,8 @@
  * consecutive cells together (this assumes that consecutive cell ids are part of the same cluster)
  * @param progress callback that is invoked to report the number of bytes processed (e.g. for
  * reporting progress in the caller)
+ * @param max_coverage remove positions with coverage higher than max_coverage
+ * @param positions if not empty, only consider positions listed here
  * @return a tuple containing:
  *    1. a vector with the reads at each position
  *    2. all the cell ids
@@ -32,7 +34,8 @@ std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t> read_pi
         const std::string fname,
         const std::vector<uint16_t> &id_to_group,
         const std::function<void(uint64_t)> &progress = [](uint32_t) {},
-        uint32_t max_coverage = 100);
+        uint32_t max_coverage = 100,
+        const std::vector<uint32_t> positions = {});
 
 
 /**
