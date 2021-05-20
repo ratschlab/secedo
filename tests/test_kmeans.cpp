@@ -8,19 +8,19 @@
 namespace {
 using namespace ::testing;
 TEST(kmeans, Empty) {
-    ASSERT_TRUE(kmeans(arma::mat(), 2, 100, 10).empty());
+    ASSERT_TRUE(KMeans().run(arma::mat(), 2, 100, 10).empty());
 }
 
 TEST(kmeans, OnePoint) {
     arma::mat points = { { 1, 2, 3 } };
-    std::vector<uint32_t> clusters = kmeans(points, 1, 100, 10);
+    std::vector<uint32_t> clusters = KMeans().run(points, 1, 100, 10);
     ASSERT_EQ(1, clusters.size());
     ASSERT_EQ(0, clusters[0]);
 }
 
 TEST(kmeans, TwoPointsTwoClusters) {
     arma::mat points = { { 1, 2, 3 }, { 4, 5, 6 } };
-    std::vector<uint32_t> clusters = kmeans(points, 2, 100, 10);
+    std::vector<uint32_t> clusters = KMeans().run(points, 2, 100, 10);
     ASSERT_EQ(2, clusters.size());
     ASSERT_EQ(0, clusters[0]);
     ASSERT_EQ(1, clusters[1]);
@@ -28,7 +28,7 @@ TEST(kmeans, TwoPointsTwoClusters) {
 
 TEST(kmeans, TwoPointsOneCluster) {
     arma::mat points = { { 1, 2, 3 }, { 4, 5, 6 } };
-    std::vector<uint32_t> clusters = kmeans(points, 1, 100, 10);
+    std::vector<uint32_t> clusters = KMeans().run(points, 1, 100, 10);
     ASSERT_EQ(2, clusters.size());
     ASSERT_EQ(0, clusters[0]);
     ASSERT_EQ(0, clusters[1]);
@@ -36,7 +36,7 @@ TEST(kmeans, TwoPointsOneCluster) {
 
 TEST(kmeans, ThreePointsTwoClusters) {
     arma::mat points = { { 1, 2, 3 }, { 4, 5, 6 }, { 1.1, 2, 3 } };
-    std::vector<uint32_t> clusters = kmeans(points, 2, 100, 10);
+    std::vector<uint32_t> clusters = KMeans().run(points, 2, 100, 10);
     ASSERT_EQ(3, clusters.size());
     ASSERT_EQ(clusters[2], clusters[0]);
     ASSERT_NE(clusters[2], clusters[1]);
@@ -53,7 +53,7 @@ TEST(kmeans, TwoClustersRandom) {
     for (uint32_t i = 50; i < 100; ++i) {
         points.row(i) = { 4. + noise(generator), 5. + noise(generator), 6. + noise(generator) };
     }
-    std::vector<uint32_t> clusters = kmeans(points, 2, 100, 10);
+    std::vector<uint32_t> clusters = KMeans().run(points, 2, 100, 10);
     for (uint32_t i = 1; i < 50; ++i) {
         ASSERT_EQ(clusters[0], clusters[i]);
     }
@@ -76,7 +76,7 @@ TEST(kmeans, TwoClustersSpectralClustering) {
         l++;
     }
 
-    std::vector<uint32_t> clusters = kmeans(points, 2, 100, 10);
+    std::vector<uint32_t> clusters = KMeans().run(points, 2, 100, 10);
 
     std::ofstream out("/tmp/kmeans.out");
     for(uint32_t i = 0; i < 2500; ++i) {

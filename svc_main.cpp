@@ -38,8 +38,8 @@ DEFINE_uint32(num_threads, 8, "Number of threads to use");
 DEFINE_string(labels_file, "", "Input file containing labels");
 
 DEFINE_string(chromosomes,
-              "The chromosomes on which to run the algorithm",
-              "1,2,3,4,5,6,7,8,9,10,11,12,13.14,15,16,17,18,19,20,21,22,X,Y");
+              "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X",
+              "The chromosomes on which to run the algorithm");
 
 DEFINE_string(log_level,
               "trace",

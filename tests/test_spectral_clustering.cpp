@@ -45,7 +45,8 @@ TEST_P(SpectralClustering, OneCluster) {
         }
 
         if (spectral_clustering(similarity, clustering, termination, "./", "", use_arma_kmeans,
-                                &cluster)) {
+                                &cluster)
+            == 1) {
             count_done++;
         }
     }
@@ -70,7 +71,11 @@ TEST_P(SpectralClustering, TwoClusters) {
     // set everything to dissimilar first
     for (uint32_t i = 0; i < num_cells; ++i) {
         for (uint32_t j = 0; j < i; ++j) {
-            similarity(i, j) = dissimilar(generator);
+            if (similar(generator) % 5) {
+                similarity(i, j) = dissimilar(generator) + 20;
+            } else {
+                similarity(i, j) = dissimilar(generator);
+            }
             similarity(j, i) = similarity(i, j);
         }
     }
@@ -79,20 +84,22 @@ TEST_P(SpectralClustering, TwoClusters) {
     const uint32_t half = num_cells / 2;
     for (uint32_t i = 0; i < half; ++i) {
         for (uint32_t j = 0; j < i; ++j) {
-            // 1st cluster
-            similarity(i, j) = similar(generator);
-            similarity(j, i) = similarity(i, j);
-
-            // 2nd cluster
-            similarity(i + half, j + half) = similar(generator);
-            similarity(j + half, i + half) = similarity(i + half, j + half);
+            if (similar(generator) % 2) {
+                // 1st cluster
+                similarity(i, j) = similar(generator);
+                similarity(j, i) = similarity(i, j);
+            } else {
+                // 2nd cluster
+                similarity(i + half, j + half) = similar(generator);
+                similarity(j + half, i + half) = similarity(i + half, j + half);
+            }
         }
     }
 
-    bool done = spectral_clustering(similarity, clustering, termination, "./", "", use_arma_kmeans,
-                                    &cluster);
+    uint32_t num_clusters = spectral_clustering(similarity, clustering, termination, "./", "",
+                                                use_arma_kmeans, &cluster);
 
-    ASSERT_FALSE(done); // the split should be successful
+    ASSERT_EQ(num_clusters, 2);
     for (uint32_t i = 0; i < half - 1; ++i) {
         ASSERT_NEAR(0, std::abs(cluster[i] - cluster[i + 1]), 1e-3);
     }
@@ -104,32 +111,52 @@ TEST_P(SpectralClustering, TwoClusters) {
 
 TEST_P(SpectralClustering, ThreeClusters) {
     auto [clustering, termination, use_arma_kmeans] = GetParam();
-    if (clustering == ClusteringType::GMM_ASSIGN || clustering == ClusteringType::GMM_PROB
-        || clustering == ClusteringType::SPECTRAL2) {
-        return; // GMM doesn't work well on this data
-    }
+
+    std::default_random_engine generator;
+    std::uniform_int_distribution<uint32_t> dissimilar(0, 5);
+    std::uniform_int_distribution<uint32_t> similar(100, 200);
+
+    constexpr uint32_t num_cells = 99;
 
     std::vector<double> cluster;
-    // we have 6 cells, with the first 2, next 2 and last 2 being identical, and the first 2
-    // and next 2 being slightly more similar to each other than to the last 2. The clustering
-    // should thus group the first 4 cells and last 2 cells together.
-    // clang-format off
-    Matd similarity(6, 6,
-                    {
-                       0., 100, 1, 1, 0, 0,
-                      100, 0, 1, 1, 0, 0,
-                      1, 1, 0, 100, 0, 0,
-                      1, 1, 100,  0, 0, 0,
-                      0, 0, 0, 0, 0, 100,
-                      0, 0, 0, 0, 100, 0 });
-    // clang-format on
-    bool done = spectral_clustering(similarity, clustering, termination, "./", "", use_arma_kmeans,
-                                    &cluster);
+    // we have 100 cells, with the first 50 and last 50 being identical (modulo some noise) to each
+    // other
+    Matd similarity = Matd::zeros(num_cells, num_cells);
 
-    ASSERT_FALSE(done); // we clearly have 2 clusters
-    ASSERT_THAT(std::vector(cluster.begin(), cluster.begin() + 4), Each(cluster[0]));
-    ASSERT_EQ(cluster[4], cluster[5]);
-    ASSERT_NE(cluster[0], cluster[4]);
+    // set everything to dissimilar first
+    for (uint32_t i = 0; i < num_cells; ++i) {
+        for (uint32_t j = 0; j < i; ++j) {
+            if (similar(generator) % 5) {
+                similarity(i, j) = dissimilar(generator) + 20;
+            } else {
+                similarity(i, j) = dissimilar(generator);
+            }
+            similarity(j, i) = similarity(i, j);
+        }
+    }
+
+    // set first half to similar
+    const uint32_t third = num_cells / 3;
+    for (uint32_t i = 0; i < third; ++i) {
+        for (uint32_t j = 0; j < i; ++j) {
+            if (similar(generator) % 2) {
+                // 1st cluster
+                similarity(i, j) = similar(generator);
+                similarity(j, i) = similarity(i, j);
+            } else {
+                // 2nd cluster
+                similarity(i + third, j + third) = similar(generator);
+                similarity(j + third, i + third) = similarity(i + third, j + third);
+
+                similarity(i + 2*third, j + 2*third) = similar(generator);
+                similarity(j + 2*third, i + 2*third) = similarity(i + 2*third, j + 2*third);
+            }
+        }
+    }
+
+    uint32_t num_clusters = spectral_clustering(similarity, clustering, termination, "./", "",
+                                                use_arma_kmeans, &cluster);
+    ASSERT_EQ(3, num_clusters);
 }
 
 INSTANTIATE_TEST_SUITE_P(

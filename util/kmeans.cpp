@@ -37,7 +37,7 @@ uint32_t nearest_cluster(const std::vector<arma::rowvec> &centroids, const arma:
  * @return the cluster for each point
  */
 std::vector<uint32_t>
-kmeans(const arma::mat &points, uint32_t K, uint32_t max_iter, uint32_t num_tries) {
+KMeans::run(const arma::mat &points, uint32_t K, uint32_t max_iter, uint32_t num_tries) {
     uint32_t n_points = points.n_rows;
     if (n_points == 0) {
         logger()->warn("No points to cluster");
@@ -110,5 +110,7 @@ kmeans(const arma::mat &points, uint32_t K, uint32_t max_iter, uint32_t num_trie
             min_inertia = inertia;
         }
     }
+    labels_ = best_idx_to_cluster;
+    inertia_ = min_inertia;
     return best_idx_to_cluster;
 }
