@@ -60,16 +60,16 @@ TEST(Preprocess, Cov59TwoDifferent) {
 
 TEST(Preprocess, AtLimit) {
     std::string bases = "CcccccccCcccCCCCcaCcccCccACccccCCCcCcCCCC";
-    ASSERT_TRUE(is_significant_helper(bases, 0.001));
+    // this is now considered insignificant, as 2 bases are not "convincing" enough
+    ASSERT_FALSE(is_significant_helper(bases, 0.001));
 }
 
-TEST(Preprocess, TwoSigmasAwayTrue) {
-    std::string bases
-            = "GGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-              "A"
-              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    ASSERT_TRUE(is_significant_helper(bases, 0.01));
-}
+//TEST(Preprocess, TwoSigmasAwayTrue) {
+//    std::string bases
+//            = "GGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+//              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+//    ASSERT_TRUE(is_significant_helper(bases, 0.01));
+//}
 
 TEST(Preprocess, TwoSigmasAwayFalse) {
     std::string bases
@@ -119,14 +119,37 @@ TEST(Filter, Empty) {
 }
 
 TEST(Filter, OnePosSignificant) {
-    std::vector<uint32_t> read_ids = { 0, 5, 9 };
-    std::vector<uint8_t> bases = { 0, 1, 2 };
-    std::vector<uint16_t> cell_ids = { 0, 1, 2 };
+    // Filtering is pretty drastic in order to increase signal to noise ratio
+    // Even with a seq error rate of 1e-3 we need at least 10 out of 100 bases to be different in
+    // order to consider a position significant. This does mean that small clusters won't be seen
+    uint32_t coverage = 100;
+    uint32_t num_diff = 10; // bases different from the others
+
+    std::vector<uint32_t> read_ids;
+    std::vector<uint8_t> bases;
+    std::vector<uint16_t> cell_ids;
+
+    // building a position like: AAAAACCCCCCCCCCCC...
+    for (uint32_t i = 0; i < coverage; ++i) {
+        read_ids.push_back(2*i+1);
+        if (i < num_diff) {
+            bases.push_back(0);
+        } else {
+            bases.push_back(1);
+        }
+        cell_ids.push_back(i);
+    }
 
     PosData pd = assemble(1, read_ids, cell_ids, bases);
+
+    std::vector<uint16_t> id_to_group(coverage);
+    std::iota(id_to_group.begin(), id_to_group.end(), 0);
+    std::vector<uint32_t> id_to_pos(coverage);
+    std::iota(id_to_pos.begin(), id_to_pos.end(), 0);
+
     Filter filter(1e-3);
-    auto [filtered, coverage] = filter.filter({ { pd } }, { 0, 1, 2 }, { 0, 1, 2 }, "", 1);
-    ASSERT_EQ(coverage, 3.0);
+    auto [filtered, avg_coverage] = filter.filter({ { pd } }, id_to_group, id_to_pos, "", 1);
+    ASSERT_EQ(avg_coverage, 100.0);
     std::vector<PosData> chromosome_data = { pd };
     ASSERT_THAT(filtered, ElementsAre(chromosome_data));
 }
@@ -148,9 +171,24 @@ TEST(Filter, AllSignificant) {
     logger()->set_level(spdlog::level::trace);
     std::vector<std::vector<PosData>> pos_data;
     for (uint32_t chr = 0; chr < 23; ++chr) {
-        std::vector<uint32_t> read_ids = { 0, 5, 9 };
-        std::vector<uint8_t> bases = { 0, 1, 2 }; // all bases are different, positions are kept
-        std::vector<uint16_t> cell_ids = { 1, 3, 5 };
+        uint32_t coverage = 100;
+        uint32_t num_diff = 10; // bases different from the others
+
+        std::vector<uint32_t> read_ids;
+        std::vector<uint8_t> bases;
+        std::vector<uint16_t> cell_ids;
+
+        // building a position like: AAAAACCCCCCCCCCCC...
+        for (uint32_t i = 0; i < coverage; ++i) {
+            read_ids.push_back(2*i+1);
+            if (i < num_diff) {
+                bases.push_back(0);
+            } else {
+                bases.push_back(1);
+            }
+            cell_ids.push_back(i);
+        }
+
         std::vector<PosData> chromosome_data;
         for (uint32_t i = 0; i < 100; ++i) {
             chromosome_data.push_back(assemble(i + 1, read_ids, cell_ids, bases));
@@ -163,10 +201,10 @@ TEST(Filter, AllSignificant) {
     std::iota(id_to_pos.begin(), id_to_pos.end(), 0);
 
     std::vector<std::vector<PosData>> filtered;
-    double coverage;
+    double avg_coverage;
     Filter filter(1e-3);
-    std::tie(filtered, coverage) = filter.filter(pos_data, id_to_group, id_to_pos, "", 2);
-    ASSERT_EQ(coverage, 3);
+    std::tie(filtered, avg_coverage) = filter.filter(pos_data, id_to_group, id_to_pos, "", 2);
+    ASSERT_EQ(avg_coverage, 100);
     ASSERT_EQ(23, filtered.size());
     ASSERT_EQ(filtered, pos_data);
 }

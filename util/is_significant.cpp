@@ -82,7 +82,7 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
     log_prob_homozygous += log_0998;
     // the normalizing coefficient (normalizing for read depth)
     double log_normalizing_coef = log_fact(coverage + 3) - log_6 - log_fact(coverage);
-    return log_normalizing_coef + log_prob_homozygous < 1.25*Ks.at(threshold_idx);
+    return log_normalizing_coef + log_prob_homozygous < Ks.at(threshold_idx);
 }
 
 bool Filter::is_significant(const PosData &pos_data, uint16_t *coverage) {
