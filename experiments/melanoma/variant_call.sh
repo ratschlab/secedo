@@ -1,7 +1,7 @@
 # Splits aligned BAM files by chromosome, creates 23 pileup files distributed on 23 machines and then runs
 # variant calling
 
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/sliceB/processed_files"
+base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_melanoma/processed_files"
 bam_dir="${base_dir}/aligned_cells"
 split_dir="${base_dir}/aligned_cells_split"
 pileup_dir="${base_dir}/pileups"
@@ -28,8 +28,7 @@ function split_bams() {
     cmd="echo hello"
     for i in $(seq "${idx}" $((idx+step-1))); do
       bam_file=${files[${i}]}
-      cmd="${cmd}; ${code_dir}/experiments/breast_cancer/split.sh ${bam_file} ${split_dir} \
-          | tee ${logs_dir}/split-${i}.log"
+      cmd="${cmd}; ${code_dir}/experiments/melanoma/split.sh ${bam_file} ${split_dir} | tee ${logs_dir}/split-${i}.log"
     done
     # echo "${cmd}"
     bsub -K -J "split-${i}" -W 1:00 -n 1 -R "rusage[mem=8000]" -R "span[hosts=1]" \

@@ -1,9 +1,10 @@
-DIR="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/sliceB/"
-NEW_BAM2=$DIR"processed_files/breast_tissue_B_2k_possorted_bam_filtered_withCBtag.bam"
-NEW_BAM2_SORTED=$DIR"processed_files/breast_tissue_B_2k_possorted_bam_filtered_withCBtag_sorted.bam"
+slice="C"
+DIR="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/slice${slice}/"
+NEW_BAM2=$DIR"processed_files/breast_tissue_${slice}_2k_possorted_bam_filtered_withCBtag.bam"
+NEW_BAM2_SORTED=$DIR"processed_files/breast_tissue_${slice}_2k_possorted_bam_filtered_withCBtag_sorted.bam"
 CELL_BAMS_DIR=$DIR"processed_files/cell_bams/"
 TAGS_FILE=$DIR"processed_files/allowedTags"
-PER_CELL_SUMMARY_FILE=$DIR"breast_tissue_B_2k_per_cell_summary_metrics.csv"
+PER_CELL_SUMMARY_FILE=$DIR"breast_tissue_${slice}_2k_per_cell_summary_metrics.csv"
 BAM_LIST=$CELL_BAMS_DIR"list_of_bams"
 LOG="log_3_splittingByCB"
 echo > $LOG
@@ -22,5 +23,5 @@ cat $PER_CELL_SUMMARY_FILE | cut -d ',' -f 1 | tail -n +2 > $TAGS_FILE
 echo "Splitting based on CB tag" >> $LOG
 mkdir $CELL_BAMS_DIR
 echo "python3 ~/sc_clustering/split_by_CBtag.py -f $NEW_BAM2_SORTED -o $CELL_BAMS_DIR -t $TAGS_FILE" >> $LOG
-python3 ~/sc_clustering/split_by_CBtag.py -f $NEW_BAM2_SORTED -o $CELL_BAMS_DIR -t $TAGS_FILE
+python3 ../../split_by_CBtag.py -f $NEW_BAM2_SORTED -o $CELL_BAMS_DIR -t $TAGS_FILE
 
