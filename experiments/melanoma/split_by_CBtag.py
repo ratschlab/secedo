@@ -40,7 +40,7 @@ def main(argv):
     allowedTags = f.readlines()
   allowedTags = [tag[:-1] for tag in allowedTags]
   #print(allowedTags)
-  
+
 
   # variable to hold barcode index
   CB_hold = 'unset'
@@ -51,17 +51,20 @@ def main(argv):
   for read in samfile.fetch( until_eof=True):
       # barcode itr for current read
       CB_itr = read.get_tag( 'CB')
-      # if change in barcode or first line; open new file  
+      # if change in barcode or first line; open new file
       if( CB_itr!=CB_hold or itr==0):
           # close previous split file, only if not first read in file
           if( itr!=0):
               split_file.close()
           CB_hold = CB_itr
-          
+
           # if in allowed tags, open a new file and set allowed to true and increase the counter
           if CB_itr in allowedTags:
             allowed = True
-            split_file = pysam.AlignmentFile( out_dir + "CB_{}.bam".format( CB_itr), "wb", template=samfile)
+            try:
+              split_file = pysam.AlignmentFile( out_dir + "CB_{}.bam".format( CB_itr), "wb", template=samfile)
+            except FileNotFoundError:
+                print('Could not find ', CB_itr, ' skipping.')
             itr+=1
           else:
             allowed = False
@@ -77,7 +80,7 @@ def main(argv):
 
 
 
-   
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])

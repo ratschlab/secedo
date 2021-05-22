@@ -74,14 +74,14 @@ function variant_calling() {
   module load openblas
   svc="${code_dir}/build/svc"
   flagfile="${code_dir}/flags_breast"
-  for hprob in 0.9 0.99; do
+  for hprob in 0.15 0.3 0.5; do
     for seq_error_rate in 0.001 0.01; do
       out_dir="${base_dir}/svc_${hprob#*.}_${seq_error_rate#*.}/"
       log_dir="${out_dir}/logs/"
       mkdir -p "${log_dir}"
       command="${svc} -i ${pileup_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
                --homozygous_prob=${hprob} --seq_error_rate=${seq_error_rate} \
-               --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/svc.log"
+               --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 100 | tee ${log_dir}/svc.log"
       echo "$command"
 
       bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=20000]" -R "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" \
