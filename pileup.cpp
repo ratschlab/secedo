@@ -91,26 +91,39 @@ bool read_bam_file(const uint16_t cell_id,
         uint32_t del_offset = 0;
         uint32_t cigar_idx = 0;
         // skip soft/hard clips
-        while(al.CigarData[cigar_idx].Type == 'H' || al.CigarData[cigar_idx].Type == 'S') {
+        while (al.CigarData[cigar_idx].Type == 'H' || al.CigarData[cigar_idx].Type == 'S') {
             cigar_idx++;
         }
+        // the last position in the current cigar chunk
         uint32_t cigar_end = al.CigarData[cigar_idx].Length;
-        for (uint32_t i = 0; i < al.AlignedBases.size() - offset; ++i) {
+        for (uint32_t i = 0; i + offset < al.AlignedBases.size(); ++i) {
             // check if we stepped outside the current CIGAR chunk
-            while (i >= cigar_end) { // TODO: write a test for this
+            while (i >= cigar_end) {
                 cigar_idx++;
                 assert(cigar_idx < al.CigarData.size());
+
                 // if the aligned string has inserted bases relative to the reference, we simply
-                // skip those bases by increasing the offset and move on to the next CIGAR chunk
+                // skip those bases by increasing the offset and move on to the next CIGAR chunk,
+                // if there is one
                 if (al.CigarData.at(cigar_idx).Type == 'I') {
                     offset += al.CigarData[cigar_idx].Length;
+                    // on rare occasions, the last chunk in a cigar string is an I; if that's the
+                    // case we are done with the current alignment
+                    if (i + offset >= al.AlignedBases.size()) {
+                        assert(cigar_idx == al.CigarData.size() - 1);
+                        break;
+                    }
                     continue;
                 } else if (al.CigarData[cigar_idx].Type == 'D') {
+                    // deleted bases don't show up in AlignedBases, but they do show up in Qualities
                     del_offset += al.CigarData[cigar_idx].Length;
-                    cigar_end += al.CigarData[cigar_idx].Length;
-                    continue;
                 }
-                cigar_end = i + al.CigarData[cigar_idx].Length;
+                cigar_end += al.CigarData[cigar_idx].Length;
+            }
+
+            if (i + offset >= al.AlignedBases.size()) {
+                assert(cigar_idx == al.CigarData.size() - 1);
+                break;
             }
 
             uint8_t base = CharToInt[(uint8_t)al.AlignedBases[i + offset]];

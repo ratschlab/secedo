@@ -45,6 +45,7 @@ def main(argv):
     allowed = False
     # read in upsplit file and loop reads by line
     samfile = pysam.AlignmentFile(unsplit_file, "rb")
+    i = 0
     for read in samfile.fetch(until_eof=True):
         # barcode itr for current read
         cd_iter = read.get_tag('CB')
@@ -57,6 +58,8 @@ def main(argv):
 
             # if in allowed tags, open a new file and set allowed to true and increase the counter
             if cd_iter in allowed_tags:
+                i += 1
+                print(f'Tag {i} out of {len(allowed_tags)}')
                 allowed = True
                 try:
                     split_file = pysam.AlignmentFile(out_dir + "CB_{}.bam".format(cd_iter), "wb", template=samfile)

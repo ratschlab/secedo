@@ -1,8 +1,8 @@
 #include "pileup.hpp"
 #include "util/pileup_reader.hpp"
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -72,7 +72,7 @@ TEST(pileup, read_file) {
     auto [data, cell_ids, max_len] = read_pileup("data/test_pileup_2.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
-    ASSERT_THAT(cell_ids, UnorderedElementsAre(0,1));
+    ASSERT_THAT(cell_ids, UnorderedElementsAre(0, 1));
     check_content(data);
     std::filesystem::remove_all("data/test_pileup_2*");
 }
@@ -83,12 +83,12 @@ TEST(pileup, read_file) {
 TEST(pileup, soft_clipping) {
     uint32_t chromosome_id = 0;
     uint32_t max_coverage = 10;
-    pileup_bams({ "data/soft_clipping.bam", "data/test2.bam" }, "data/test_pileup_3", true, chromosome_id,
-                max_coverage, 1, 1);
+    pileup_bams({ "data/soft_clipping.bam", "data/test2.bam" }, "data/test_pileup_3", true,
+                chromosome_id, max_coverage, 1, 1);
     auto [data, cell_ids, max_len] = read_pileup("data/test_pileup_3.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
-    ASSERT_THAT(cell_ids, UnorderedElementsAre(0,1));
+    ASSERT_THAT(cell_ids, UnorderedElementsAre(0, 1));
     check_content(data);
     std::filesystem::remove_all("data/test_pileup_3*");
 }
@@ -99,12 +99,29 @@ TEST(pileup, soft_clipping) {
 TEST(pileup, hard_clipping) {
     uint32_t chromosome_id = 0;
     uint32_t max_coverage = 10;
-    pileup_bams({ "data/hard_clipping.bam", "data/test2.bam" }, "data/test_pileup_4", true, chromosome_id,
-                max_coverage, 1, 1);
+    pileup_bams({ "data/hard_clipping.bam", "data/test2.bam" }, "data/test_pileup_4", true,
+                chromosome_id, max_coverage, 1, 1);
     auto [data, cell_ids, max_len] = read_pileup("data/test_pileup_4.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
-    ASSERT_THAT(cell_ids, UnorderedElementsAre(0,1));
+    ASSERT_THAT(cell_ids, UnorderedElementsAre(0, 1));
+    check_content(data);
+    std::filesystem::remove_all("data/test_pileup_4*");
+}
+
+/**
+ * On rare occasions, the cigar string ends with an I (no idea why). Make sure such cases are
+ * correctly handled.
+ */
+TEST(pileup, insert_at_end) {
+    uint32_t chromosome_id = 0;
+    uint32_t max_coverage = 10;
+    pileup_bams({ "data/insert_at_end.bam", "data/test2.bam" }, "data/test_pileup_5", true,
+                chromosome_id, max_coverage, 1, 1);
+    auto [data, cell_ids, max_len] = read_pileup("data/test_pileup_4.bin", { 0, 1 });
+    // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
+    ASSERT_EQ(423, max_len);
+    ASSERT_THAT(cell_ids, UnorderedElementsAre(0, 1));
     check_content(data);
     std::filesystem::remove_all("data/test_pileup_4*");
 }

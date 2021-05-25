@@ -1,9 +1,9 @@
 # Splits aligned BAM files by chromosome, creates 23 pileup files distributed on 23 machines and then runs
 # variant calling
 
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/sliceB/processed_files"
-bam_dir="${base_dir}/aligned_cells"
-split_dir="${base_dir}/aligned_cells_split"
+slices="A B C"
+
+base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/all_slices/"
 pileup_dir="${base_dir}/pileups"
 code_dir="$HOME/somatic_variant_calling/code"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -11,29 +11,39 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # split the aligned BAMs by chromosome for easier parallelization
 function split_bams() {
-  echo "Splitting aligned BAMs by chromosome..."
 
-  files=($(find ${bam_dir} -name *.bam ))
-  n_cells=${#files[@]}
-  echo "Found ${n_cells} cells"
+  for slice in ${slices}; do
+    if [ ${slice} == "B" ]; then
+      continue
+    fi
+    slice_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/slice${slice}/processed_files"
+    bam_dir="${slice_dir}/aligned_cells"
+    split_dir="${slice_dir}/aligned_cells_split"
+
+    echo "Splitting aligned BAMs in slice ${bam_dir} by chromosome..."
+
+    files=($(find ${bam_dir} -name *.bam ))
+    n_cells=${#files[@]}
+    echo "Found ${n_cells} files"
 
 
-  step=100
-  mkdir -p "${split_dir}"
-  logs_dir="${split_dir}/logs"
-  mkdir -p ${logs_dir}
+    step=100
+    mkdir -p "${split_dir}"
+    logs_dir="${split_dir}/logs"
+    mkdir -p ${logs_dir}
 
-  for idx in $(seq 0 ${step} $((n_cells-1))); do
-    echo "Processing files ${idx}->$((idx+step-1))..."
-    cmd="echo hello"
-    for i in $(seq "${idx}" $((idx+step-1))); do
-      bam_file=${files[${i}]}
-      cmd="${cmd}; ${code_dir}/experiments/breast_cancer/split.sh ${bam_file} ${split_dir} \
-          | tee ${logs_dir}/split-${i}.log"
+    for idx in $(seq 0 ${step} $((n_cells-1))); do
+      echo "Processing files ${idx}->$((idx+step-1))..."
+      cmd="echo hello"
+      for i in $(seq "${idx}" $((idx+step-1))); do
+        bam_file=${files[${i}]}
+        cmd="${cmd}; ${code_dir}/experiments/breast_cancer/split.sh ${bam_file} ${split_dir} \
+            | tee ${logs_dir}/split-${i}.log"
+      done
+      # echo "${cmd}"
+      bsub -K -J "split-${i}" -W 1:00 -n 1 -R "rusage[mem=8000]" -R "span[hosts=1]" \
+          -oo "${logs_dir}/split-${i}.lsf.log" "${cmd}" &
     done
-    # echo "${cmd}"
-    bsub -K -J "split-${i}" -W 1:00 -n 1 -R "rusage[mem=8000]" -R "span[hosts=1]" \
-        -oo "${logs_dir}/split-${i}.lsf.log" "${cmd}" &
   done
 
   wait
@@ -43,6 +53,7 @@ function split_bams() {
 # Waits for jobs to complete
 function create_pileup() {
   echo "Generating pileups..."
+
   log_dir="${pileup_dir}/logs"
   pileup="${code_dir}/build/preprocess"
 
@@ -50,7 +61,13 @@ function create_pileup() {
   mkdir -p ${log_dir}
   for chromosome in {1..22} X; do # Y was not added - maybe it confuses things
           scratch_dir="/scratch/pileup_${chromosome}"
-          source_files=${split_dir}/*_chr${chromosome}.bam*
+          source_files=""
+          for slice in ${slices}; do
+            slice_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/slice${slice}/processed_files"
+            split_dir="${slice_dir}/aligned_cells_split"
+
+            source_files="${source_files} ${split_dir}/*_chr${chromosome}.bam*"
+          done
           num_files=`ls -l ${source_files} | wc -l`
           echo "Found ${num_files} files for chromosome ${chromosome}"
           copy_command="echo Copying data...; mkdir ${scratch_dir}; cp ${source_files} ${scratch_dir}"
@@ -85,7 +102,7 @@ function variant_calling() {
                --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/svc.log"
       echo "$command"
 
-      bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=20000]" -R "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" \
+      bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=40000]" -R "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" \
            "${command}" &
     done
   done
