@@ -38,7 +38,7 @@ Matd laplacian(const Matd &a) {
         }
     }
     std::transform(diag.begin(), diag.end(), diag.begin(),
-                   [](double v) { return 1 / std::sqrt(v); });
+                   [](double v) { return v == 0 ? 0 : 1 / std::sqrt(v); });
     Matd result = Matd::zeros(a.rows(), a.rows());
     for (uint32_t r = 0; r < a.rows(); ++r) {
         for (uint32_t c = 0; c <= r; ++c) {

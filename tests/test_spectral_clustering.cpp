@@ -180,6 +180,20 @@ TEST_P(SpectralClustering, ThreeClusters) {
     }
 }
 
+// make sure the algorithm doesn't crash if the similarity matrix is all zeros
+TEST_P(SpectralClustering, AllZero) {
+    logger()->set_level(spdlog::level::trace);
+    auto [clustering, termination, use_arma_kmeans] = GetParam();
+
+    constexpr uint32_t num_cells = 99;
+
+    std::vector<double> cluster;
+    // we have 100 cells, with the first 50 and last 50 being identical (modulo some noise) to each
+    // other
+    Matd similarity = Matd::zeros(num_cells, num_cells);
+    spectral_clustering(similarity, clustering, termination, "./", "", use_arma_kmeans, &cluster);
+}
+
 INSTANTIATE_TEST_SUITE_P(
         Method,
         SpectralClustering,
