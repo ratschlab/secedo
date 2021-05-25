@@ -92,7 +92,7 @@ function variant_calling() {
   module load openblas
   svc="${code_dir}/build/svc"
   flagfile="${code_dir}/flags_breast"
-  for hprob in 0.9 0.99; do
+  for hprob in 0.3 0.5; do
     for seq_error_rate in 0.001 0.01; do
       out_dir="${base_dir}/svc_${hprob#*.}_${seq_error_rate#*.}/"
       log_dir="${out_dir}/logs/"
