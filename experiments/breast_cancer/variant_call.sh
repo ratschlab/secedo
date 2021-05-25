@@ -102,7 +102,7 @@ function variant_calling() {
                --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/svc.log"
       echo "$command"
 
-      bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=40000]" -R "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" \
+      bsub -K -J "svc" -W 04:00 -n 20 -R "rusage[mem=40000]" -R "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" \
            "${command}" &
     done
   done

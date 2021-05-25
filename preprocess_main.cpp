@@ -56,7 +56,8 @@ int main(int argc, char *argv[]) {
         auto f_map_name = std::filesystem::path(FLAGS_o + "_" + FLAGS_chromosomes + ".map");
         std::ofstream f_map(f_map_name);
         for (uint32_t i = 0; i < input_files.size(); ++i) {
-            f_map << input_files[i].filename() << "\t" << i << std::endl;
+            std::string fname = input_files[i].filename().replace_extension().string();
+            f_map << fname.substr(0, fname.rfind("_")) << "\t" << i << std::endl;
         }
     }
 
