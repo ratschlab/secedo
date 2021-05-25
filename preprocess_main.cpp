@@ -51,6 +51,13 @@ int main(int argc, char *argv[]) {
         }
         std::sort(input_files.begin(), input_files.end());
         logger()->info("Found {} input files in '{}'", input_files.size(), FLAGS_i);
+
+        // write the mapping between the actual cell id and the cell idx used in the pileup
+        auto f_map_name = std::filesystem::path(FLAGS_o + "_" + FLAGS_chromosomes + ".map");
+        std::ofstream f_map(f_map_name);
+        for (uint32_t i = 0; i < input_files.size(); ++i) {
+            f_map << input_files[i].filename() << "\t" << i << std::endl;
+        }
     }
 
     if (std::filesystem::is_directory(FLAGS_o)) {
