@@ -358,7 +358,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     }
 
     ProgressBar progress(total_positions, "Processed:", std::cout);
-    progress.SetFrequencyUpdate(total_positions / 100);
+    progress.SetFrequencyUpdate(std::max(1ULL, total_positions / 100));
     std::deque<uint32_t> active_keys;
     // the number of completed DNA fragments, i.e. reads that started max_fragment_length ago
     uint32_t completed = 0;
