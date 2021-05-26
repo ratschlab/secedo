@@ -48,8 +48,8 @@ DEFINE_string(log_level,
 DEFINE_uint32(merge_count,
               1,
               "Pool data from  merge_count consecutive cells as if they were a single cell, in"
-              "  order to artificially increase coverage. Only work on synthetic data where we know"
-              " consecutive cells are part of the same cluster!");
+              "  order to artificially increase coverage. Only works on synthetic data where we "
+              "know consecutive cells are part of the same cluster!");
 
 DEFINE_string(merge_file,
               "",
