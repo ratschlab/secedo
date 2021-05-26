@@ -72,6 +72,10 @@ static bool ValidateClusteringType(const char *flagname, const std::string &valu
 }
 DEFINE_validator(clustering_type, ValidateClusteringType);
 
+DEFINE_uint32(min_cluster_size,
+              100,
+              "Stop clustering when the size of a cluster is below this value");
+
 static bool ValidateTermination(const char *flagname, const std::string &value) {
     if (value != "AIC" && value != "BIC") {
         printf("Invalid value for --%s: %s.\nShould be one of AIC, BIC\n", flagname, value.c_str());
@@ -253,9 +257,9 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     }
 
     for (uint32_t c = 0; c < num_clusters; ++c) {
-        if (pos_to_id_new[c].size() < 30) {
-            logger()->trace("Cluster {} size is too small. Stopping.", c);
-            return; // TODO: hack - figure it out
+        if (pos_to_id_new[c].size() < FLAGS_min_cluster_size) {
+            logger()->trace("Cluster {} size is too small ({} vs {}). Stopping.", c,
+                            pos_to_id_new[c].size(), FLAGS_min_cluster_size);
         }
     }
 

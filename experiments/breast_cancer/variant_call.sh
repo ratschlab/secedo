@@ -4,7 +4,7 @@
 slices="A B C D E"
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/all_slices/"
-pileup_dir="${base_dir}/pileups"
+pileup_dir="${base_dir}/pileupsABCDE"
 code_dir="$HOME/somatic_variant_calling/code"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
