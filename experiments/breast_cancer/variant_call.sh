@@ -1,9 +1,9 @@
 # Splits aligned BAM files by chromosome, creates 23 pileup files distributed on 23 machines and then runs
 # variant calling
 
-slices="B"
+slices="A B C D E"
 
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/sliceB/processed_files"
+base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/all_slices/"
 pileup_dir="${base_dir}/pileups"
 code_dir="$HOME/somatic_variant_calling/code"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -95,16 +95,16 @@ function variant_calling() {
   flagfile="${code_dir}/flags_breast"
   for hprob in 0.3 0.5; do
     for seq_error_rate in 0.001 0.01; do
-      out_dir="${base_dir}/svc_2x_${hprob#*.}_${seq_error_rate#*.}/"
-      log_dir="${out_dir}/logs/"
+      out_dir="${base_dir}/svc_${hprob#*.}_${seq_error_rate#*.}"
+      log_dir="${out_dir}/logs"
       mkdir -p "${log_dir}"
       command="${svc} -i ${pileup_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
                --homozygous_prob=${hprob} --seq_error_rate=${seq_error_rate} \
-               --merge_file="${code_dir}/experiments/breast_cancer/breast_group_2"
                --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/svc.log"
+      #                --merge_file="${code_dir}/experiments/breast_cancer/breast_group_2"
       echo "$command"
 
-      bsub -K -J "svc${slices}_${hprob#*.}_${seq_error_rate#*.}" -W 04:00 -n 20 -R "rusage[mem=40000]" \
+      bsub -K -J "svc${slices}_${hprob#*.}_${seq_error_rate#*.}" -W 08:00 -n 20 -R "rusage[mem=60000]" \
            -R  "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" "${command}" &
     done
   done
