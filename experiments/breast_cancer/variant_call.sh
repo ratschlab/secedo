@@ -77,7 +77,8 @@ function create_pileup() {
           echo "Copy command: ${copy_command}"
           echo "Pileup command: $command"
           # allocating 40G scratch space; for the 1400 simulated Varsim cells, chromosomes 1/2 (the longest) need ~22G
-          bsub  -K -J "pile-${chromosome}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
+          bsub  -K -J "pile-${chromosome}-${slices}" -W 01:00 -n 20 \
+                -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
                 -oo "${log_dir}/pileup-${chromosome}.lsf.log" "${copy_command}; ${command}; rm -rf ${scratch_dir}" &
   done
 
@@ -102,8 +103,8 @@ function variant_calling() {
                --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/svc.log"
       echo "$command"
 
-      bsub -K -J "svc" -W 04:00 -n 20 -R "rusage[mem=40000]" -R "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" \
-           "${command}" &
+      bsub -K -J "svc${slices}_${hprob#*.}_${seq_error_rate#*.}" -W 04:00 -n 20 -R "rusage[mem=40000]" \
+           -R  "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" "${command}" &
     done
   done
 
