@@ -72,7 +72,7 @@ TEST(pileup, read_file) {
     auto [data, cell_count, max_len] = read_pileup("data/test_pileup_2.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
-    ASSERT_EQ(cell_count, 1);
+    ASSERT_EQ(cell_count, 2);
     check_content(data);
     std::filesystem::remove_all("data/test_pileup_2*");
 }
@@ -88,7 +88,7 @@ TEST(pileup, soft_clipping) {
     auto [data, cell_count, max_len] = read_pileup("data/test_pileup_3.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
-    ASSERT_EQ(cell_count, 1);
+    ASSERT_EQ(cell_count, 2);
     check_content(data);
     std::filesystem::remove_all("data/test_pileup_3*");
 }
@@ -104,7 +104,7 @@ TEST(pileup, hard_clipping) {
     auto [data, cell_count, max_len] = read_pileup("data/test_pileup_4.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
-    ASSERT_EQ(cell_count, 1);
+    ASSERT_EQ(cell_count, 2);
     check_content(data);
     std::filesystem::remove_all("data/test_pileup_4*");
 }
@@ -121,7 +121,7 @@ TEST(pileup, insert_at_end) {
     auto [data, cell_count, max_len] = read_pileup("data/test_pileup_4.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
-    ASSERT_EQ(cell_count, 1);
+    ASSERT_EQ(cell_count, 2);
     check_content(data);
     std::filesystem::remove_all("data/test_pileup_4*");
 }
