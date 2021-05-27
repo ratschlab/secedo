@@ -292,7 +292,8 @@ uint32_t spectral_clustering(const Matd &similarity,
         return 1;
     }
     for (uint32_t i = 0; i < max_clusters; ++i) {
-        uint32_t count = std::count(cluster->begin(), cluster->end(), i);
+        uint32_t count = std::count_if(cluster->begin(), cluster->end(),
+                                       [i](double v) { return std::abs(v - i) < 1e-3; });
         logger()->trace("Cluster {} has {} cells", i + 1, count);
     }
     return cluster_count;
