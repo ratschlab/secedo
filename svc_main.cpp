@@ -260,10 +260,11 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
         if (pos_to_id_new[c].size() < FLAGS_min_cluster_size) {
             logger()->trace("Cluster {} size is too small ({} vs {}). Stopping.", c,
                             pos_to_id_new[c].size(), FLAGS_min_cluster_size);
+        } else {
+            variant_call(pds, input_files, max_read_length, id_to_group, id_to_pos_new[c],
+                         pos_to_id_new[c], mutation_rate, homozygous_rate, seq_error_rate,
+                         num_threads, out_dir, normalization, marker + static_cast<char>('A' + c));
         }
-        variant_call(pds, input_files, max_read_length, id_to_group, id_to_pos_new[c],
-                     pos_to_id_new[c], mutation_rate, homozygous_rate, seq_error_rate, num_threads,
-                     out_dir, normalization, marker + static_cast<char>('A' + c));
     }
 }
 
