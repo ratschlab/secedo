@@ -84,13 +84,6 @@ TEST(Preprocess, Paradox) {
 }
 
 
-/** Make sure we round the length of the string properly (for computing the proper threshold K),
- * i.e. length 65 in this case should generate index 5 */
-TEST(Preprocess, LengthAtLimitRoundDown) {
-    std::string bases = "TTTTTTTTTTTTTTTTTTTTTTTTTTTTGGGTGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT";
-    ASSERT_TRUE(is_significant_helper(bases, 0.001));
-}
-
 // this test is removed, as we stopped emulating the python version after introducing
 // is_two_sigmas_away()
 /** Make sure we round the length of the string properly (for computing the proper threshold K),
