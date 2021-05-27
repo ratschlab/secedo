@@ -65,9 +65,9 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
         return false;
     }
 
-//    if (is_two_sigmas_away(coverage, base_count)) {
-//        return true;
-//    }
+    //    if (is_two_sigmas_away(coverage, base_count)) {
+    //        return true;
+    //    }
 
     // choose K threshold for the closest coverage, rounding to nearest even to emulate Python
     uint32_t threshold_idx
@@ -129,7 +129,8 @@ Filter::filter(const std::vector<std::vector<PosData>> &pos_data,
 
             if (is_significant(base_count)) {
                 coverage_chr[chr_idx] += read_ids.size();
-                filtered_data.push_back({ pd.position, read_ids, cell_ids_and_bases });
+                filtered_data.emplace_back(pd.position, std::move(read_ids),
+                                           std::move(cell_ids_and_bases));
             }
         }
         total_positions.fetch_add(filtered_data.size());

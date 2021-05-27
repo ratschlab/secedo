@@ -11,10 +11,18 @@
 struct PosData {
     PosData(uint32_t position,
             std::vector<uint32_t> &&read_ids,
-            std::vector<uint16_t> cell_ids_bases)
+            std::vector<uint16_t> &&cell_ids_bases)
         : position(position),
           read_ids(std::move(read_ids)),
           cell_ids_bases(std::move(cell_ids_bases)) {}
+
+    PosData(uint32_t position,
+            const std::vector<uint32_t> &read_ids,
+            const std::vector<uint16_t> &cell_ids_bases)
+            : position(position),
+              read_ids(std::move(read_ids)),
+              cell_ids_bases(std::move(cell_ids_bases)) {}
+
     uint32_t position;
     /** ids of all reads at this position */
     std::vector<uint32_t> read_ids;

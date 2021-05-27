@@ -209,15 +209,13 @@ get_batches(const std::vector<std::filesystem::path> &input_files, uint32_t batc
 }
 
 PosData create_pos_data(uint32_t pos, std::vector<CellData> cell_data, uint32_t size) {
-    PosData result;
-    result.cell_ids_bases.resize(size);
-    result.read_ids.resize(size);
-    result.position = pos;
+    std::vector<uint16_t> cell_ids_bases(size);
+    std::vector<uint32_t> read_ids(size);
     for (uint32_t i = 0; i < size; ++i) {
-        result.cell_ids_bases[i] = cell_data[i].cell_id_and_base;
-        result.read_ids[i] = cell_data[i].read_id;
+        cell_ids_bases[i] = cell_data[i].cell_id_and_base;
+        read_ids[i] = cell_data[i].read_id;
     }
-    return result;
+    return PosData(pos, std::move(read_ids), std::move(cell_ids_bases));
 }
 
 std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_files,
