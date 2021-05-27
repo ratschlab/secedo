@@ -33,7 +33,7 @@ read_pileup_text(const std::string fname,
     std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> id_stats;
     uint32_t id_count = 0;
     uint64_t read_bytes = 0;
-    uint32_t  pos_idx = 0;
+    uint32_t pos_idx = 0;
     // process position by position
     while (std::getline(f, line)) {
         read_bytes = (line.size() + 1);
@@ -54,7 +54,7 @@ read_pileup_text(const std::string fname,
         }
 
         if (!positions.empty()) {
-            while(pos_idx < positions.size() && positions[pos_idx] < position) {
+            while (pos_idx < positions.size() && positions[pos_idx] < position) {
                 pos_idx++;
             }
             if (pos_idx == positions.size()) {
@@ -190,7 +190,7 @@ read_pileup_bin(const std::string fname,
         }
 
         if (!positions.empty()) {
-            while(pos_idx < positions.size() && positions[pos_idx] < position) {
+            while (pos_idx < positions.size() && positions[pos_idx] < position) {
                 pos_idx++;
             }
             if (pos_idx == positions.size()) {
@@ -215,18 +215,18 @@ read_pileup_bin(const std::string fname,
             uint8_t base = cell_ids_and_bases[i] & 3;
             cell_ids_and_bases[i] = id_to_group[cell_id] << 2 | base;
             all_cell_ids_grouped.insert(cell_id);
-        }
 
-        PosData pd = { position, read_ids, cell_ids_and_bases };
-
-        for (uint32_t j = 0; j < read_ids.size(); ++j) {
-            uint32_t read_id = read_ids[j];
-            if (id_stats.find(read_id) != id_stats.end()) {
-                id_stats[read_id] = { id_stats[read_id].first, position };
+            uint32_t read_id = read_ids[i];
+            auto it = id_stats.find(read_id);
+            if (it != id_stats.end()) {
+                it->second = { it->second.first, position };
             } else {
                 id_stats[read_id] = { position, position };
             }
         }
+
+        PosData pd = { position, read_ids, cell_ids_and_bases };
+
         result.push_back(std::move(pd));
     }
 
@@ -254,8 +254,9 @@ read_pileup(const std::string fname,
             const std::function<void(uint64_t)> &progress,
             uint32_t max_coverage,
             const std::vector<uint32_t> positions) {
-    return ends_with(fname, ".bin") ? read_pileup_bin(fname, id_to_group, progress, max_coverage, positions)
-                                    : read_pileup_text(fname, id_to_group, progress, max_coverage, positions);
+    return ends_with(fname, ".bin")
+            ? read_pileup_bin(fname, id_to_group, progress, max_coverage, positions)
+            : read_pileup_text(fname, id_to_group, progress, max_coverage, positions);
 }
 
 

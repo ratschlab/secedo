@@ -3,7 +3,7 @@
 
 slices="A B C D E"
 
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/all_slices/"
+base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/all_slices"
 pileup_dir="${base_dir}/pileupsABCDE"
 code_dir="$HOME/somatic_variant_calling/code"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -104,7 +104,7 @@ function variant_calling() {
       #                --merge_file="${code_dir}/experiments/breast_cancer/breast_group_2"
       echo "$command"
 
-      bsub -K -J "svc${slices}_${hprob#*.}_${seq_error_rate#*.}" -W 08:00 -n 20 -R "rusage[mem=60000]" \
+      bsub -K -J "svc${slices}_${hprob#*.}_${seq_error_rate#*.}" -W 08:00 -n 20 -R "rusage[mem=80000]" \
            -R  "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" "${command}" &
     done
   done

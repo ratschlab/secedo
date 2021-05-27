@@ -55,7 +55,7 @@ function generate_cell_patterns() {
   printf "\n\n\n"
    # TODO: replace healthy_vcf with line below to generate tumor cells based on the healthy cell
   # healthy_vcf="${base_dir}/genomes/healthy.truth.vcf"
-  healthy_vcf="${base_dir}/genomes/tumor-40K-1/tumor-40K-1.truth.vcf"
+  healthy_vcf="${base_dir}/genomes/tumor-20K-3/tumor-20K-3.truth.vcf"
   if [ -f ${healthy_vcf} ]; then
     echo "Using existing ${healthy_vcf}"
   else
@@ -64,12 +64,13 @@ function generate_cell_patterns() {
     echo "done"
   fi
   # Here we are simulating tumor cells that have 40K SNPs in common but only differ among themselves with 20K
-  for i in $(seq 2 "${n_tumor}"); do # TODO: set back to 1
+  # ... and now we make the 4th tumor cell only have 10K SNPs relative to the 3rd
+  for i in $(seq 4 "${n_tumor}"); do # TODO: set back to 1
     command="time python2 ${base_dir}/varsim-0.8.4/varsim_somatic.py \
             --reference ${base_dir}/genomes/GRCh38_new.fa \
             --id tumor-20K-${i} \
             --seed $((i*1743)) \
-            --som_num_snp 20000 \
+            --som_num_snp 10000 \
             --som_num_ins 250 \
             --som_num_del 250 \
             --som_num_mnp 200 \
@@ -117,14 +118,14 @@ function generate_reads() {
         --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} \
         2>&1 | tee ${out_dir}/logs/sim-healthy-${batch}.log"
 #    echo ${cmd}
-    bsub  -K -J "sim-he-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
-                -oo "${out_dir}/logs/sim-healthy-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
+#    bsub  -K -J "sim-he-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
+#                -oo "${out_dir}/logs/sim-healthy-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
   done
 
   out_dir="${base_dir}/${cov}/tumor"
   mkdir -p "${out_dir}/logs/"
 
-  for tumor_type in $(seq 1 "${n_tumor}"); do
+  for tumor_type in $(seq 4 "${n_tumor}"); do  # TODO: set back to 1
     out_prefix=${out_dir}/tumor_${tumor_type}_
     fasta="tumor-20K-${tumor_type}.fa"
 
@@ -159,6 +160,7 @@ function map_reads() {
   logs_dir="${base_dir}/${cov}/aligned_cells_split/logs"
   mkdir -p ${logs_dir}
 
+  # First map healthy cells
   for idx in $(seq 0 ${step} $((n_cells-1))); do
     cmd="echo hello"
     for i in $(seq "${idx}" $((idx+step-1))); do
@@ -173,10 +175,11 @@ function map_reads() {
            ${code_dir}/experiments/varsim/split.sh ${bam_file} ${base_dir}/${cov}"
     done
     # echo "${cmd}"
-    bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${logs_dir}/bowtie-healthy-${i}.lsf.log" "${cmd}" &
+    # bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${logs_dir}/bowtie-healthy-${i}.lsf.log" "${cmd}" &
   done
 
-  for tumor_type in $(seq 1 "${n_tumor}"); do  # TODO: change back to 1
+  # Now map tumor cells
+  for tumor_type in $(seq 4 "${n_tumor}"); do  # TODO: change back to 1
     for idx in $(seq 0 ${step} $((n_cells-1))); do
         cmd="echo hello"
         for i in $(seq "${idx}" $((idx+step-1))); do
@@ -238,8 +241,8 @@ function variant_calling() {
   input_dir="${work_dir}/pileups"
   svc="${code_dir}/build/svc"
   flagfile="${code_dir}/flags_sim"
-  for hprob in 0.9; do
-    for seq_error_rate in 0.001 0.01; do
+  for hprob in 0.3 0.5; do
+    for seq_error_rate in 0.01; do
       out_dir="${work_dir}/svc_${hprob#*.}_${seq_error_rate#*.}/"
       mkdir -p "${out_dir}"
       command="${svc} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
