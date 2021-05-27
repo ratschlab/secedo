@@ -152,7 +152,7 @@ read_pileup_bin(const std::string fname,
     std::ifstream f(fname, std::ios::binary);
     std::string line;
     uint16_t max_cell_id = 0;
-    std::unordered_set<uint32_t> all_cell_ids_grouped;
+    uint16_t max_cell_id_grouped = 0;
 
     // maps read ids to a (first,last) pair (in order to find the longest DNA fragment)
     std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> id_stats;
@@ -216,7 +216,7 @@ read_pileup_bin(const std::string fname,
             }
             uint8_t base = cell_ids_and_bases[read_idx] & 3;
             cell_ids_and_bases[read_idx] = id_to_group[cell_id] << 2 | base;
-            all_cell_ids_grouped.insert(cell_id);
+            max_cell_id_grouped = std::max(max_cell_id_grouped, id_to_group[cell_id]);
 
             uint32_t read_id = read_ids[read_idx];
             auto it = id_stats.find(read_id);
@@ -245,7 +245,7 @@ read_pileup_bin(const std::string fname,
     logger()->trace(
             "{}: found {} cell ids, {} after grouping, {} reads. "
             "Longest fragment is {} with {} bases",
-            fname, max_cell_id, all_cell_ids_grouped.size(), id_stats.size(), max_id, max_length);
+            fname, max_cell_id, max_cell_id_grouped, id_stats.size(), max_id, max_length);
 
     return { result, max_cell_id, max_length };
 }
