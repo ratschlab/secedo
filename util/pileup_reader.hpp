@@ -35,7 +35,8 @@ std::tuple<std::vector<PosData>, uint16_t, uint32_t> read_pileup(
         const std::vector<uint16_t> &id_to_group,
         const std::function<void(uint64_t)> &progress = [](uint32_t) {},
         uint32_t max_coverage = 100,
-        const std::vector<uint32_t> positions = {});
+        const std::vector<uint32_t> positions = {},
+        bool compute_max_read_len = true);
 
 
 /**

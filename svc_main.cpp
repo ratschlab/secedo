@@ -338,7 +338,7 @@ int main(int argc, char *argv[]) {
         std::tie(pos_data[i], max_cell_ids[i], max_read_lengths[i]) = read_pileup(
                 input_files[i], id_to_group,
                 [&read_progress](uint32_t progress) { read_progress += progress; },
-                FLAGS_max_coverage, positions[chromosome_id]);
+                FLAGS_max_coverage, positions[chromosome_id], false /* compute read len */);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
     uint32_t num_cells = *std::max_element(max_cell_ids.begin(), max_cell_ids.end()) + 1;

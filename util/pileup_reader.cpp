@@ -141,7 +141,8 @@ read_pileup_bin(const std::string fname,
                 const std::vector<uint16_t> &id_to_group,
                 const std::function<void(uint64_t)> &progress,
                 uint32_t max_coverage,
-                const std::vector<uint32_t> &positions) {
+                const std::vector<uint32_t> &positions,
+                bool compute_max_read_length) {
     std::vector<PosData> result;
 
     if (!std::filesystem::exists(fname)) {
@@ -218,12 +219,16 @@ read_pileup_bin(const std::string fname,
             cell_ids_and_bases[read_idx] = id_to_group[cell_id] << 2 | base;
             max_cell_id_grouped = std::max(max_cell_id_grouped, id_to_group[cell_id]);
 
-            uint32_t read_id = read_ids[read_idx];
-            auto it = id_stats.find(read_id);
-            if (it != id_stats.end()) {
-                it->second = { it->second.first, position };
-            } else {
-                id_stats[read_id] = { position, position };
+            // computing the max read length is actually expensive, so we don't do it by default,
+            // simply approximating the read length to 1000
+            if (compute_max_read_length) {
+                uint32_t read_id = read_ids[read_idx];
+                auto it = id_stats.find(read_id);
+                if (it != id_stats.end()) {
+                    it->second = { it->second.first, position };
+                } else {
+                    id_stats[read_id] = { position, position };
+                }
             }
         }
 
@@ -245,7 +250,7 @@ read_pileup_bin(const std::string fname,
             "Longest fragment is {} with {} bases",
             fname, max_cell_id, max_cell_id_grouped, id_stats.size(), max_id, max_length);
 
-    return { result, max_cell_id, max_length };
+    return { result, max_cell_id, compute_max_read_length ? max_length : 1000 };
 }
 
 std::tuple<std::vector<PosData>, uint16_t, uint32_t>
@@ -253,9 +258,10 @@ read_pileup(const std::string fname,
             const std::vector<uint16_t> &id_to_group,
             const std::function<void(uint64_t)> &progress,
             uint32_t max_coverage,
-            const std::vector<uint32_t> positions) {
+            const std::vector<uint32_t> positions,
+            bool compute_max_read_len) {
     return ends_with(fname, ".bin")
-            ? read_pileup_bin(fname, id_to_group, progress, max_coverage, positions)
+            ? read_pileup_bin(fname, id_to_group, progress, max_coverage, positions, compute_max_read_len)
             : read_pileup_text(fname, id_to_group, progress, max_coverage, positions);
 }
 
