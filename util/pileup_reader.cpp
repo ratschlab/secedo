@@ -177,7 +177,7 @@ read_pileup_bin(const std::string fname,
         f.read(reinterpret_cast<char *>(cell_ids_and_bases.data()),
                coverage * sizeof(cell_ids_and_bases[0]));
 
-        if (i % 100) {
+        if (i & 127) {
             // report progress
             read_bytes = f.tellg();
             if ((int64_t)read_bytes == -1) { // end of file
