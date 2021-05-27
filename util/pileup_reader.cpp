@@ -236,6 +236,7 @@ read_pileup_bin(const std::string fname,
     }
 
     max_cell_id++;
+    max_cell_id_grouped++;
     uint32_t max_length = 0;
     uint32_t max_id = 0;
     for (const auto &[k, v] : id_stats) {
@@ -245,10 +246,12 @@ read_pileup_bin(const std::string fname,
             max_id = k;
         }
     }
-    logger()->trace(
-            "{}: found {} cell ids, {} after grouping, {} reads. "
-            "Longest fragment is {} with {} bases",
-            fname, max_cell_id, max_cell_id_grouped, id_stats.size(), max_id, max_length);
+    logger()->trace("{}: found {} cell ids, {} after grouping", fname, max_cell_id,
+                    max_cell_id_grouped);
+    if (compute_max_read_length) {
+        logger()->trace("{} reads. Longest fragment is {} with {} bases", fname, max_cell_id,
+                        max_cell_id_grouped, id_stats.size(), max_id, max_length);
+    }
 
     return { result, max_cell_id, compute_max_read_length ? max_length : 1000 };
 }
@@ -261,7 +264,8 @@ read_pileup(const std::string fname,
             const std::vector<uint32_t> positions,
             bool compute_max_read_len) {
     return ends_with(fname, ".bin")
-            ? read_pileup_bin(fname, id_to_group, progress, max_coverage, positions, compute_max_read_len)
+            ? read_pileup_bin(fname, id_to_group, progress, max_coverage, positions,
+                              compute_max_read_len)
             : read_pileup_text(fname, id_to_group, progress, max_coverage, positions);
 }
 

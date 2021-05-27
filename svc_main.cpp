@@ -76,6 +76,11 @@ DEFINE_uint32(min_cluster_size,
               100,
               "Stop clustering when the size of a cluster is below this value");
 
+DEFINE_bool(compute_read_stats,
+            false,
+            "If set to true, the algorithm will compute the maximum fragment length and the "
+            "longest fragment for each pileup file (expensive)");
+
 static bool ValidateTermination(const char *flagname, const std::string &value) {
     if (value != "AIC" && value != "BIC") {
         printf("Invalid value for --%s: %s.\nShould be one of AIC, BIC\n", flagname, value.c_str());
@@ -339,7 +344,7 @@ int main(int argc, char *argv[]) {
         std::tie(pos_data[i], max_cell_ids[i], max_read_lengths[i]) = read_pileup(
                 input_files[i], id_to_group,
                 [&read_progress](uint32_t progress) { read_progress += progress; },
-                FLAGS_max_coverage, positions[chromosome_id], false /* compute read len */);
+                FLAGS_max_coverage, positions[chromosome_id], FLAGS_compute_read_stats);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
     uint32_t num_cells = *std::max_element(max_cell_ids.begin(), max_cell_ids.end()) + 1;
