@@ -160,7 +160,7 @@ read_pileup_bin(const std::string fname,
     uint64_t read_bytes = 0;
     uint64_t reported_bytes = 0;
     uint32_t pos_idx = 0;
-
+    uint32_t i = 0;
     while (f.good()) {
         uint32_t position;
         uint16_t coverage;
@@ -177,14 +177,15 @@ read_pileup_bin(const std::string fname,
         f.read(reinterpret_cast<char *>(cell_ids_and_bases.data()),
                coverage * sizeof(cell_ids_and_bases[0]));
 
-        // report progress
-        read_bytes = f.tellg();
-        if ((int64_t)read_bytes == -1) { // end of file
-            read_bytes = std::filesystem::file_size(fname);
+        if (i % 100) {
+            // report progress
+            read_bytes = f.tellg();
+            if ((int64_t)read_bytes == -1) { // end of file
+                read_bytes = std::filesystem::file_size(fname);
+            }
+            progress(read_bytes - reported_bytes);
+            reported_bytes = read_bytes;
         }
-        progress(read_bytes - reported_bytes);
-        reported_bytes = read_bytes;
-
         if (coverage > max_coverage) {
             continue;
         }
