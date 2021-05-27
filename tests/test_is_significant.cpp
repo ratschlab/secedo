@@ -163,10 +163,10 @@ TEST(Filter, OnePosNotSignificant) {
 TEST(Filter, AllSignificant) {
     logger()->set_level(spdlog::level::trace);
     std::vector<std::vector<PosData>> pos_data;
-    for (uint32_t chr = 0; chr < 23; ++chr) {
-        uint32_t coverage = 100;
-        uint32_t num_diff = 10; // bases different from the others
+    uint32_t coverage = 100;
+    uint32_t num_diff = 10; // bases different from the others
 
+    for (uint32_t chr = 0; chr < 23; ++chr) {
         std::vector<uint32_t> read_ids;
         std::vector<uint8_t> bases;
         std::vector<uint16_t> cell_ids;
@@ -188,16 +188,16 @@ TEST(Filter, AllSignificant) {
         }
         pos_data.push_back(chromosome_data);
     }
-    std::vector<uint16_t> id_to_group(10);
+    std::vector<uint16_t> id_to_group(coverage);
     std::iota(id_to_group.begin(), id_to_group.end(), 0);
-    std::vector<uint32_t> id_to_pos(10);
+    std::vector<uint32_t> id_to_pos(coverage);
     std::iota(id_to_pos.begin(), id_to_pos.end(), 0);
 
     std::vector<std::vector<PosData>> filtered;
     double avg_coverage;
     Filter filter(1e-3);
     std::tie(filtered, avg_coverage) = filter.filter(pos_data, id_to_group, id_to_pos, "", 2);
-    ASSERT_EQ(avg_coverage, 100);
+    ASSERT_EQ(avg_coverage, coverage);
     ASSERT_EQ(23, filtered.size());
     ASSERT_EQ(filtered, pos_data);
 }
