@@ -186,6 +186,7 @@ read_pileup_bin(const std::string fname,
             progress(read_bytes - reported_bytes);
             reported_bytes = read_bytes;
         }
+        i++;
         if (coverage > max_coverage) {
             continue;
         }
