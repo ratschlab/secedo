@@ -205,6 +205,8 @@ function map_reads() {
 # Starts jobs for creating pileup files from the aligned BAM files. One job per Chromosome.
 # Waits for jobs to complete
 function create_pileup() {
+  module load openblas
+
   echo "[$(date)] Generating pileups..."
   out_dir="${base_dir}/${cov}/pileups"
   log_dir="${out_dir}/logs"

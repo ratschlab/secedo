@@ -52,6 +52,8 @@ function split_bams() {
 # Starts jobs for creating pileup files from the aligned BAM files. One job per Chromosome.
 # Waits for jobs to complete
 function create_pileup() {
+  module load openblas
+
   echo "Generating pileups..."
 
   log_dir="${pileup_dir}/logs"
