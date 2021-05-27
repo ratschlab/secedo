@@ -177,7 +177,7 @@ read_pileup_bin(const std::string fname,
         f.read(reinterpret_cast<char *>(cell_ids_and_bases.data()),
                coverage * sizeof(cell_ids_and_bases[0]));
 
-        if (i & 127) {
+        if (i & 4095) {
             // report progress
             read_bytes = f.tellg();
             if ((int64_t)read_bytes == -1) { // end of file
@@ -227,7 +227,7 @@ read_pileup_bin(const std::string fname,
             }
         }
 
-        result.push_back({ position, std::move(read_ids), std::move(cell_ids_and_bases) });
+        result.emplace_back(position, std::move(read_ids), std::move(cell_ids_and_bases));
     }
 
     max_cell_id++;

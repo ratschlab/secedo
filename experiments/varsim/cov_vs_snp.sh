@@ -2,17 +2,6 @@
 # SNP distance and given coverage and checking if the algorithm correctly clusters
 
 
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
-fastas=("${base_dir}/genomes/tumor-20K-3.fa" "${base_dir}/genomes/tumor-20K-4.fa")
-
-coverage=0.05  # read coverage for each cell
-cov="cov${coverage#*.}x_snp"  # e.g. cov01x_snp for coverage 0.01x
-n_cells=500 # number of  cells in each group
-code_dir="$HOME/somatic_variant_calling/code"
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
-
-
 # runs art_illumina to generate simulated reads for #n_cells healthy and #n_cells tumor cells with coverage #coverage
 # Start jobs for generating both healthy and tumor reads and wait for the jobs to complete
 function generate_reads() {
@@ -161,6 +150,14 @@ fi
 
 action=$1
 coverage=$2
+
+base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
+fastas=("${base_dir}/genomes/tumor-20K-3.fa" "${base_dir}/genomes/tumor-20K-4.fa")
+
+cov="cov${coverage#*.}x_snp"  # e.g. cov01x_snp for coverage 0.01x
+n_cells=500 # number of  cells in each group
+code_dir="$HOME/somatic_variant_calling/code"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 if (( action <= 2)); then
   generate_reads
