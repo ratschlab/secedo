@@ -9,7 +9,7 @@
 
 constexpr bool simplify = true;
 
-std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
+std::tuple<std::vector<PosData>, uint16_t, uint32_t>
 read_pileup_text(const std::string fname,
                  const std::vector<uint16_t> &id_to_group,
                  const std::function<void(uint64_t)> &progress,
@@ -133,10 +133,10 @@ read_pileup_text(const std::string fname,
             fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(), max_id,
             max_length);
 
-    return { result, all_cell_ids, max_length };
+    return { result, all_cell_ids.size(), max_length };
 }
 
-std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
+std::tuple<std::vector<PosData>, uint16_t, uint32_t>
 read_pileup_bin(const std::string fname,
                 const std::vector<uint16_t> &id_to_group,
                 const std::function<void(uint64_t)> &progress,
@@ -151,7 +151,7 @@ read_pileup_bin(const std::string fname,
 
     std::ifstream f(fname, std::ios::binary);
     std::string line;
-    std::unordered_set<uint32_t> all_cell_ids;
+    uint16_t max_cell_id = 0;
     std::unordered_set<uint32_t> all_cell_ids_grouped;
 
     // maps read ids to a (first,last) pair (in order to find the longest DNA fragment)
@@ -204,9 +204,9 @@ read_pileup_bin(const std::string fname,
             assert(positions[pos_idx] == position);
         }
 
-        for (uint32_t i = 0; i < read_ids.size(); ++i) {
-            uint16_t cell_id = cell_ids_and_bases[i] >> 2;
-            all_cell_ids.insert(cell_id);
+        for (uint32_t read_idx = 0; read_idx < read_ids.size(); ++read_idx) {
+            uint16_t cell_id = cell_ids_and_bases[read_idx] >> 2;
+            max_cell_id = std::max(max_cell_id, cell_id);
             if (cell_id >= id_to_group.size()) {
                 logger()->error(
                         "Cell id {} is too large. Increase --max_cell_count if using the default "
@@ -214,11 +214,11 @@ read_pileup_bin(const std::string fname,
                         id_to_group.size());
                 std::exit(1);
             }
-            uint8_t base = cell_ids_and_bases[i] & 3;
-            cell_ids_and_bases[i] = id_to_group[cell_id] << 2 | base;
+            uint8_t base = cell_ids_and_bases[read_idx] & 3;
+            cell_ids_and_bases[read_idx] = id_to_group[cell_id] << 2 | base;
             all_cell_ids_grouped.insert(cell_id);
 
-            uint32_t read_id = read_ids[i];
+            uint32_t read_id = read_ids[read_idx];
             auto it = id_stats.find(read_id);
             if (it != id_stats.end()) {
                 it->second = { it->second.first, position };
@@ -232,6 +232,7 @@ read_pileup_bin(const std::string fname,
         result.push_back(std::move(pd));
     }
 
+    max_cell_id++;
     uint32_t max_length = 0;
     uint32_t max_id = 0;
     for (const auto &[k, v] : id_stats) {
@@ -244,13 +245,12 @@ read_pileup_bin(const std::string fname,
     logger()->trace(
             "{}: found {} cell ids, {} after grouping, {} reads. "
             "Longest fragment is {} with {} bases",
-            fname, all_cell_ids.size(), all_cell_ids_grouped.size(), id_stats.size(), max_id,
-            max_length);
+            fname, max_cell_id, all_cell_ids_grouped.size(), id_stats.size(), max_id, max_length);
 
-    return { result, all_cell_ids, max_length };
+    return { result, max_cell_id, max_length };
 }
 
-std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t>
+std::tuple<std::vector<PosData>, uint16_t, uint32_t>
 read_pileup(const std::string fname,
             const std::vector<uint16_t> &id_to_group,
             const std::function<void(uint64_t)> &progress,

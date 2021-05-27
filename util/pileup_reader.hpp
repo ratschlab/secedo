@@ -30,7 +30,7 @@
  * to read and re-filter all the data again at every sub-clustering step (about 12 minutes for 2500
  * cells at coverage 0.04x and ETH's slow network disk).
  */
-std::tuple<std::vector<PosData>, std::unordered_set<uint32_t>, uint32_t> read_pileup(
+std::tuple<std::vector<PosData>, uint16_t, uint32_t> read_pileup(
         const std::string fname,
         const std::vector<uint16_t> &id_to_group,
         const std::function<void(uint64_t)> &progress = [](uint32_t) {},

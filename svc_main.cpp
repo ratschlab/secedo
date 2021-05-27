@@ -320,7 +320,7 @@ int main(int argc, char *argv[]) {
 
     // read input files in parallel
     std::vector<std::vector<PosData>> pos_data(input_files.size());
-    std::vector<std::unordered_set<uint32_t>> cell_ids(input_files.size());
+    std::vector<uint16_t> cell_ids(input_files.size());
     std::vector<uint32_t> max_read_lengths(input_files.size());
 
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
@@ -341,13 +341,7 @@ int main(int argc, char *argv[]) {
                 FLAGS_max_coverage, positions[chromosome_id]);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
-
-    std::unordered_set<uint32_t> all_cell_ids;
-    for (uint32_t i = 0; i < cell_ids.size(); ++i) {
-        std::copy(cell_ids[i].begin(), cell_ids[i].end(),
-                  std::inserter(all_cell_ids, all_cell_ids.end()));
-    }
-    uint32_t num_cells = *std::max_element(all_cell_ids.begin(), all_cell_ids.end()) + 1;
+    uint32_t num_cells = *std::max_element(cell_ids.begin(), cell_ids.end()) + 1;
 
     if (FLAGS_merge_file.empty()) {
         // now that we know the actual number of cells, resize the mapping
