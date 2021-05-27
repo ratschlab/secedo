@@ -149,8 +149,8 @@ function variant_calling() {
 }
 
 # check the command-line arguments
-if [ "$#" -ne 1 ]; then
-            echo "Usage: main.sh <start_step>"
+if [ "$#" -ne 2 ]; then
+            echo "Usage: main.sh <start_step> <coverage>"
             echo "start_step=1 -> Nothing"
             echo "start_step=2 -> Generate reads for healthy/tumor cells (~20 mins)"
             echo "start_step=3 -> Align reads against the human genome (~10 mins)"
