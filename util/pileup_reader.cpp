@@ -227,9 +227,7 @@ read_pileup_bin(const std::string fname,
             }
         }
 
-        PosData pd = { position, read_ids, cell_ids_and_bases };
-
-        result.push_back(std::move(pd));
+        result.push_back({ position, std::move(read_ids), std::move(cell_ids_and_bases) });
     }
 
     max_cell_id++;
