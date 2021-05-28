@@ -33,12 +33,12 @@ function generate_healthy_genome() {
      --sv_dgv empty_file \
      --disable_sim \
      --simulator_executable doesnt_matter_we_are_not_simulating \
-     --out_dir ${out_dir} --log_dir ${out_dir}/logs/ --work_dir ${out_dir}/tmp | tee 2>&1 ${out_dir}/healthy.log"
+     --out_dir ${out_dir} --log_dir ${out_dir}/logs/ --work_dir ${out_dir}/tmp | tee 2>&1 ${out_dir}/logs/healthy.log"
 
   echo "Executing: $cmd"
 
-  bsub -K -J "healthy-templ" -W 1:00 -n 10 -R "rusage[mem=8000]" -R "span[hosts=1]" \
-    -oo "${out_dir}/healthy.lsf.log" "${cmd}" &
+  bsub -K -J "healthy" -W 1:00 -n 10 -R "rusage[mem=8000]" -R "span[hosts=1]" \
+    -oo "${out_dir}/logs/healthy.lsf.log" "${cmd}" &
 }
 
 # runs Varsim to generate a pattern for a tumor cell based on the GRCh38_new.fa reference genome and the given
@@ -98,15 +98,15 @@ function generate_tumor_genome() {
           --disable_sim \
           --simulator_executable ${out_dir}/empty_file \
           --out_dir ${out_dir}/${tumor_genome}/ \
-          --log_dir ${out_dir}/logs/logs-${tumor_genome} \
+          --log_dir ${out_dir}/logs/${tumor_genome} \
           --sv_insert_seq ${out_dir}/empty_file; \
-           echo Finished | tee -a ${out_dir}/logs/tumor-${tumor_genome}.log"
+           echo Finished | tee -a ${out_dir}/logs/${tumor_genome}.log"
 
-  echo "[$(date)] Executing: ${command}" | tee "${out_dir}/logs/tumor-${i}.log"
+  echo "[$(date)] Executing: ${command}" | tee "${out_dir}/logs/${tumor_genome}.log"
 
   # takes about 15 minutes
-  bsub -K -J "tumor-${i}-templ" -W 1:00 -n 10 -R "rusage[mem=20000]" -R "span[hosts=1]" \
-    -oo "${out_dir}/logs/tumor-${i}.lsf.log" "${command}" &
+  bsub -K -J "${tumor_genome}" -W 1:00 -n 10 -R "rusage[mem=20000]" -R "span[hosts=1]" \
+    -oo "${out_dir}/logs/${tumor_genome}.lsf.log" "${command}" &
 
   wait
 }

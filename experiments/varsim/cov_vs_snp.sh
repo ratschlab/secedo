@@ -13,7 +13,7 @@ function generate_reads() {
 
   art_illumina="/cluster/work/grlab/projects/projects2019-supervario/art_bin_MountRainier/art_illumina"
   gen_reads="python3 ${code_dir}/experiments/varsim/generate_reads.py"
-  scratch_dir="/scratch/svc"
+  scratch_dir=$(mktemp -d -t genome-XXXXXXXXXX --tmpdir=/scratch)
 
   out_dir="${base_dir}/${cov}/reads"
   mkdir -p "${out_dir}/logs/"
@@ -91,7 +91,7 @@ function create_pileup() {
   mkdir -p ${out_dir}
   mkdir -p ${log_dir}
   for chromosome in {1..22} X; do # Y was not added - maybe it confuses things
-          scratch_dir="/scratch/pileup_${chromosome}"
+          scratch_dir=$(mktemp -d -t pileup-XXXXXXXXXX --tmpdir=/scratch)
           source_files=${base_dir}/${cov}/aligned_cells_split/*_chr${chromosome}.bam*
           num_files=`ls -l ${source_files} | wc -l`
           echo "Found ${num_files} files for chromosome ${chromosome}"

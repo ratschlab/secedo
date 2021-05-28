@@ -62,7 +62,7 @@ function create_pileup() {
   mkdir -p ${pileup_dir}
   mkdir -p ${log_dir}
   for chromosome in {1..22} X; do # Y was not added - maybe it confuses things
-          scratch_dir="/scratch/pileup_${chromosome}"
+          scratch_dir=$(mktemp -d -t pileup-XXXXXXXXXX --tmpdir=/scratch)
           source_files=""
           for slice in ${slices}; do
             slice_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/slice${slice}/processed_files"
