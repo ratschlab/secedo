@@ -151,9 +151,9 @@ action=$1
 coverage=$2
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
-fastas=("${base_dir}/genomes/tumor-20K-3.fa" "${base_dir}/genomes/tumor-20K-4.fa")
+fastas=("${base_dir}/genomes/tumor-20K-3/tumor-20K-3.fa" "${base_dir}/genomes/tumor-5K-5/tumor-5K-5.fa")
 
-cov="cov${coverage#*.}x_snp"  # e.g. cov01x_snp for coverage 0.01x
+cov="cov${coverage#*.}x_5Ksnp"  # e.g. cov01x_snp for coverage 0.01x
 n_cells=500 # number of  cells in each group
 code_dir="$HOME/somatic_variant_calling/code"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"

@@ -233,7 +233,7 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     }
     write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), id_to_cluster);
 
-    if (num_clusters == 5) {
+    if (num_clusters == 2) {
         logger()->info("Performing clustering refinement via expectation maximization...");
         expectation_maximization(pos_data, id_to_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
                                  &cluster);
