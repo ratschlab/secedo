@@ -140,11 +140,10 @@ function variant_calling() {
 # check the command-line arguments
 if [ "$#" -ne 2 ]; then
             echo "Usage: main.sh <start_step> <coverage>"
-            echo "start_step=1 -> Nothing"
-            echo "start_step=2 -> Generate reads for healthy/tumor cells (~20 mins)"
-            echo "start_step=3 -> Align reads against the human genome (~10 mins)"
-            echo "start_step=4 -> Create pileup files (one per chromosome) (~10 mins)"
-            echo "start_step=5 -> Run variant calling (~10 mins)"
+            echo "start_step=1 -> Generate reads for healthy/tumor cells (~20 mins)"
+            echo "start_step=2 -> Align reads against the human genome (~10 mins)"
+            echo "start_step=3 -> Create pileup files (one per chromosome) (~10 mins)"
+            echo "start_step=4 -> Run variant calling (~10 mins)"
             exit 1
 fi
 
@@ -159,15 +158,15 @@ n_cells=500 # number of  cells in each group
 code_dir="$HOME/somatic_variant_calling/code"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-if (( action <= 2)); then
+if (( action <= 1)); then
   generate_reads
 fi
-if (( action <= 3)); then
+if (( action <= 2)); then
   map_reads
 fi
-if (( action <= 4)); then
+if (( action <= 3)); then
   create_pileup
 fi
-if (( action <= 5)); then
+if (( action <= 4)); then
   variant_calling
 fi
