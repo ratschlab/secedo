@@ -326,7 +326,7 @@ int main(int argc, char *argv[]) {
 
     // read input files in parallel
     std::vector<std::vector<PosData>> pos_data(input_files.size());
-    std::vector<uint16_t> max_cell_ids(input_files.size());
+    std::vector<uint16_t> num_cells_chr(input_files.size());
     std::vector<uint32_t> max_read_lengths(input_files.size());
 
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
@@ -341,13 +341,13 @@ int main(int argc, char *argv[]) {
             == chromsome_ids.end()) {
             continue;
         }
-        std::tie(pos_data[i], max_cell_ids[i], max_read_lengths[i]) = read_pileup(
+        std::tie(pos_data[i], num_cells_chr[i], max_read_lengths[i]) = read_pileup(
                 input_files[i], id_to_group,
                 [&read_progress](uint32_t progress) { read_progress += progress; },
                 FLAGS_max_coverage, positions[chromosome_id], FLAGS_compute_read_stats);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
-    uint32_t num_cells = *std::max_element(max_cell_ids.begin(), max_cell_ids.end()) + 1;
+    uint32_t num_cells = *std::max_element(num_cells_chr.begin(), num_cells_chr.end());
 
     if (FLAGS_merge_file.empty()) {
         // now that we know the actual number of cells, resize the mapping
