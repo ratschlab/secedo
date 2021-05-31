@@ -119,8 +119,8 @@ function variant_calling() {
   input_dir="${work_dir}/pileups"
   svc="${code_dir}/build/svc"
   flagfile="${code_dir}/flags_sim"
-  for hprob in 0.3 0.5; do
-    for seq_error_rate in 0.01; do
+  for hprob in 0.5; do
+    for seq_error_rate in 0.05; do
       out_dir="${work_dir}/svc_${hprob#*.}_${seq_error_rate#*.}/"
       mkdir -p "${out_dir}"
       command="${svc} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
@@ -151,9 +151,9 @@ action=$1
 coverage=$2
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
-fastas=("${base_dir}/genomes/tumor-20K-3/tumor-20K-3.fa" "${base_dir}/genomes/tumor-5K-5/tumor-5K-5.fa")
+fastas=("${base_dir}/genomes/tumor-20K-3/tumor-20K-3.fa" "${base_dir}/genomes/tumor-2.5K-8/tumor-2.5K-8.fa")
 
-cov="cov${coverage#*.}x_5Ksnp"  # e.g. cov01x_snp for coverage 0.01x
+cov="cov${coverage#*.}x_2.5Ksnp"  # e.g. cov01x_snp for coverage 0.01x
 n_cells=500 # number of  cells in each group
 code_dir="$HOME/somatic_variant_calling/code"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"

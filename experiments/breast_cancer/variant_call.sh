@@ -95,12 +95,12 @@ function variant_calling() {
   module load openblas
   svc="${code_dir}/build/svc"
   flagfile="${code_dir}/flags_breast"
-  for hprob in 0.3 0.5; do
-    for seq_error_rate in 0.01; do
+  for hprob in 0.5; do
+    for seq_error_rate in 0.05; do
       out_dir="${base_dir}/svc_ABCDE_${hprob#*.}_${seq_error_rate#*.}"
       log_dir="${out_dir}/logs"
       mkdir -p "${log_dir}"
-      command="${svc} -i ${pileup_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
+      command="${svc} -i ${pileup_dir}/ -o ${out_dir}/ --num_threads 20 --log_level=trace --flagfile ${flagfile} \
                --homozygous_prob=${hprob} --seq_error_rate=${seq_error_rate} --min_cluster_size 500 \
                --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/svc.log"
       #                --merge_file="${code_dir}/experiments/breast_cancer/breast_group_2"

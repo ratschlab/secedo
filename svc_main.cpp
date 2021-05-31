@@ -60,6 +60,12 @@ DEFINE_string(clustering_type,
               "SPECTRAL6",
               "How to perform spectral clustering. One of FIEDLER, SPECTRAL2, SPECTRAL6, "
               "GMM_ASSIGN, GMM_PROB. See spectral_clustering.hpp for details.");
+
+DEFINE_bool(expectation_maximization,
+            false,
+            "If true, the spectral clustering results will be refined using an Expectation "
+            "Maximization algorithm");
+
 static bool ValidateClusteringType(const char *flagname, const std::string &value) {
     if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6" && value != "GMM_PROB"
         && value != "GMM_ASSIGN") {
@@ -233,7 +239,7 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     }
     write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), id_to_cluster);
 
-    if (num_clusters == 2) {
+    if (FLAGS_expectation_maximization && num_clusters == 2) {
         logger()->info("Performing clustering refinement via expectation maximization...");
         expectation_maximization(pos_data, id_to_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
                                  &cluster);
@@ -257,6 +263,7 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
             if (std::abs(cluster[cell_idx] - c) < 0.05) {
                 id_to_pos_new[c][cell_id] = pos_to_id_new[c].size();
                 pos_to_id_new[c].push_back(cell_id);
+                break;
             }
         }
     }
