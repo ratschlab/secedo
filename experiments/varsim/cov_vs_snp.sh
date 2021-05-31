@@ -2,7 +2,7 @@
 # SNP distance and given coverage and checking if the algorithm correctly clusters
 
 
-# runs art_illumina to generate simulated reads for #n_cells healthy and #n_cells tumor cells with coverage #coverage
+# runs art_illumina to generate simulated reads for #n_cells cells with coverage #coverage
 # Start jobs for generating both healthy and tumor reads and wait for the jobs to complete
 function generate_reads() {
   echo "[$(date)] Generating reads..."
@@ -23,7 +23,7 @@ function generate_reads() {
     fasta=${fastas[${tumor_type}]}
     filename=$(basename -- "${fasta}")  # extract file name from path
 
-    for batch in $(seq 0 ${step} $((n_cells-1))); do
+    for batch in $(seq 0 ${step} $((n_cells[tumor_type]-1))); do
       cmd="echo [$(date)] Copying data...; mkdir -p ${scratch_dir}; cp ${fasta} ${scratch_dir}"
       cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${filename} --art ${art_illumina} -p 20 --id_prefix tumor_${tumor_type}_ \
           --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} --seed_offset $((tumor_type*10000))  \
@@ -56,7 +56,7 @@ function map_reads() {
 
   # Now map tumor cells
   for tumor_type in 0 1; do
-    for idx in $(seq 0 ${step} $((n_cells-1))); do
+    for idx in $(seq 0 ${step} $((n_cells[tumor_type]-1))); do
         cmd="echo hello"
         for i in $(seq "${idx}" $((idx+step-1))); do
           suf=$(printf "%03d" ${i})
@@ -153,8 +153,8 @@ coverage=$2
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
 fastas=("${base_dir}/genomes/tumor-20K-3/tumor-20K-3.fa" "${base_dir}/genomes/tumor-2.5K-8/tumor-2.5K-8.fa")
 
-cov="cov${coverage#*.}x_2.5Ksnp"  # e.g. cov01x_snp for coverage 0.01x
-n_cells=500 # number of  cells in each group
+cov="cov${coverage#*.}x_2.5Ksnp_imbalanced"  # e.g. cov01x_snp for coverage 0.01x
+n_cells=(250 750) # number of  cells in each group
 code_dir="$HOME/somatic_variant_calling/code"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 

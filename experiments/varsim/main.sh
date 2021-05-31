@@ -2,16 +2,16 @@
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
 coverage=0.05  # read coverage for each cell
-cov="cov${coverage#*.}x"  # e.g. cov01x for coverage 0.01x
-n_cells=500 # number of healthy and tumor cells in each group
+cov="cov${coverage#*.}x3K"  # e.g. cov01x for coverage 0.01x
+n_cells=500 # number of cells in each group
 code_dir="$HOME/somatic_variant_calling/code"
 
-tumor_cells=("${base_dir}/genomes/tumor-40K-1/tumor-40K-1.fa" "${base_dir}/genomes/tumor-20K-2/tumor-20K-2.fa" \
-"${base_dir}/genomes/tumor-20K-3/tumor-20K-3.fa" "${base_dir}/genomes/tumor-10K-4/tumor-10K-4.fa")
-n_tumor=${#tumor_cells[@]}
+genomes=("${base_dir}/genomes/tumor-40K-1/tumor-40K-1.fa" "${base_dir}/genomes/tumor-20K-2/tumor-20K-2.fa" \
+"${base_dir}/genomes/tumor-20K-3/tumor-20K-3.fa" "${base_dir}/genomes/tumor-10K-4/tumor-10K-4.fa" \
+"${base_dir}/genomes/tumor-15K-7/tumor-15K-7.fa" "${base_dir}/genomes/tumor-5K-5/tumor-5K-5.fa")
+n_tumor=${#genomes[@]}
 
-# runs art_illumina to generate simulated reads for #n_cells healthy and #n_cells tumor cells with coverage #coverage
-# Start jobs for generating both healthy and tumor reads and wait for the jobs to complete
+# runs art_illumina to generate simulated reads for each group of cells with coverage #coverage
 function generate_reads() {
   echo "[$(date)] Generating reads..."
 
@@ -21,39 +21,23 @@ function generate_reads() {
 
   art_illumina="/cluster/work/grlab/projects/projects2019-supervario/art_bin_MountRainier/art_illumina"
   gen_reads="python3 ${code_dir}/experiments/varsim/generate_reads.py"
-  scratch_dir=$(mktemp -d -t fasta-XXXXXXXXXX --tmpdir=/scratch)
 
-  out_dir="${base_dir}/${cov}/healthy"
-  mkdir -p "${out_dir}/logs/"
-  out_prefix=${out_dir}/healthy_
-  fasta="healthy.fa"
-
-  for batch in $(seq 0 ${step} $((n_cells-1))); do
-    cmd="[$(date)] echo Copying data...; mkdir -p ${scratch_dir}; cp ${base_dir}/genomes/${fasta}  ${scratch_dir}"
-    cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta} --art ${art_illumina} -p 20 --id_prefix healthy \
-        --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} \
-        2>&1 | tee ${out_dir}/logs/sim-healthy-${batch}.log"
-#    echo ${cmd}
-#    bsub  -K -J "sim-he-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
-#                -oo "${out_dir}/logs/sim-healthy-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
-  done
-
-  out_dir="${base_dir}/${cov}/tumor"
+  out_dir="${base_dir}/${cov}/cells"
   mkdir -p "${out_dir}/logs/"
 
-  for tumor_type in $(seq 4 "${n_tumor}"); do  # TODO: set back to 1
-    out_prefix=${out_dir}/tumor_${tumor_type}_
-    fasta="${tumor_cells[${tumor_type}]}"
+  for cell_idx in $(seq 0 $(( n_tumor-1 ))); do
+    out_prefix=${out_dir}/cell_${cell_idx}_
+    fasta="${genomes[${cell_idx}]}"
     fasta_fname=$(basename -- "${fasta}")  # extract file name from path
 
     for batch in $(seq 0 ${step} $((n_cells-1))); do
       cmd="echo [$(date)] Copying data...; mkdir -p ${scratch_dir}; cp ${fasta} ${scratch_dir}"
       cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta_fname} --art ${art_illumina} -p 20 --id_prefix \
-      tumor_${tumor_type}_  --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} \
-      --seed_offset $((tumor_type*10000))  2>&1 | tee ${out_dir}/logs/sim-tumor-${tumor_type}-${batch}.log"
- #     echo ${cmd}
-      bsub  -K -J "sim-tu-${tumor_type}-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
-                  -oo "${out_dir}/logs/sim-tumor-${tumor_type}-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
+      cell_${cell_idx}_  --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} \
+      --seed_offset $((cell_idx*10000))  2>&1 | tee ${out_dir}/logs/sim-tumor-${cell_idx}-${batch}.log"
+      echo ${cmd}
+      bsub  -K -J "sim-tu-${cell_idx}-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
+                  -oo "${out_dir}/logs/sim-tumor-${cell_idx}-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
     done
   done
 
@@ -77,34 +61,16 @@ function map_reads() {
   logs_dir="${base_dir}/${cov}/aligned_cells_split/logs"
   mkdir -p ${logs_dir}
 
-  # First map healthy cells
-  for idx in $(seq 0 ${step} $((n_cells-1))); do
-    cmd="echo hello"
-    for i in $(seq "${idx}" $((idx+step-1))); do
-      suf=$(printf "%03d" $i)
-
-      file1="${base_dir}/${cov}/healthy/healthy_${i}.1.fq.gz"
-      file2="${base_dir}/${cov}/healthy/healthy_${i}.2.fq.gz"
-      bam_file="${base_dir}/${cov}/aligned_cells/healthy_${suf}.bam"
-      cmd="${cmd}; bowtie2 -p 20 -x ${base_dir}/genomes/ref_index/GRCh38 -1 $file1 -2 $file2 \
-           | samtools view -h -b -f 0x2 -F 0x500 - \
-           | samtools sort -@ 10 -o ${bam_file}; samtools index ${bam_file}; \
-           ${code_dir}/experiments/varsim/split.sh ${bam_file} ${base_dir}/${cov}"
-    done
-    # echo "${cmd}"
-    # bsub -K -J "bt-${i}" -W 2:00 -n 20 -R "rusage[mem=800]" -R "span[hosts=1]"  -oo "${logs_dir}/bowtie-healthy-${i}.lsf.log" "${cmd}" &
-  done
-
   # Now map tumor cells
-  for tumor_type in $(seq 4 "${n_tumor}"); do  # TODO: change back to 1
+  for cell_idx in $(seq 4 "${n_tumor}"); do  # TODO: change back to 1
     for idx in $(seq 0 ${step} $((n_cells-1))); do
         cmd="echo hello"
         for i in $(seq "${idx}" $((idx+step-1))); do
           suf=$(printf "%03d" ${i})
 
-          file1="${base_dir}/${cov}/tumor/tumor_${tumor_type}_${i}.1.fq.gz"
-          file2="${base_dir}/${cov}/tumor/tumor_${tumor_type}_${i}.2.fq.gz"
-          bam_file="${base_dir}/${cov}/aligned_cells/tumor_${tumor_type}_${suf}.bam"
+          file1="${base_dir}/${cov}/cells/cell_${cell_idx}_${i}.1.fq.gz"
+          file2="${base_dir}/${cov}/cells/cell_${cell_idx}_${i}.2.fq.gz"
+          bam_file="${base_dir}/${cov}/aligned_cells/cell_${cell_idx}_${suf}.bam"
           cmd="${cmd}; bowtie2 -p 20 -x ${base_dir}/genomes/ref_index/GRCh38 -1 $file1 -2 $file2 \
               | samtools view -h -b -f 0x2 -F 0x500 - \
               | samtools sort -@ 10 -o ${bam_file}; samtools index ${bam_file}; \
@@ -160,8 +126,8 @@ function variant_calling() {
   input_dir="${work_dir}/pileups"
   svc="${code_dir}/build/svc"
   flagfile="${code_dir}/flags_sim"
-  for hprob in 0.3 0.5; do
-    for seq_error_rate in 0.01; do
+  for hprob in 0.5; do
+    for seq_error_rate in 0.05; do
       out_dir="${work_dir}/svc_${hprob#*.}_${seq_error_rate#*.}/"
       mkdir -p "${out_dir}"
       command="${svc} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \

@@ -135,5 +135,7 @@ generate_tumor_genome 7500 "${base_dir}/genomes/tumor-20K-3/tumor-20K-3.truth.vc
 generate_tumor_genome 30000 "${base_dir}/genomes/tumor-40K-1/tumor-40K-1.truth.vcf" "tumor-30K-6"
 # tumor 7 differs in 15K SNPs from tumor 1
 generate_tumor_genome 15000 "${base_dir}/genomes/tumor-40K-1/tumor-40K-1.truth.vcf" "tumor-15K-7"
-# tumor 8 differs in 2.5K SNPs from tumor 3
-generate_tumor_genome 15000 "${base_dir}/genomes/tumor-20K-3/tumor-20K-3.truth.vcf" "tumor-2.5K-8"
+# tumor 8 differs in 15K SNPs from tumor 3
+generate_tumor_genome 15000 "${base_dir}/genomes/tumor-20K-3/tumor-20K-3.truth.vcf" "tumor-15K-8"
+# tumor 9 differs in 2.5K SNPs from tumor 4
+generate_tumor_genome 2500 "${base_dir}/genomes/tumor-5K-5/tumor-5K-5.truth.vcf" "tumor-2.5K-9"
