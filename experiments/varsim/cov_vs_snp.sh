@@ -138,8 +138,8 @@ function variant_calling() {
 }
 
 # check the command-line arguments
-if [ "$#" -ne 2 ]; then
-            echo "Usage: main.sh <start_step> <coverage>"
+if [ "$#" -ne 4 ]; then
+            echo "Usage: main.sh <start_step> <coverage> <cell1.fa> <cell2.fa>"
             echo "start_step=1 -> Generate reads for healthy/tumor cells (~20 mins)"
             echo "start_step=2 -> Align reads against the human genome (~10 mins)"
             echo "start_step=3 -> Create pileup files (one per chromosome) (~10 mins)"
@@ -149,14 +149,18 @@ fi
 
 action=$1
 coverage=$2
+cell1=$3
+cell2=$4
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
-fastas=("${base_dir}/genomes/tumor-20K-3/tumor-20K-3.fa" "${base_dir}/genomes/tumor-2.5K-8/tumor-2.5K-8.fa")
+fastas=("${base_dir}/genomes/${cell1}/${cell1}.fa" "${base_dir}/genomes/cell2/cell2.fa")
+snps=$(cut -d "-" -f2 <<< ${cell2})
 
-cov="cov${coverage#*.}x_2.5Ksnp_imbalanced"  # e.g. cov01x_snp for coverage 0.01x
+cov="cov${coverage#*.}x_${snps}snp_imbalanced"  # e.g. cov01x_15Ksnp for coverage 0.01x and 15K snps
 n_cells=(250 750) # number of  cells in each group
 code_dir="$HOME/somatic_variant_calling/code"
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+echo "Writing to directory: ${cov}"
 
 if (( action <= 1)); then
   generate_reads

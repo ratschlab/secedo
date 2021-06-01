@@ -26,6 +26,7 @@ function generate_reads() {
   mkdir -p "${out_dir}/logs/"
 
   for cell_idx in $(seq 0 $(( n_tumor-1 ))); do
+    scratch_dir=$(mktemp -d -t fasta-XXXXXXXXXX --tmpdir=/scratch)
     out_prefix=${out_dir}/cell_${cell_idx}_
     fasta="${genomes[${cell_idx}]}"
     fasta_fname=$(basename -- "${fasta}")  # extract file name from path
