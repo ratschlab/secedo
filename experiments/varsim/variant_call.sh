@@ -3,19 +3,20 @@
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
 coverage=0.05  # read coverage for each cell
 cov="cov${coverage#*.}x3K"  # e.g. cov01x for coverage 0.01x
-n_cells=500 # number of cells in each group
+
 code_dir="$HOME/somatic_variant_calling/code"
 
-genomes=("${base_dir}/genomes/tumor-40K-1/tumor-40K-1.fa" "${base_dir}/genomes/tumor-20K-2/tumor-20K-2.fa" \
-"${base_dir}/genomes/tumor-20K-3/tumor-20K-3.fa" "${base_dir}/genomes/tumor-10K-4/tumor-10K-4.fa" \
-"${base_dir}/genomes/tumor-15K-7/tumor-15K-7.fa" "${base_dir}/genomes/tumor-5K-5/tumor-5K-5.fa")
+genomes=("${base_dir}/genomes/healthy.fa" "${base_dir}/genomes/tumor-40K-1/tumor-40K-1.fa" \
+"${base_dir}/genomes/tumor-20K-2/tumor-20K-2.fa" "${base_dir}/genomes/tumor-20K-3/tumor-20K-3.fa" \
+"${base_dir}/genomes/tumor-10K-4/tumor-10K-4.fa" "${base_dir}/genomes/tumor-15K-7/tumor-15K-7.fa" \
+"${base_dir}/genomes/tumor-5K-5/tumor-5K-5.fa" "${base_dir}/genomes/tumor-2.5K-9/tumor-2.5K-9.fa")
 n_tumor=${#genomes[@]}
+
+n_cells=(2000 500 500 500 500 2000 500 1000) # number of cells in each group
 
 # runs art_illumina to generate simulated reads for each group of cells with coverage #coverage
 function generate_reads() {
   echo "[$(date)] Generating reads..."
-
-  module load bowtie2
 
   step=100
 
@@ -31,7 +32,7 @@ function generate_reads() {
     fasta="${genomes[${cell_idx}]}"
     fasta_fname=$(basename -- "${fasta}")  # extract file name from path
 
-    for batch in $(seq 0 ${step} $((n_cells-1))); do
+    for batch in $(seq 0 ${step} $((n_cells[cell_idx]-1))); do
       cmd="echo [$(date)] Copying data...; mkdir -p ${scratch_dir}; cp ${fasta} ${scratch_dir}"
       cmd="$cmd;${gen_reads} --fasta ${scratch_dir}/${fasta_fname} --art ${art_illumina} -p 20 --id_prefix \
       cell_${cell_idx}_  --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} \
@@ -52,8 +53,9 @@ function generate_reads() {
 # split indexed files).
 
 # Starts jobs for mapping reads against the GRCh38 human genome and waits for the jobs to complete
-# takes < 10 minutes
+# takes ~ 10 minutes for 1000 cells
 function map_reads() {
+  module load bowtie2
   echo "[$(date)] Mapping reads using bowtie2, sorting and splitting by chromosome..."
   step=10
 
@@ -62,9 +64,8 @@ function map_reads() {
   logs_dir="${base_dir}/${cov}/aligned_cells_split/logs"
   mkdir -p ${logs_dir}
 
-  # Now map tumor cells
-  for cell_idx in $(seq 4 "${n_tumor}"); do  # TODO: change back to 1
-    for idx in $(seq 0 ${step} $((n_cells-1))); do
+  for cell_idx in $(seq 0 $(( n_tumor-1 ))); do
+    for idx in $(seq 0 ${step} $((n_cells[cell_idx]-1))); do
         cmd="echo hello"
         for i in $(seq "${idx}" $((idx+step-1))); do
           suf=$(printf "%03d" ${i})
@@ -137,7 +138,7 @@ function variant_calling() {
              #       --pos_file=${base_dir}/cosmic/cosmic.vcf \
       echo "$command"
 
-      bsub -K -J "svc" -W 03:00 -n 20 -R "rusage[mem=10000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}" &
+      bsub -K -J "svc" -W 08:00 -n 20 -R "rusage[mem=80000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}" &
     done
   done
 

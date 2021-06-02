@@ -143,7 +143,9 @@ if [ "$#" -ne 4 ]; then
             echo "start_step=1 -> Generate reads for healthy/tumor cells (~20 mins)"
             echo "start_step=2 -> Align reads against the human genome (~10 mins)"
             echo "start_step=3 -> Create pileup files (one per chromosome) (~10 mins)"
-            echo "start_step=4 -> Run variant calling (~10 mins)"
+            echo "start_step=4 -> Run variant calling (~10 mins)\n\n"
+            echo "For example: "
+            echo "\t./cov_vs_snp.sh 1 0.02 tumor-20K-3 tumor-30K-6"
             exit 1
 fi
 
@@ -153,7 +155,7 @@ cell1=$3
 cell2=$4
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
-fastas=("${base_dir}/genomes/${cell1}/${cell1}.fa" "${base_dir}/genomes/cell2/cell2.fa")
+fastas=("${base_dir}/genomes/${cell1}/${cell1}.fa" "${base_dir}/genomes/${cell2}/${cell2}.fa")
 snps=$(cut -d "-" -f2 <<< ${cell2})
 
 cov="cov${coverage#*.}x_${snps}snp_imbalanced"  # e.g. cov01x_15Ksnp for coverage 0.01x and 15K snps
