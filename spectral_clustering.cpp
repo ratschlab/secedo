@@ -9,6 +9,9 @@
 #include <cstdint>
 #include <vector>
 
+// set to true in order to log the unnormalized similarity matrices
+constexpr bool log_matrices = false;
+
 ClusteringType parse_clustering_type(const std::string &clustering_type) {
     if (clustering_type == "FIEDLER")
         return ClusteringType::FIEDLER;
@@ -140,11 +143,13 @@ uint32_t spectral_clustering(const Matd &similarity,
     f << eigenvalues.cols(0ull, std::min(20ull, eigenvalues.n_cols - 1ull));
     f.close();
 
-    // write the eigenvectors to a file (useful for visualization)
-    if (eigenvectors.n_cols > 2) {
-        f.open(out_dir + "sim_mat_eigenvectors" + marker + ".csv");
-        f << eigenvectors << std::endl;
-        f.close();
+    if (log_matrices) {
+        // write the eigenvectors to a file (useful for visualization)
+        if (eigenvectors.n_cols > 2) {
+            f.open(out_dir + "sim_mat_eigenvectors" + marker + ".csv");
+            f << eigenvectors << std::endl;
+            f.close();
+        }
     }
 
     // decide if it seems there are two different clusters, by fitting a Gaussian Mixture Model to

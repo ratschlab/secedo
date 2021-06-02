@@ -220,7 +220,7 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     uint32_t n_cells_total = id_to_group.size();
     Matd sim_mat = computeSimilarityMatrix(pos_data, n_cells_subcluster, max_read_length, id_to_pos,
                                            mutation_rate, homozygous_rate, seq_error_rate,
-                                           num_threads, FLAGS_o, marker, FLAGS_normalization);
+                                           num_threads, marker, FLAGS_normalization);
 
     logger()->info("Performing spectral clustering...");
     std::vector<double> cluster; // size n_cells

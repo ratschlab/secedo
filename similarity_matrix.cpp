@@ -296,37 +296,11 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              double homozygous_rate,
                              double seq_error_rate,
                              const uint32_t num_threads,
-                             const std::string &out_dir,
                              const std::string &marker,
                              const std::string &normalization) {
     // distance matrices - the desired result of the computation
     Matd mat_same = Matd::zeros(num_cells, num_cells);
     Matd mat_diff = Matd::zeros(num_cells, num_cells);
-
-    std::string mat_same_fname = out_dir + "mat_same" + marker + ".csv";
-    std::string mat_diff_fname = out_dir + "mat_diff" + marker + ".csv";
-    std::string sim_mat_fname = out_dir + "sim_mat" + marker + ".csv";
-
-    if (std::filesystem::exists(mat_same_fname) && std::filesystem::exists(mat_diff_fname)) {
-        logger()->info("Using existing similarity matrix: {}/{}", mat_same_fname, mat_diff_fname);
-        mat_diff = read_mat(mat_diff_fname);
-        mat_same = read_mat(mat_same_fname);
-        if (mat_diff.rows() != num_cells || mat_same.rows() != num_cells) {
-            std::filesystem::remove(mat_diff_fname);
-            std::filesystem::remove(mat_same_fname);
-            logger()->warn(
-                    "Existing mat_diff/mat_same are invalid. Removing and re-computing similarity "
-                    "matrix");
-            mat_diff = Matd::zeros(num_cells, num_cells);
-            mat_same = Matd::zeros(num_cells, num_cells);
-        } else {
-            mat_diff -= mat_same;
-            normalize(normalization, &mat_diff);
-            write_mat(sim_mat_fname, mat_diff);
-            return mat_diff;
-        }
-    }
-
 
     // stores temp updates to mat_same and mat_diff in order to avoid a critical section
     Vec2<std::tuple<uint32_t, uint32_t, double>> updates_same(num_threads);
@@ -445,18 +419,12 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
         combs_all += comb;
     }
 
-    // write mat_same and mat_diff onto disk for inspection
-    write_mat(mat_same_fname, mat_same);
-    write_mat(mat_diff_fname, mat_diff);
-    write_mat(out_dir + "combs_xs_xd" + marker + ".csv", combs_all);
-
     // compute log(P(diff)/P(same))
     // i.e., simMat_diff[i,j] = -w(i,j) for w(i,j) as defined in the draft:
     // https://www.overleaf.com/3934821935gjttfmhfzkyf
     mat_diff -= mat_same;
 
     normalize(normalization, &mat_diff);
-    write_mat(sim_mat_fname, mat_diff);
 
     return mat_diff;
 }

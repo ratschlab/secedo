@@ -54,6 +54,5 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              double homozygous_rate,
                              double seq_error_rate,
                              const uint32_t num_threads,
-                             const std::string &out_dir,
                              const std::string &marker,
                              const std::string &normalization);

@@ -2,7 +2,7 @@
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
 coverage=0.05  # read coverage for each cell
-cov="cov${coverage#*.}x3K"  # e.g. cov01x for coverage 0.01x
+cov="cov${coverage#*.}x8K"  # e.g. cov01x for coverage 0.01x
 
 code_dir="$HOME/somatic_variant_calling/code"
 
