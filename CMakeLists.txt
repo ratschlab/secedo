@@ -59,15 +59,15 @@ add_library(spectral_clustering ${spectral_clustering_files})
 target_link_libraries(spectral_clustering armadillo util  OpenMP::OpenMP_CXX)
 
 file(GLOB variant_calling_files variant_calling.cpp variant_calling.cpp)
-add_library(lib_variant_calling ${variant_calling_files})
-target_link_libraries(lib_variant_calling util)
+add_library(variant_calling ${variant_calling_files})
+target_link_libraries(variant_calling util)
 
 file(GLOB pileup_files pileup.cpp pileup.cpp)
 add_library(pileup ${pileup_files})
 target_link_libraries(pileup util)
 
 add_executable(svc svc_main.cpp)
-target_link_libraries(svc expectation_maximization lib_variant_calling lib_similarity_matrix
+target_link_libraries(svc expectation_maximization variant_calling lib_similarity_matrix
     spectral_clustering util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(svc stdc++fs)
@@ -90,7 +90,7 @@ target_compile_options(gtest PRIVATE -w)
 file(GLOB test_files "tests/*.cpp")
 
 add_executable(tests ${test_files})
-target_link_libraries(tests gtest_main gtest gmock expectation_maximization pileup spectral_clustering)
+target_link_libraries(tests gtest_main gtest gmock expectation_maximization pileup spectral_clustering variant_calling)
 target_include_directories(tests PRIVATE "include")
 
 gtest_discover_tests(tests)

@@ -26,6 +26,8 @@ DEFINE_double(
         0.15,
         "The probability that a locus is homozygous, (not filtered correctly in the first step");
 
+DEFINE_double(heterozygous_prob, 1e-3, "The probability that a locus is heterozygous");
+
 DEFINE_string(i,
               "",
               "Input file or directory containing 'pileup' textual or binary format from"
@@ -65,6 +67,11 @@ DEFINE_bool(expectation_maximization,
             false,
             "If true, the spectral clustering results will be refined using an Expectation "
             "Maximization algorithm");
+
+DEFINE_string(reference_genome,
+              "",
+              "The genome against to call variants, if provided. The fasta file must have 2x24 "
+              "sections, with the maternal chromosome being followed by the paternal chromosome");
 
 static bool ValidateClusteringType(const char *flagname, const std::string &value) {
     if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6" && value != "GMM_PROB"
@@ -143,16 +150,6 @@ uint32_t get_chromosome(const std::filesystem::path &filename) {
     return chromosome_to_id(parts[1]);
 }
 
-std::string chr_id_to_str(uint32_t chr_id) {
-    if (chr_id < 22) {
-        return std::to_string(chr_id + 1);
-    }
-    if (chr_id == 22)
-        return "X";
-    assert(chr_id == 23);
-    return "Y";
-}
-
 /**
  * Recursively divides cells into 2 sub-clusters until a termination criteria is met.
  * N - number of cells
@@ -180,20 +177,24 @@ std::string chr_id_to_str(uint32_t chr_id) {
  * with the same name)
  * @param marker marks the current sub-cluster; for example AB means we are in the second
  * sub-cluster (B) of the first cluster (A)
+ * @param[out] clusters contains the final clustering assignment. Positions marked as zero indicate
+ * that a cluster couldn't be assigned.
  */
-void variant_call(const std::vector<std::vector<PosData>> &pds,
-                  const std::vector<std::filesystem::path> &input_files,
-                  uint32_t max_read_length,
-                  const std::vector<uint16_t> &id_to_group,
-                  const std::vector<uint32_t> &id_to_pos,
-                  const std::vector<uint32_t> &pos_to_id,
-                  double mutation_rate,
-                  double homozygous_rate,
-                  double seq_error_rate,
-                  const uint32_t num_threads,
-                  const std::string &out_dir,
-                  const std::string &normalization,
-                  const std::string marker) {
+void divide_cluster(const std::vector<std::vector<PosData>> &pds,
+                    const std::vector<std::filesystem::path> &input_files,
+                    uint32_t max_read_length,
+                    const std::vector<uint16_t> &id_to_group,
+                    const std::vector<uint32_t> &id_to_pos,
+                    const std::vector<uint32_t> &pos_to_id,
+                    double mutation_rate,
+                    double homozygous_rate,
+                    double seq_error_rate,
+                    const uint32_t num_threads,
+                    const std::string &out_dir,
+                    const std::string &normalization,
+                    const std::string marker,
+                    std::vector<uint16_t> *clusters,
+                    uint16_t cluster_count) {
     if (!marker.empty()) {
         logger()->info("\n\nPerforming clustering of sub-cluster {} with {} elements", marker,
                        pos_to_id.size());
@@ -205,7 +206,7 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         const uint32_t chromosome = get_chromosome(input_files[i]);
         for (uint32_t j = 0; j < pos_data[i].size(); ++j) {
-            filtered << chr_id_to_str(chromosome) << '\t' << pos_data[i][j].position << std::endl;
+            filtered << id_to_chromosome(chromosome) << '\t' << pos_data[i][j].position << std::endl;
         }
     }
     filtered.close();
@@ -259,23 +260,30 @@ void variant_call(const std::vector<std::vector<PosData>> &pds,
 
     for (uint32_t cell_idx = 0; cell_idx < n_cells_subcluster; ++cell_idx) {
         uint32_t cell_id = pos_to_id[cell_idx];
-        for (uint32_t c = 0; c < num_clusters; ++c) {
+        bool assigned = false;
+        for (uint32_t c = 0; !assigned && c < num_clusters; ++c) {
             if (std::abs(cluster[cell_idx] - c) < 0.05) {
                 id_to_pos_new[c][cell_id] = pos_to_id_new[c].size();
                 pos_to_id_new[c].push_back(cell_id);
-                break;
+                clusters->at(cell_id) = cluster_count + c;
+                assigned = true;
             }
         }
+        if (!assigned) { // set to 0 cluster id of cells that couldn't be assigned to a cluster
+            clusters->at(cell_id) = 0;
+        }
     }
+    write_vec(std::filesystem::path(out_dir) / "clustering", *clusters);
 
     for (uint32_t c = 0; c < num_clusters; ++c) {
         if (pos_to_id_new[c].size() < FLAGS_min_cluster_size) {
             logger()->trace("Cluster {} size is too small ({} vs {}). Stopping.", c,
                             pos_to_id_new[c].size(), FLAGS_min_cluster_size);
         } else {
-            variant_call(pds, input_files, max_read_length, id_to_group, id_to_pos_new[c],
-                         pos_to_id_new[c], mutation_rate, homozygous_rate, seq_error_rate,
-                         num_threads, out_dir, normalization, marker + static_cast<char>('A' + c));
+            divide_cluster(pds, input_files, max_read_length, id_to_group, id_to_pos_new[c],
+                           pos_to_id_new[c], mutation_rate, homozygous_rate, seq_error_rate,
+                           num_threads, out_dir, normalization, marker + static_cast<char>('A' + c),
+                           clusters, cluster_count + num_clusters);
         }
     }
 }
@@ -290,9 +298,9 @@ int main(int argc, char *argv[]) {
             = get_grouping(FLAGS_merge_count, FLAGS_merge_file, FLAGS_max_cell_count);
 
     std::vector<std::string> chromosomes_str = split(FLAGS_chromosomes, ',');
-    std::vector<uint32_t> chromsome_ids;
+    std::vector<uint32_t> chromosome_ids;
     for (const auto &chr : chromosomes_str) {
-        chromsome_ids.push_back(chromosome_to_id(chr));
+        chromosome_ids.push_back(chromosome_to_id(chr));
     }
 
     std::vector<std::filesystem::path> input_files = { FLAGS_i };
@@ -327,42 +335,66 @@ int main(int argc, char *argv[]) {
     }
 
     uint64_t total_size = 0;
+    std::unordered_set<uint32_t> available_chromosome_ids;
     for (const auto &f : input_files) {
         total_size += std::filesystem::file_size(f);
+        available_chromosome_ids.insert(get_chromosome(f));
     }
 
+    for (auto chr_id : chromosome_ids) {
+        auto it = available_chromosome_ids.find(chr_id);
+        if (it == available_chromosome_ids.end()) {
+            logger()->error(
+                    "Chromosome {} specified with --chromosomes={}, but no input file for it was "
+                    "found",
+                    id_to_chromosome(chr_id), FLAGS_chromosomes);
+            std::exit(1);
+        }
+    }
+
+    constexpr uint32_t chr_count = 24; // total number of chromosomes (including X and Y)
+
     // read input files in parallel
-    std::vector<std::vector<PosData>> pos_data(input_files.size());
-    std::vector<uint16_t> num_cells_chr(input_files.size());
-    std::vector<uint32_t> max_read_lengths(input_files.size());
+    std::vector<std::vector<PosData>> pos_data(chr_count);
+    std::vector<uint16_t> num_cells_chr(chr_count);
+    std::vector<uint32_t> max_read_lengths(chr_count);
 
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
     read_progress.SetFrequencyUpdate(total_size / 100);
-    for (uint32_t i = 0; i < pos_data.size(); ++i) {
-        logger()->trace("Pairing {} with {}", input_files[i], get_chromosome(input_files[i]));
-    }
+
 #pragma omp parallel for num_threads(FLAGS_num_threads)
-    for (uint32_t i = 0; i < pos_data.size(); ++i) {
+    for (uint32_t i = 0; i < input_files.size(); ++i) {
         uint32_t chromosome_id = get_chromosome(input_files[i]);
-        if (std::find(chromsome_ids.begin(), chromsome_ids.end(), chromosome_id)
-            == chromsome_ids.end()) {
+        if (std::find(chromosome_ids.begin(), chromosome_ids.end(), chromosome_id)
+            == chromosome_ids.end()) {
+            logger()->trace("Skipping {} (not in --chromosomes)", input_files[i]);
             continue;
         }
-        std::tie(pos_data[i], num_cells_chr[i], max_read_lengths[i]) = read_pileup(
-                input_files[i], id_to_group,
-                [&read_progress](uint32_t progress) { read_progress += progress; },
-                FLAGS_max_coverage, positions[chromosome_id], FLAGS_compute_read_stats);
+        std::tie(pos_data[chromosome_id], num_cells_chr[chromosome_id],
+                 max_read_lengths[chromosome_id])
+                = read_pileup(
+                        input_files[i], id_to_group,
+                        [&read_progress](uint32_t progress) { read_progress += progress; },
+                        FLAGS_max_coverage, positions[chromosome_id], FLAGS_compute_read_stats);
     }
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
     uint32_t num_cells = *std::max_element(num_cells_chr.begin(), num_cells_chr.end());
 
     if (FLAGS_merge_file.empty()) {
+        if (id_to_group.size() < num_cells) {
+            logger()->error(
+                    "--max_cell_count is {}, but number of cells is {}. Please add "
+                    "--max_cell_count={} to the command line",
+                    FLAGS_max_cell_count, num_cells, FLAGS_max_cell_count);
+            std::exit(1);
+        }
         // now that we know the actual number of cells, resize the mapping
         id_to_group.resize(num_cells);
     } else if (num_cells != id_to_group.size()) {
         logger()->error(
                 "Invalid merge file {}. Merge files contains {} cell ids, data has {} cell ids",
                 FLAGS_merge_file, id_to_group.size(), num_cells);
+        std::exit(1);
     }
 
     uint32_t num_groups = *std::max_element(id_to_group.begin(), id_to_group.end()) + 1;
@@ -372,10 +404,16 @@ int main(int argc, char *argv[]) {
     std::vector<uint32_t> cell_id_map(num_groups);
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 
-    variant_call(pos_data, input_files, max_read_length, id_to_group, cell_id_map, cell_id_map,
-                 FLAGS_mutation_rate, FLAGS_homozygous_prob, FLAGS_seq_error_rate,
-                 FLAGS_num_threads, FLAGS_o, FLAGS_normalization, "");
+    std::vector<uint16_t> clusters(num_cells); // contains the final clustering
 
+    divide_cluster(pos_data, input_files, max_read_length, id_to_group, cell_id_map, cell_id_map,
+                   FLAGS_mutation_rate, FLAGS_homozygous_prob, FLAGS_seq_error_rate,
+                   FLAGS_num_threads, FLAGS_o, FLAGS_normalization, "", &clusters, 1);
+
+
+    logger()->info("Performing variant calling against {}", FLAGS_reference_genome);
+    variant_calling(pos_data, clusters, FLAGS_reference_genome, FLAGS_heterozygous_prob,
+                    FLAGS_seq_error_rate, FLAGS_o);
 
     logger()->info("Done.");
 }

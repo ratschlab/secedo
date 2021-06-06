@@ -153,3 +153,15 @@ uint32_t chromosome_to_id(const std::string &chromosome) {
         return converted - 1;
     }
 }
+
+
+std::string id_to_chromosome(uint32_t chr_id) {
+    if (chr_id < 22) {
+        return std::to_string(chr_id + 1);
+    }
+    if (chr_id == 22)
+        return "X";
+    assert(chr_id == 23);
+    return "Y";
+}
+
