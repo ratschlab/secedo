@@ -120,7 +120,6 @@ TEST_P(SpectralClustering, TwoClusters) {
 }
 
 TEST_P(SpectralClustering, ThreeClusters) {
-    logger()->set_level(spdlog::level::trace);
     auto [clustering, termination, use_arma_kmeans] = GetParam();
 
     if (clustering != ClusteringType::SPECTRAL2 && clustering != ClusteringType::SPECTRAL6) {
@@ -185,7 +184,6 @@ TEST_P(SpectralClustering, ThreeClusters) {
 
 // make sure the algorithm doesn't crash if the similarity matrix is all zeros
 TEST_P(SpectralClustering, AllZero) {
-    logger()->set_level(spdlog::level::trace);
     auto [clustering, termination, use_arma_kmeans] = GetParam();
 
     constexpr uint32_t num_cells = 99;
@@ -255,7 +253,6 @@ TEST_P(DivideClusters, TwoClusters) {
     std::iota(pos_to_id.begin(), pos_to_id.end(), 0);
 
     std::vector<uint16_t> clusters(num_cells);
-    logger()->set_level(spdlog::level::trace);
     divide_cluster({ pds }, max_read_length, id_to_group, id_to_pos, pos_to_id, mutation_rate,
                    homozygous_rate, seq_error_rate, num_threads, "data/", normalization, "BIC",
                    clustering, use_arma_kmeans, false, min_cluster_size, "", &clusters, 1);
@@ -273,7 +270,7 @@ TEST_P(DivideClusters, TwoClusters) {
 
 
 INSTANTIATE_TEST_SUITE_P(
-        Method,
+        SC,
         SpectralClustering,
         ::testing::Values(std::make_tuple(ClusteringType::SPECTRAL2, Termination::AIC, false),
                           std::make_tuple(ClusteringType::FIEDLER, Termination::AIC, false),
@@ -293,7 +290,7 @@ INSTANTIATE_TEST_SUITE_P(
                           std::make_tuple(ClusteringType::GMM_ASSIGN, Termination::BIC, true)));
 
 INSTANTIATE_TEST_SUITE_P(
-        Method,
+        DC,
         DivideClusters,
         ::testing::Values(std::make_tuple("SPECTRAL2", Termination::AIC, false),
                           std::make_tuple("FIEDLER", Termination::AIC, false),
@@ -302,7 +299,6 @@ INSTANTIATE_TEST_SUITE_P(
                           std::make_tuple("SPECTRAL2", Termination::AIC, true),
                           std::make_tuple("FIEDLER", Termination::AIC, true),
                           std::make_tuple("SPECTRAL2", Termination::BIC, true),
-                          std::make_tuple("FIEDLER", Termination::BIC, true),
-                          std::make_tuple("GMM_PROB", Termination::BIC, true)));
+                          std::make_tuple("FIEDLER", Termination::BIC, true)));
 
 } // namespace

@@ -137,6 +137,10 @@ DEFINE_string(pos_file,
               "When present, only consider positions in this file. The file must have 2 columns, "
               "first one is chromosome id, second is position.");
 
+DEFINE_string(clustering,
+              "",
+              "If provided read the clustering from this file and only perform variant calling");
+
 //============================================================================
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -254,13 +258,20 @@ int main(int argc, char *argv[]) {
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 
     std::vector<uint16_t> clusters(num_cells); // contains the final clustering
-
-    divide_cluster(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
-                   FLAGS_mutation_rate, FLAGS_homozygous_prob, FLAGS_seq_error_rate,
-                   FLAGS_num_threads, FLAGS_o, FLAGS_normalization, FLAGS_termination,
-                   FLAGS_clustering_type, FLAGS_arma_kmeans, FLAGS_expectation_maximization,
-                   FLAGS_min_cluster_size, "", &clusters, 1);
-
+    if (FLAGS_clustering.empty()) {
+        divide_cluster(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
+                       FLAGS_mutation_rate, FLAGS_homozygous_prob, FLAGS_seq_error_rate,
+                       FLAGS_num_threads, FLAGS_o, FLAGS_normalization, FLAGS_termination,
+                       FLAGS_clustering_type, FLAGS_arma_kmeans, FLAGS_expectation_maximization,
+                       FLAGS_min_cluster_size, "", &clusters, 1);
+    } else {
+        logger()->info("Using provided clustering file {}", FLAGS_clustering);
+        clusters = int_split<uint16_t>(read_file(FLAGS_clustering), ',');
+        if (clusters.size() != num_cells) {
+            logger()->error("Number of clusters ({}) doesn't match number of cells ({})",
+                            clusters.size(), num_cells);
+        }
+    }
 
     logger()->info("Performing variant calling against {}", FLAGS_reference_genome);
     variant_calling(pos_data, clusters, FLAGS_reference_genome, FLAGS_heterozygous_prob,
