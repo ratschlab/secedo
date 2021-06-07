@@ -51,12 +51,12 @@ add_library(expectation_maximization ${expectation_maximization_files})
 target_link_libraries(expectation_maximization util OpenMP::OpenMP_CXX)
 
 file(GLOB similarity_matrix_files similarity_matrix.cpp)
-add_library(lib_similarity_matrix ${similarity_matrix_files})
-target_link_libraries(lib_similarity_matrix progress_bar util OpenMP::OpenMP_CXX)
+add_library(similarity_matrix ${similarity_matrix_files})
+target_link_libraries(similarity_matrix progress_bar util OpenMP::OpenMP_CXX)
 
 file(GLOB spectral_clustering_files spectral_clustering.cpp)
 add_library(spectral_clustering ${spectral_clustering_files})
-target_link_libraries(spectral_clustering armadillo util  OpenMP::OpenMP_CXX)
+target_link_libraries(spectral_clustering armadillo expectation_maximization similarity_matrix util  OpenMP::OpenMP_CXX)
 
 file(GLOB variant_calling_files variant_calling.cpp variant_calling.cpp)
 add_library(variant_calling ${variant_calling_files})
@@ -67,7 +67,7 @@ add_library(pileup ${pileup_files})
 target_link_libraries(pileup util)
 
 add_executable(svc svc_main.cpp)
-target_link_libraries(svc expectation_maximization variant_calling lib_similarity_matrix
+target_link_libraries(svc expectation_maximization variant_calling similarity_matrix
     spectral_clustering util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_link_libraries(svc stdc++fs)

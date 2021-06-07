@@ -55,8 +55,11 @@ TEST_P(SpectralClustering, OneCluster) {
 }
 
 TEST_P(SpectralClustering, TwoClusters) {
-    logger()->set_level(spdlog::level::trace);
     auto [clustering, termination, use_arma_kmeans] = GetParam();
+
+    if (clustering != ClusteringType::SPECTRAL2 && clustering != ClusteringType::SPECTRAL6) {
+        return; // clustering is flakey for the other methods
+    }
 
     std::default_random_engine generator;
     std::uniform_int_distribution<uint32_t> dissimilar(0, 5);
@@ -194,6 +197,81 @@ TEST_P(SpectralClustering, AllZero) {
     spectral_clustering(similarity, clustering, termination, "./", "", use_arma_kmeans, &cluster);
 }
 
+
+class DivideClusters
+    : public testing::TestWithParam<std::tuple<std::string, Termination, bool>> {};
+
+constexpr uint32_t max_read_length = 500;
+constexpr double mutation_rate = 0.01;
+constexpr double homozygous_rate = 0.5;
+constexpr double seq_error_rate = 0.05;
+constexpr uint32_t num_threads = 4;
+const std::string normalization = "ADD_MIN";
+constexpr uint32_t min_cluster_size = 101;
+
+
+TEST_P(DivideClusters, TwoClusters) {
+    auto [clustering, termination, use_arma_kmeans] = GetParam();
+
+    // generate data for 100 cells, divided into 2 groups of 50 cells
+    constexpr uint32_t num_cells = 200;
+    constexpr uint32_t num_pos = 5000; // total positions, about half will be significant
+    constexpr double avg_coverage = 0.05;
+
+    std::default_random_engine generator;
+    std::uniform_int_distribution<uint32_t> rnd_coverage(1, 2 * avg_coverage * num_cells);
+    std::uniform_real_distribution<double> zeroone(0, 1);
+
+
+    std::vector<PosData> pds;
+    // all read_ids will be distinct to keep things simple
+    uint32_t read_id_count = 0;
+    for (uint32_t pos = 0; pos < num_pos; ++pos) {
+        std::vector<uint32_t> read_ids;
+        std::vector<uint16_t> cell_ids_bases;
+        uint32_t coverage = rnd_coverage(generator); // the expected coverage for this position
+        bool is_significant = zeroone(generator) < 0.5;
+        for (uint32_t cell_idx = 0; cell_idx < num_cells; ++cell_idx) {
+            if (rnd_coverage(generator) <= coverage) {
+                // if significant A for the first 50, C for the rest; otherwise G for all
+                uint8_t base = is_significant ? (cell_idx < num_cells / 2) ? 0 : 1 : 2;
+                // simulate random errors
+                if (zeroone(generator) < seq_error_rate) {
+                    base = rnd_coverage(generator) % 4;
+                }
+                cell_ids_bases.push_back(cell_idx << 2 | base);
+                read_ids.push_back(read_id_count++);
+            }
+        }
+        pds.push_back(PosData(pos, read_ids, cell_ids_bases));
+    }
+
+
+    std::vector<uint16_t> id_to_group(num_cells);
+    std::vector<uint32_t> id_to_pos(num_cells);
+    std::vector<uint32_t> pos_to_id(num_cells);
+    std::iota(id_to_group.begin(), id_to_group.end(), 0);
+    std::iota(id_to_pos.begin(), id_to_pos.end(), 0);
+    std::iota(pos_to_id.begin(), pos_to_id.end(), 0);
+
+    std::vector<uint16_t> clusters(num_cells);
+    logger()->set_level(spdlog::level::trace);
+    divide_cluster({ pds }, max_read_length, id_to_group, id_to_pos, pos_to_id, mutation_rate,
+                   homozygous_rate, seq_error_rate, num_threads, "data/", normalization, "BIC",
+                   clustering, use_arma_kmeans, false, min_cluster_size, "", &clusters, 1);
+
+    uint32_t num_clusters = *std::max_element(clusters.begin(), clusters.end());
+    ASSERT_EQ(2, num_clusters);
+
+    for (uint32_t i = 1; i < num_cells / 2; ++i) {
+        EXPECT_NEAR(clusters[0], clusters[i], 1e-1);
+    }
+    for (uint32_t i = num_cells / 2; i < num_cells; ++i) {
+        EXPECT_NEAR(clusters.back(), clusters[i], 1e-1);
+    }
+}
+
+
 INSTANTIATE_TEST_SUITE_P(
         Method,
         SpectralClustering,
@@ -213,5 +291,18 @@ INSTANTIATE_TEST_SUITE_P(
                           std::make_tuple(ClusteringType::FIEDLER, Termination::BIC, true),
                           std::make_tuple(ClusteringType::GMM_PROB, Termination::BIC, true),
                           std::make_tuple(ClusteringType::GMM_ASSIGN, Termination::BIC, true)));
+
+INSTANTIATE_TEST_SUITE_P(
+        Method,
+        DivideClusters,
+        ::testing::Values(std::make_tuple("SPECTRAL2", Termination::AIC, false),
+                          std::make_tuple("FIEDLER", Termination::AIC, false),
+                          std::make_tuple("SPECTRAL2", Termination::BIC, false),
+                          std::make_tuple("FIEDLER", Termination::BIC, false),
+                          std::make_tuple("SPECTRAL2", Termination::AIC, true),
+                          std::make_tuple("FIEDLER", Termination::AIC, true),
+                          std::make_tuple("SPECTRAL2", Termination::BIC, true),
+                          std::make_tuple("FIEDLER", Termination::BIC, true),
+                          std::make_tuple("GMM_PROB", Termination::BIC, true)));
 
 } // namespace

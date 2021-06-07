@@ -1,7 +1,5 @@
 #include "sequenced_data.hpp"
-#include "similarity_matrix.hpp"
 #include "spectral_clustering.hpp"
-#include "util/is_significant.hpp"
 #include "util/logger.hpp"
 #include "util/pileup_reader.hpp"
 #include "util/util.hpp"
@@ -139,155 +137,6 @@ DEFINE_string(pos_file,
               "When present, only consider positions in this file. The file must have 2 columns, "
               "first one is chromosome id, second is position.");
 
-// TODO(ddanciu): this is brittle - just write the chromosome id into the binary pileup file
-uint32_t get_chromosome(const std::filesystem::path &filename) {
-    std::string fname = filename.filename().replace_extension().replace_extension();
-    std::vector<std::string> parts = split(fname, '_');
-    if (parts.size() != 2) {
-        logger()->error("Invalid pileup filename. Must be <bla>_chromosome.*");
-        std::exit(1);
-    }
-    return chromosome_to_id(parts[1]);
-}
-
-/**
- * Recursively divides cells into 2 sub-clusters until a termination criteria is met.
- * N - number of cells
- * G - number of cell groups (normally N=G, but in case we group cells to artificially increase
- * coverage we have G < N)
- * NC - number of cells in the current sub-cluster. At the first call of divide() NC=G.
- * @param pos_data
- * @param max_read_length length of the longest fragment (typically around 500)
- * @param id_to_group of size N maps cell ids to cell groups. Data from cells in the same group is
- * treated as if it came from one cell. Used to artificially increase coverage when testing
- * @param id_to_pos of size G maps a cell id to its position in the similarity matrix as we
- * subdivide into smaller and smaller clusters. At the beginning, this is the identity permutation.
- * If a cell with id 'cell_id' is not in the current cluster, then id_to_pos[cell_id]==NO_POS. The
- * position of a cell in the similarity matrix is given by id_to_pos[id_to_group[cell_id]].
- * @param pos_to_id of size NC the inverse of #id_to_pos, it maps each position 0...pos in the
- * current subgroup to the actual cell it corresponds to
- * @param mutation_rate epsilon, estimated frequency of mutated loci in the pre-processed data set
- * @param homozygous_rate  the probability that a locus is homozygous, (not filtered correctly in
- * the first step)
- * @param seq_error_rate error rate of the sequencer, e.g. 1e-3 if using Illumina reads with base
- * quality >30
- * @param num_threads number of threads to use for the computation
- * @param out_dir where to output the clustering results
- * @param normalization the type of normalization to use for the similiarity matrix (see the flag
- * with the same name)
- * @param marker marks the current sub-cluster; for example AB means we are in the second
- * sub-cluster (B) of the first cluster (A)
- * @param[out] clusters contains the final clustering assignment. Positions marked as zero indicate
- * that a cluster couldn't be assigned.
- */
-void divide_cluster(const std::vector<std::vector<PosData>> &pds,
-                    const std::vector<std::filesystem::path> &input_files,
-                    uint32_t max_read_length,
-                    const std::vector<uint16_t> &id_to_group,
-                    const std::vector<uint32_t> &id_to_pos,
-                    const std::vector<uint32_t> &pos_to_id,
-                    double mutation_rate,
-                    double homozygous_rate,
-                    double seq_error_rate,
-                    const uint32_t num_threads,
-                    const std::string &out_dir,
-                    const std::string &normalization,
-                    const std::string marker,
-                    std::vector<uint16_t> *clusters,
-                    uint16_t cluster_count) {
-    if (!marker.empty()) {
-        logger()->info("\n\nPerforming clustering of sub-cluster {} with {} elements", marker,
-                       pos_to_id.size());
-    }
-    logger()->info("Filtering significant positions...");
-    Filter filter(seq_error_rate);
-    auto [pos_data, coverage] = filter.filter(pds, id_to_group, id_to_pos, marker, num_threads);
-    std::ofstream filtered(std::filesystem::path(out_dir) / ("significant_positions" + marker));
-    for (uint32_t i = 0; i < pos_data.size(); ++i) {
-        const uint32_t chromosome = get_chromosome(input_files[i]);
-        for (uint32_t j = 0; j < pos_data[i].size(); ++j) {
-            filtered << id_to_chromosome(chromosome) << '\t' << pos_data[i][j].position << std::endl;
-        }
-    }
-    filtered.close();
-
-    if (coverage < 9) {
-        logger()->trace("Coverage of cluster {} is lower than 9. Stopping.", marker);
-        return;
-    }
-
-    logger()->info("Computing similarity matrix...");
-    uint32_t n_cells_subcluster = pos_to_id.size();
-    uint32_t n_cells_total = id_to_group.size();
-    Matd sim_mat = computeSimilarityMatrix(pos_data, n_cells_subcluster, max_read_length, id_to_pos,
-                                           mutation_rate, homozygous_rate, seq_error_rate,
-                                           num_threads, marker, FLAGS_normalization);
-
-    logger()->info("Performing spectral clustering...");
-    std::vector<double> cluster; // size n_cells
-    Termination termination = parse_termination(FLAGS_termination);
-    ClusteringType clustering_type = parse_clustering_type(FLAGS_clustering_type);
-    uint32_t num_clusters = spectral_clustering(sim_mat, clustering_type, termination, FLAGS_o,
-                                                marker, FLAGS_arma_kmeans, &cluster);
-    if (num_clusters == 1) {
-        return;
-    }
-
-    std::vector<uint16_t> id_to_cluster(n_cells_total);
-    for (uint16_t cell_id = 0; cell_id < n_cells_total; ++cell_id) {
-        uint16_t pos = id_to_pos[id_to_group[cell_id]];
-        id_to_cluster[cell_id] = pos == NO_POS ? NO_POS : cluster[pos];
-    }
-    write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), id_to_cluster);
-
-    if (FLAGS_expectation_maximization && num_clusters == 2) {
-        logger()->info("Performing clustering refinement via expectation maximization...");
-        expectation_maximization(pos_data, id_to_pos, FLAGS_num_threads, FLAGS_seq_error_rate,
-                                 &cluster);
-        for (uint16_t i = 0; i < n_cells_total; ++i) {
-            uint32_t pos = id_to_pos[id_to_group[i]];
-            id_to_cluster[i] = pos == NO_POS ? NO_POS : cluster[pos];
-        }
-        write_vec(std::filesystem::path(out_dir) / ("expectation_maximization" + marker),
-                  id_to_cluster);
-    } else {
-        logger()->info("Skipping clustering refinement via expectation maximization...");
-    }
-
-    std::vector<std::vector<uint32_t>> pos_to_id_new(num_clusters);
-    std::vector<std::vector<uint32_t>> id_to_pos_new(
-            num_clusters, std::vector<uint32_t>(id_to_pos.size(), NO_POS));
-
-    for (uint32_t cell_idx = 0; cell_idx < n_cells_subcluster; ++cell_idx) {
-        uint32_t cell_id = pos_to_id[cell_idx];
-        bool assigned = false;
-        for (uint32_t c = 0; !assigned && c < num_clusters; ++c) {
-            if (std::abs(cluster[cell_idx] - c) < 0.05) {
-                id_to_pos_new[c][cell_id] = pos_to_id_new[c].size();
-                pos_to_id_new[c].push_back(cell_id);
-                clusters->at(cell_id) = cluster_count + c;
-                assigned = true;
-            }
-        }
-        if (!assigned) { // set to 0 cluster id of cells that couldn't be assigned to a cluster
-            clusters->at(cell_id) = 0;
-        }
-    }
-    write_vec(std::filesystem::path(out_dir) / "clustering", *clusters);
-
-    for (uint32_t c = 0; c < num_clusters; ++c) {
-        if (pos_to_id_new[c].size() < FLAGS_min_cluster_size) {
-            logger()->trace("Cluster {} size is too small ({} vs {}). Stopping.", c,
-                            pos_to_id_new[c].size(), FLAGS_min_cluster_size);
-        } else {
-            divide_cluster(pds, input_files, max_read_length, id_to_group, id_to_pos_new[c],
-                           pos_to_id_new[c], mutation_rate, homozygous_rate, seq_error_rate,
-                           num_threads, out_dir, normalization, marker + static_cast<char>('A' + c),
-                           clusters, cluster_count + num_clusters);
-        }
-    }
-}
-
 //============================================================================
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -406,9 +255,14 @@ int main(int argc, char *argv[]) {
 
     std::vector<uint16_t> clusters(num_cells); // contains the final clustering
 
-    divide_cluster(pos_data, input_files, max_read_length, id_to_group, cell_id_map, cell_id_map,
+    Termination termination = parse_termination(FLAGS_termination);
+    ClusteringType clustering_type = parse_clustering_type(FLAGS_clustering_type);
+
+    divide_cluster(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
                    FLAGS_mutation_rate, FLAGS_homozygous_prob, FLAGS_seq_error_rate,
-                   FLAGS_num_threads, FLAGS_o, FLAGS_normalization, "", &clusters, 1);
+                   FLAGS_num_threads, FLAGS_o, FLAGS_normalization, FLAGS_termination,
+                   FLAGS_clustering_type, FLAGS_arma_kmeans, FLAGS_expectation_maximization,
+                   FLAGS_min_cluster_size, "", &clusters, 1);
 
 
     logger()->info("Performing variant calling against {}", FLAGS_reference_genome);

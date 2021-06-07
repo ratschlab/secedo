@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sequenced_data.hpp"
 #include "util/util.hpp"
 
 /**
@@ -74,3 +75,56 @@ uint32_t spectral_clustering(const Matd &similarity,
                              const std::string &marker,
                              bool use_arma_kmeans,
                              std::vector<double> *cluster);
+
+/**
+ * Recursively divides cells into 2 sub-clusters until a termination criteria is met.
+ * N - number of cells
+ * G - number of cell groups (normally N=G, but in case we group cells to artificially increase
+ * coverage we have G < N)
+ * NC - number of cells in the current sub-cluster. At the first call of divide() NC=G.
+ * @param pos_data
+ * @param max_read_length length of the longest fragment (typically around 500)
+ * @param id_to_group of size N maps cell ids to cell groups. Data from cells in the same group is
+ * treated as if it came from one cell. Used to artificially increase coverage when testing
+ * @param id_to_pos of size G maps a cell id to its position in the similarity matrix as we
+ * subdivide into smaller and smaller clusters. At the beginning, this is the identity permutation.
+ * If a cell with id 'cell_id' is not in the current cluster, then id_to_pos[cell_id]==NO_POS. The
+ * position of a cell in the similarity matrix is given by id_to_pos[id_to_group[cell_id]].
+ * @param pos_to_id of size NC the inverse of #id_to_pos, it maps each position 0...pos in the
+ * current subgroup to the actual cell it corresponds to
+ * @param mutation_rate epsilon, estimated frequency of mutated loci in the pre-processed data set
+ * @param homozygous_rate  the probability that a locus is homozygous, (not filtered correctly in
+ * the first step)
+ * @param seq_error_rate error rate of the sequencer, e.g. 1e-3 if using Illumina reads with base
+ * quality >30
+ * @param num_threads number of threads to use for the computation
+ * @param out_dir where to output the clustering results
+ * @param normalization the type of normalization to use for the similiarity matrix (see the flag
+ * with the same name)
+ * @param marker marks the current sub-cluster; for example AB means we are in the second
+ * sub-cluster (B) of the first cluster (A)
+ * @param[in, out] clusters vector of size num_cells, will contain the final clustering assignment.
+ * Positions marked as zero indicate that a cluster couldn't be assigned.
+ */
+void divide_cluster(const std::vector<std::vector<PosData>> &pds,
+                    uint32_t max_read_length,
+                    const std::vector<uint16_t> &id_to_group,
+                    const std::vector<uint32_t> &id_to_pos,
+                    const std::vector<uint32_t> &pos_to_id,
+                    double mutation_rate,
+                    double homozygous_rate,
+                    double seq_error_rate,
+                    const uint32_t num_threads,
+                    const std::string &out_dir,
+                    const std::string &normalization,
+                    const std::string &termination_str,
+                    const std::string &clustering_type_str,
+                    bool use_arma_kmeans,
+                    bool use_expectation_maximization,
+                    uint32_t min_cluster_size,
+                    const std::string marker,
+                    std::vector<uint16_t> *clusters,
+                    uint16_t cluster_count);
+
+// TODO(ddanciu): this is brittle - just write the chromosome id into the binary pileup file
+uint32_t get_chromosome(const std::filesystem::path &filename);
