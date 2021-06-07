@@ -74,7 +74,13 @@ void get_next_chromosome(std::ifstream &fasta_file, std::vector<uint8_t> *chr_da
             break;
         }
     }
-    assert(idx == chr_data->size());
+    if (idx != chr_data->size()) {
+        logger()->error(
+                "Invalid reference genome. Maternal and paternal chromosome sizes don't match ({} "
+                "vs {})",
+                chr_data->size(), idx);
+        std::exit(1);
+    }
 }
 
 bool is_homozygous(uint8_t base) {
