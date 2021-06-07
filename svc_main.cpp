@@ -255,9 +255,6 @@ int main(int argc, char *argv[]) {
 
     std::vector<uint16_t> clusters(num_cells); // contains the final clustering
 
-    Termination termination = parse_termination(FLAGS_termination);
-    ClusteringType clustering_type = parse_clustering_type(FLAGS_clustering_type);
-
     divide_cluster(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
                    FLAGS_mutation_rate, FLAGS_homozygous_prob, FLAGS_seq_error_rate,
                    FLAGS_num_threads, FLAGS_o, FLAGS_normalization, FLAGS_termination,
