@@ -124,7 +124,7 @@ function variant_calling() {
       out_dir="${work_dir}/svc_${hprob#*.}_${seq_error_rate#*.}/"
       mkdir -p "${out_dir}"
       command="${svc} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
-             --homozygous_prob=${hprob} --seq_error_rate=${seq_error_rate} \
+             --not_informative_rate=${hprob} --seq_error_rate=${seq_error_rate} \
              --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 1000 -min_cluster_size 50 \
              | tee ${out_dir}/svc.log"
              #       --pos_file=${base_dir}/cosmic/cosmic.vcf \

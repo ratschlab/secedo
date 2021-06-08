@@ -140,7 +140,7 @@ std::vector<std::vector<uint32_t>> read_positions(const std::string &file) {
     return result;
 }
 
-uint32_t chromosome_to_id(const std::string &chromosome) {
+uint8_t chromosome_to_id(const std::string &chromosome) {
     char *p;
     uint32_t converted = strtol(chromosome.c_str(), &p, 10);
     if (*p) {

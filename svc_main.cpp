@@ -17,14 +17,18 @@ DEFINE_double(seq_error_rate, 0.01, "Sequencing errors rate, denoted by theta");
 DEFINE_double(mutation_rate,
               0.01,
               "epsilon, estimated frequency of mutated loci in the pre-processed data set");
-// estimate of how many positions are actually homozygous germline, were only included because of
-// sequencing (or alignment!) errors
-DEFINE_double(
-        homozygous_prob,
-        0.15,
-        "The probability that a locus is homozygous, (not filtered correctly in the first step");
+// The filtering step attempts to eliminate positions not consistent with the "all cells have the
+// same homozygous genotype". This value approximates the percentage of positions that snuck through
+// although they are homozygous and have the same genotype (they were mis-labeled as 'interesting'
+// due to sequencing errors)
+DEFINE_double(not_informative_rate,
+              0.5,
+              "The faction of non-informative loci, i.e. the probability that cells at a filtered "
+              "locus actually have identical (heterozygous or homozygous) genotype.");
 
-DEFINE_double(heterozygous_prob, 1e-3, "The probability that a locus is heterozygous");
+DEFINE_double(heterozygous_prob,
+              1e-3,
+              "The probability that a locus is heterozygous in the human genome");
 
 DEFINE_string(i,
               "",
@@ -66,10 +70,15 @@ DEFINE_bool(expectation_maximization,
             "If true, the spectral clustering results will be refined using an Expectation "
             "Maximization algorithm");
 
-DEFINE_string(reference_genome,
+DEFINE_string(
+        reference_genome,
+        "",
+        "The genome against which variants are called, if provided. The fasta file must have 2x24 "
+        "sections, with the maternal chromosome being followed by the paternal chromosome");
+DEFINE_string(map_file,
               "",
-              "The genome against to call variants, if provided. The fasta file must have 2x24 "
-              "sections, with the maternal chromosome being followed by the paternal chromosome");
+              "If not empty, maps positions in --reference_genome to positions in the haploid "
+              "genome that --reference_genome is based on (e.g. to GRCh38)");
 
 static bool ValidateClusteringType(const char *flagname, const std::string &value) {
     if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6" && value != "GMM_PROB"
@@ -260,7 +269,7 @@ int main(int argc, char *argv[]) {
     std::vector<uint16_t> clusters(num_cells); // contains the final clustering
     if (FLAGS_clustering.empty()) {
         divide_cluster(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
-                       FLAGS_mutation_rate, FLAGS_homozygous_prob, FLAGS_seq_error_rate,
+                       FLAGS_mutation_rate, FLAGS_not_informative_rate, FLAGS_seq_error_rate,
                        FLAGS_num_threads, FLAGS_o, FLAGS_normalization, FLAGS_termination,
                        FLAGS_clustering_type, FLAGS_arma_kmeans, FLAGS_expectation_maximization,
                        FLAGS_min_cluster_size, "", &clusters, 1);
@@ -274,7 +283,7 @@ int main(int argc, char *argv[]) {
     }
 
     logger()->info("Performing variant calling against {}", FLAGS_reference_genome);
-    variant_calling(pos_data, clusters, FLAGS_reference_genome, FLAGS_heterozygous_prob,
+    variant_calling(pos_data, clusters, FLAGS_reference_genome, FLAGS_map_file, FLAGS_heterozygous_prob,
                     FLAGS_seq_error_rate, FLAGS_o);
 
     logger()->info("Done.");

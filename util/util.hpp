@@ -186,7 +186,7 @@ std::vector<std::vector<uint32_t>> read_positions(const std::string &file);
  * @param chromosome a one character string representing the chromosome name
  * @return an id between 0 and 23, with 22=X, 23=Y
  */
-uint32_t chromosome_to_id(const std::string &chromosome);
+uint8_t chromosome_to_id(const std::string &chromosome);
 
 /** Converts a chromosome id between 0 and 22 to the chromosome name 1..22, X, Y */
 std::string id_to_chromosome(uint32_t chr_id);
