@@ -218,14 +218,14 @@ bool is_same_genotype(uint8_t a, uint8_t b) {
  */
 std::vector<std::pair<char, char>> get_different_bases(uint8_t reference_genotype,
                                                        uint8_t genotype) {
-    uint8_t r1 = IntToChar[reference_genotype & 7];
-    uint8_t r2 = IntToChar[reference_genotype >> 3];
+    char r1 = IntToChar[reference_genotype & 7];
+    char r2 = IntToChar[reference_genotype >> 3];
     if (r1 > r2) {
         std::swap(r1, r2);
     }
 
-    uint8_t g1 = IntToChar[genotype & 7];
-    uint8_t g2 = IntToChar[genotype >> 3];
+    char g1 = IntToChar[genotype & 7];
+    char g2 = IntToChar[genotype >> 3];
     if (g1 > g2) {
         std::swap(g1, g2);
     }
@@ -301,7 +301,7 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                 // write position to file if different
                 if (!is_same_genotype(genotype, reference_genotype) && genotype != NO_GENOTYPE) {
                     if (is_homozygous(reference_genotype)) {
-                        std::string alt = std::to_string(IntToChar[genotype & 7]);
+                        std::string alt(1, IntToChar[genotype & 7]);
                         std::string gt = "1/1"; // VCF genotype indicator
                         if (!is_homozygous(genotype)) {
                             alt += IntToChar[genotype >> 3];
