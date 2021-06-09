@@ -89,11 +89,11 @@ std::vector<T> int_split(const std::string &s, char c) {
     std::string segment;
     std::vector<T> result;
     std::stringstream in(s);
-   try {
+    try {
         while (std::getline(in, segment, c)) {
             result.push_back(std::stoll(segment));
         }
-    } catch (std::invalid_argument) {
+    } catch (std::invalid_argument &) {
         logger()->error("Invalid string to split: {}", s);
         std::exit(1);
     }
