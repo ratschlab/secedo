@@ -48,9 +48,14 @@ std::string read_file(const std::string &fname);
 template <typename T>
 void write_vec(const std::string &name, const std::vector<T> &vec) {
     std::ofstream out(name);
-    for (const auto v : vec) {
-        out << v << ", ";
+    if (vec.empty()) {
+        return;
     }
+
+    for (uint32_t i = 0; i < vec.size() - 1; ++i) {
+        out << vec[i] << ",";
+    }
+    out << vec.back();
     out << std::endl;
 }
 
@@ -84,9 +89,13 @@ std::vector<T> int_split(const std::string &s, char c) {
     std::string segment;
     std::vector<T> result;
     std::stringstream in(s);
-
-    while (std::getline(in, segment, c)) {
-        result.push_back(std::stoll(segment));
+   try {
+        while (std::getline(in, segment, c)) {
+            result.push_back(std::stoll(segment));
+        }
+    } catch (std::invalid_argument) {
+        logger()->error("Invalid string to split: {}", s);
+        std::exit(1);
     }
     return result;
 }

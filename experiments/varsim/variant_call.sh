@@ -134,6 +134,8 @@ function variant_calling() {
       mkdir -p "${out_dir}"
       command="${svc} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
              --not_informative_rate=${hprob} --seq_error_rate=${seq_error_rate} \
+             --clustering=${base_dir}/cov05x8K/svc_5_05/clustering \
+             --reference_genome=${base_dir}/genomes/healthy.fa --map_file=${base_dir}/genomes/healthy.map \
              --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 1000 | tee ${out_dir}/svc.log"
              #       --pos_file=${base_dir}/cosmic/cosmic.vcf \
       echo "$command"
