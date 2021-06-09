@@ -45,24 +45,24 @@ class VariantCalling : public ::testing::Test {
 
 TEST(ReadFasta, Empty) {
     std::ifstream f("data/empty.pileup");
-    std::vector<uint8_t> chr_data;
-    get_next_chromosome(f, {}, &chr_data);
+    std::vector<uint8_t> chr_data, tmp1, tmp2;
+    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(0, chr_data.size());
 }
 
 TEST(ReadFasta, FemalGenome) {
     std::ifstream f("data/genome_diploid_female.fa");
-    std::vector<uint8_t> chr_data;
     std::string expected_maternal = "AAAAAGGGGG";
     std::string expected_paternal = "CCCCCTTTTT";
-    get_next_chromosome(f, {}, &chr_data);
+    std::vector<uint8_t> chr_data, tmp1, tmp2;
+    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(10, chr_data.size());
     for (uint32_t i = 0; i < chr_data.size(); ++i) {
         ASSERT_EQ(CharToInt[(int)expected_paternal[i]], chr_data[i] & 7);
         ASSERT_EQ(CharToInt[(int)expected_maternal[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, {}, &chr_data);
+    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(8, chr_data.size());
 
     expected_paternal = "AAAAGGGG";
@@ -77,15 +77,16 @@ TEST(ReadFasta, MaleGenome) {
     std::ifstream f("data/genome_diploid_male.fa");
     std::vector<uint8_t> chr_data;
     std::string expected_maternal = "AAAAAGGGGG";
-    std::string expected_paternal = "CCCCCTTTTT";
-    get_next_chromosome(f, {}, &chr_data);
+    std::string expected_paternal = "CACCCTTTTT";
+    std::vector<uint8_t> tmp1, tmp2;
+    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(10, chr_data.size());
     for (uint32_t i = 0; i < chr_data.size(); ++i) {
         ASSERT_EQ(CharToInt[(int)expected_paternal[i]], chr_data[i] & 7);
         ASSERT_EQ(CharToInt[(int)expected_maternal[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, {}, &chr_data);
+    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(8, chr_data.size());
 
     std::string expected_X = "CCCCNNNN";
@@ -94,7 +95,7 @@ TEST(ReadFasta, MaleGenome) {
         ASSERT_EQ(CharToInt[(int)expected_X[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, {}, &chr_data);
+    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(8, chr_data.size());
 
     std::string expected_Y = "AAAAGGGG";
@@ -108,16 +109,17 @@ TEST(ReadFasta, MaleGenomeMapped) {
     std::ifstream f("data/genome_diploid_male.fa");
     std::vector<uint8_t> chr_data;
     std::string expected_maternal = "ANAAAAGGGGG";
-    std::string expected_paternal = "NCCCCCTTTTT";
+    std::string expected_paternal = "NCACCCTTTTT";
     auto map = read_map("data/genome_diploid_male.map");
-    get_next_chromosome(f, map, &chr_data);
+    std::vector<uint8_t> tmp1, tmp2;
+    get_next_chromosome(f, map, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(11, chr_data.size());
     for (uint32_t i = 0; i < chr_data.size(); ++i) {
         ASSERT_EQ(CharToInt[(int)expected_paternal[i]], chr_data[i] & 7);
         ASSERT_EQ(CharToInt[(int)expected_maternal[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, map, &chr_data);
+    get_next_chromosome(f, map, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(7, chr_data.size());
 
     std::string expected_X = "CCCNNNN";
@@ -126,7 +128,7 @@ TEST(ReadFasta, MaleGenomeMapped) {
         ASSERT_EQ(CharToInt[(int)expected_X[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, map, &chr_data);
+    get_next_chromosome(f, map, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(6, chr_data.size());
 
     std::string expected_Y = "AAAGGG";
@@ -173,6 +175,33 @@ TEST_F(VariantCalling, OnePosOneVariant) {
     ASSERT_EQ(1, vcfs.size());
     ASSERT_EQ(vcfs[0].ref, 'C');
     ASSERT_EQ(vcfs[0].alt, 'A');
+    ASSERT_EQ(vcfs[0].gt, "1/1");
+}
+
+/**
+ * On pos 0 of chromosome 0, the reference genome is homozygous AA. The new genome will be
+ * homozygous CC and the VCF should reflect this.
+ */
+TEST_F(VariantCalling, OnePosOneVariantHomozygous) {
+    const uint32_t num_cells = 10;
+    std::vector<uint32_t> read_ids(num_cells);
+    std::vector<uint16_t> cell_ids_bases(num_cells);
+    std::iota(read_ids.begin(), read_ids.end(), 0);
+    for (uint32_t i = 0; i < num_cells; ++i) {
+        cell_ids_bases[i] = i << 2 | 1; // all cells have an 'C' in this position
+    }
+    PosData pd(2, read_ids, cell_ids_bases);
+    const std::vector<std::vector<PosData>> pds = { { pd } };
+    std::vector<uint16_t> clusters(num_cells, 1);
+
+    variant_calling(pds, clusters, "data/genome_diploid_male.fa", "", 1e-3, 1e-3,
+                    "data/" + name() + "/");
+
+    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_0.vcf");
+
+    ASSERT_EQ(1, vcfs.size());
+    ASSERT_EQ(vcfs[0].ref, 'A');
+    ASSERT_EQ(vcfs[0].alt, 'C');
     ASSERT_EQ(vcfs[0].gt, "1/1");
 }
 

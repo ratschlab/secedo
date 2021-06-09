@@ -119,7 +119,9 @@ void read_contig(std::ifstream &fasta_file, std::vector<uint8_t> *chr_data) {
 
 void get_next_chromosome(std::ifstream &fasta_file,
                          const std::unordered_map<std::string, std::vector<ChrMap>> &map,
-                         std::vector<uint8_t> *chr_data) {
+                         std::vector<uint8_t> *chr_data,
+                         std::vector<uint8_t> *tmp1,
+                         std::vector<uint8_t> *tmp2) {
     std::string line;
     if (!std::getline(fasta_file, line)) {
         return;
@@ -127,17 +129,16 @@ void get_next_chromosome(std::ifstream &fasta_file,
     assert(line[0] == '>');
     char chromosome = line[1];
     std::string chr_name = line.substr(1);
-    chr_data->resize(0);
+
     logger()->trace("Reading chromosome: {} (first allele)", chr_name);
 
-    read_contig(fasta_file, chr_data);
+    tmp1->resize(0);
+    read_contig(fasta_file, tmp1);
 
-    std::vector<uint8_t> chr_data_mapped;
-    chr_data_mapped.reserve(chr_data->size() + 1000);
     if (map.find(chr_name) != map.end()) {
-        apply_map(map.at(chr_name), *chr_data, &chr_data_mapped);
+        apply_map(map.at(chr_name), *tmp1, chr_data);
     } else {
-        std::swap(chr_data_mapped, *chr_data);
+        std::swap(*tmp1, *chr_data);
     }
 
 
@@ -154,9 +155,8 @@ void get_next_chromosome(std::ifstream &fasta_file,
         } else {
             logger()->info("Simulating homozygous Y");
         }
-        chr_data->resize(chr_data_mapped.size());
-        for (uint32_t i = 0; i < chr_data_mapped.size(); ++i) {
-            chr_data->at(i) = chr_data_mapped[i] | (chr_data_mapped[i] << 3);
+        for (uint32_t i = 0; i < chr_data->size(); ++i) {
+            chr_data->at(i) |=  (chr_data->at(i) << 3);
         }
         return;
     }
@@ -166,29 +166,25 @@ void get_next_chromosome(std::ifstream &fasta_file,
     chr_name = line.substr(1);
 
     logger()->trace("Reading chromosome: {} (second allele)", line);
-    chr_data->resize(0);
-    read_contig(fasta_file, chr_data);
+    tmp1->resize(0);
+    read_contig(fasta_file, tmp1);
 
-    std::vector<uint8_t> chr_data_mapped2;
-    chr_data_mapped2.reserve(chr_data->size() + 1000);
     if (map.find(chr_name) != map.end()) {
-        apply_map(map.at(chr_name), *chr_data, &chr_data_mapped2);
+        apply_map(map.at(chr_name), *tmp1, tmp2);
     } else {
-        std::swap(chr_data_mapped2, *chr_data);
+        std::swap(*tmp1, *tmp2);
     }
 
-
-    if (chr_data_mapped.size() != chr_data_mapped2.size()) {
+    if (chr_data->size() != tmp2->size()) {
         logger()->error(
                 "Invalid reference genome. Maternal and paternal chromosome sizes don't match ({} "
                 "vs {})",
-                chr_data_mapped.size(), chr_data_mapped2.size());
+                chr_data->size(), tmp2->size());
         std::exit(1);
     }
 
-    chr_data->resize(chr_data_mapped.size());
-    for (uint32_t i = 0; i < chr_data_mapped.size(); ++i) {
-        chr_data->at(i) = (chr_data_mapped[i] << 3) | chr_data_mapped2[i];
+    for (uint32_t i = 0; i < chr_data->size(); ++i) {
+        chr_data->at(i) = (chr_data->at(i) << 3) | tmp2->at(i);
     }
 }
 
@@ -242,7 +238,7 @@ std::vector<std::pair<char, char>> get_different_bases(uint8_t reference_genotyp
         return { { r1, g1 }, { r2, g2 } };
     }
 }
-
+#include <iostream>
 void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                      const std::vector<uint16_t> &clusters,
                      const std::string &reference_genome_file,
@@ -264,9 +260,11 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
 
     uint32_t num_clusters = *std::max_element(clusters.begin(), clusters.end());
     std::ifstream fasta_file(reference_genome_file);
-    std::vector<uint8_t> reference_chromosome;
+    std::vector<uint8_t> reference_chromosome, tmp1, tmp2;
     if (std::filesystem::file_size(reference_genome_file) > 1e6) { // not a test setting
         reference_chromosome.reserve(250'000'000);
+        tmp1.reserve(250'000'000);
+        tmp2.reserve(250'000'000);
     }
 
     std::vector<std::ofstream> vcfs(num_clusters);
@@ -281,7 +279,7 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
     std::ofstream f(out_dir / "variant");
     for (uint32_t chr_idx = 0; chr_idx < pos_data.size(); ++chr_idx) {
         const std::vector<PosData> &chromosome_data = pos_data[chr_idx];
-        get_next_chromosome(fasta_file, map, &reference_chromosome);
+        get_next_chromosome(fasta_file, map, &reference_chromosome, &tmp1, &tmp2);
         for (const PosData &pd : chromosome_data) {
             std::vector<std::array<uint16_t, 4>> nbases(num_clusters);
             for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {

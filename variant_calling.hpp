@@ -32,7 +32,9 @@ struct ChrMap {
  */
 void get_next_chromosome(std::ifstream &fasta_file,
                          const std::unordered_map<std::string, std::vector<ChrMap>> &map,
-                         std::vector<uint8_t> *chr_data);
+                         std::vector<uint8_t> *chr_data,
+                         std::vector<uint8_t> *tmp1,
+                         std::vector<uint8_t> *tmp2);
 
 /**
  * Calls the most likely variant for each position for each of the clusters given by #clusters.
