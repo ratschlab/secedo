@@ -57,6 +57,9 @@ std::unordered_map<std::string, std::vector<ChrMap>> read_map(const std::string 
     std::ifstream f(map_file);
     std::string line;
     while (std::getline(f, line)) {
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
         std::vector<std::string> cols = split(line, '\t');
         if (cols.size() != 8) {
             logger()->error("Invalid map file: {}. Has {} columns, expected 8.", map_file,
@@ -88,7 +91,7 @@ void apply_map(const std::vector<ChrMap> &map,
         }
         if (map_entry.tr == 'D') {
             for (uint32_t pos = 0; pos < map_entry.len; ++pos) {
-                new_chr_data->push_back(CharToInt[(uint32_t )'N']);
+                new_chr_data->push_back(CharToInt[(uint32_t)'N']);
             }
         } else {
             for (uint32_t pos = 0; pos < map_entry.len; ++pos) {
