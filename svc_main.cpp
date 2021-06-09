@@ -62,8 +62,8 @@ DEFINE_string(merge_file,
 
 DEFINE_string(clustering_type,
               "SPECTRAL6",
-              "How to perform spectral clustering. One of FIEDLER, SPECTRAL2, SPECTRAL6, "
-              "GMM_ASSIGN, GMM_PROB. See spectral_clustering.hpp for details.");
+              "How to perform spectral clustering. One of FIEDLER, SPECTRAL2, SPECTRAL6. "
+              "See spectral_clustering.hpp for details.");
 
 DEFINE_bool(expectation_maximization,
             false,
@@ -81,10 +81,8 @@ DEFINE_string(map_file,
               "genome that --reference_genome is based on (e.g. to GRCh38)");
 
 static bool ValidateClusteringType(const char *flagname, const std::string &value) {
-    if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6" && value != "GMM_PROB"
-        && value != "GMM_ASSIGN") {
-        printf("Invalid value for --%s: %s.\nShould be one of FIEDLER, SPECTRAL2, SPECTRAL6, "
-               "GMM_ASSIGN, GMM_PROB\n",
+    if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6") {
+        printf("Invalid value for --%s: %s.\nShould be one of FIEDLER, SPECTRAL2, SPECTRAL6\n",
                flagname, value.c_str());
         return false;
     }
@@ -283,8 +281,8 @@ int main(int argc, char *argv[]) {
     }
 
     logger()->info("Performing variant calling against {}", FLAGS_reference_genome);
-    variant_calling(pos_data, clusters, FLAGS_reference_genome, FLAGS_map_file, FLAGS_heterozygous_prob,
-                    FLAGS_seq_error_rate, FLAGS_o);
+    variant_calling(pos_data, clusters, FLAGS_reference_genome, FLAGS_map_file,
+                    FLAGS_heterozygous_prob, FLAGS_seq_error_rate, FLAGS_o);
 
     logger()->info("Done.");
 }

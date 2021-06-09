@@ -31,15 +31,6 @@ enum class ClusteringType {
      * Spectral clustering with the first 6 eigenvectors
      */
     SPECTRAL6,
-    /**
-     * Use the probabilities given by the Gaussian Mixture Model
-     */
-    GMM_PROB,
-    /**
-     * Use the discrete assignments given by the Gaussian Mixture Model (choose the index of the
-     * Gaussian whose center/mean is the closest to the data point)
-     */
-    GMM_ASSIGN,
 };
 
 ClusteringType parse_clustering_type(const std::string &clustering_type);

@@ -22,10 +22,6 @@ ClusteringType parse_clustering_type(const std::string &clustering_type) {
         return ClusteringType::SPECTRAL2;
     else if (clustering_type == "SPECTRAL6")
         return ClusteringType::SPECTRAL6;
-    else if (clustering_type == "GMM_PROB")
-        return ClusteringType::GMM_PROB;
-    else if (clustering_type == "GMM_ASSIGN")
-        return ClusteringType::GMM_ASSIGN;
     else
         throw std::invalid_argument(clustering_type);
 }
@@ -215,12 +211,6 @@ uint32_t spectral_clustering(const Matd &similarity,
     logger()->trace("Attempting to cluster into {} clusters", cluster_count);
 
     switch (clustering) {
-        case ClusteringType::GMM_ASSIGN:
-            *cluster = get_assignments(gmms[1], cell_coord, 0);
-            break;
-        case ClusteringType::GMM_PROB:
-            *cluster = get_probabilities(gmms[1], cell_coord, 0);
-            break;
         case ClusteringType::FIEDLER: {
             // TODO: use the min-sparsity cut described in
             // https://people.eecs.berkeley.edu/~jrs/189s17/lec/22.pdf rather than the 0 cut

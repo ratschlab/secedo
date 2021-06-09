@@ -161,7 +161,6 @@ TEST(Filter, OnePosNotSignificant) {
 }
 
 TEST(Filter, AllSignificant) {
-    logger()->set_level(spdlog::level::trace);
     std::vector<std::vector<PosData>> pos_data;
     uint32_t coverage = 100;
     uint32_t num_diff = 10; // bases different from the others

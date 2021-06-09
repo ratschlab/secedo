@@ -274,20 +274,12 @@ INSTANTIATE_TEST_SUITE_P(
         SpectralClustering,
         ::testing::Values(std::make_tuple(ClusteringType::SPECTRAL2, Termination::AIC, false),
                           std::make_tuple(ClusteringType::FIEDLER, Termination::AIC, false),
-                          std::make_tuple(ClusteringType::GMM_ASSIGN, Termination::AIC, false),
-                          std::make_tuple(ClusteringType::GMM_PROB, Termination::AIC, false),
                           std::make_tuple(ClusteringType::SPECTRAL2, Termination::BIC, false),
                           std::make_tuple(ClusteringType::FIEDLER, Termination::BIC, false),
-                          std::make_tuple(ClusteringType::GMM_PROB, Termination::BIC, false),
-                          std::make_tuple(ClusteringType::GMM_ASSIGN, Termination::BIC, false),
                           std::make_tuple(ClusteringType::SPECTRAL2, Termination::AIC, true),
                           std::make_tuple(ClusteringType::FIEDLER, Termination::AIC, true),
-                          std::make_tuple(ClusteringType::GMM_ASSIGN, Termination::AIC, true),
-                          std::make_tuple(ClusteringType::GMM_PROB, Termination::AIC, true),
                           std::make_tuple(ClusteringType::SPECTRAL2, Termination::BIC, true),
-                          std::make_tuple(ClusteringType::FIEDLER, Termination::BIC, true),
-                          std::make_tuple(ClusteringType::GMM_PROB, Termination::BIC, true),
-                          std::make_tuple(ClusteringType::GMM_ASSIGN, Termination::BIC, true)));
+                          std::make_tuple(ClusteringType::FIEDLER, Termination::BIC, true)));
 
 INSTANTIATE_TEST_SUITE_P(
         DC,
