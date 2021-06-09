@@ -196,8 +196,7 @@ TEST_P(SpectralClustering, AllZero) {
 }
 
 
-class DivideClusters
-    : public testing::TestWithParam<std::tuple<std::string, Termination, bool>> {};
+class DivideClusters : public testing::TestWithParam<std::tuple<std::string, Termination, bool>> {};
 
 constexpr uint32_t max_read_length = 500;
 constexpr double mutation_rate = 0.01;
@@ -214,7 +213,7 @@ TEST_P(DivideClusters, TwoClusters) {
     // generate data for 100 cells, divided into 2 groups of 50 cells
     constexpr uint32_t num_cells = 200;
     constexpr uint32_t num_pos = 5000; // total positions, about half will be significant
-    constexpr double avg_coverage = 0.05;
+    constexpr double avg_coverage = 0.2; // average per-cell coverage
 
     std::default_random_engine generator;
     std::uniform_int_distribution<uint32_t> rnd_coverage(1, 2 * avg_coverage * num_cells);
@@ -231,7 +230,7 @@ TEST_P(DivideClusters, TwoClusters) {
         bool is_significant = zeroone(generator) < 0.5;
         for (uint32_t cell_idx = 0; cell_idx < num_cells; ++cell_idx) {
             if (rnd_coverage(generator) <= coverage) {
-                // if significant A for the first 50, C for the rest; otherwise G for all
+                // if significant, A for the first 100 cells, C for the rest; otherwise G for all
                 uint8_t base = is_significant ? (cell_idx < num_cells / 2) ? 0 : 1 : 2;
                 // simulate random errors
                 if (zeroone(generator) < seq_error_rate) {
@@ -281,16 +280,16 @@ INSTANTIATE_TEST_SUITE_P(
                           std::make_tuple(ClusteringType::SPECTRAL2, Termination::BIC, true),
                           std::make_tuple(ClusteringType::FIEDLER, Termination::BIC, true)));
 
-INSTANTIATE_TEST_SUITE_P(
-        DC,
-        DivideClusters,
-        ::testing::Values(std::make_tuple("SPECTRAL2", Termination::AIC, false),
-                          std::make_tuple("FIEDLER", Termination::AIC, false),
-                          std::make_tuple("SPECTRAL2", Termination::BIC, false),
-                          std::make_tuple("FIEDLER", Termination::BIC, false),
-                          std::make_tuple("SPECTRAL2", Termination::AIC, true),
-                          std::make_tuple("FIEDLER", Termination::AIC, true),
-                          std::make_tuple("SPECTRAL2", Termination::BIC, true),
-                          std::make_tuple("FIEDLER", Termination::BIC, true)));
+INSTANTIATE_TEST_SUITE_P(DC,
+                         DivideClusters,
+                         ::testing::Values(std::make_tuple("SPECTRAL6", Termination::AIC, false),
+                                           std::make_tuple("SPECTRAL2", Termination::AIC, false),
+                                           std::make_tuple("FIEDLER", Termination::AIC, false),
+                                           std::make_tuple("SPECTRAL2", Termination::BIC, false),
+                                           std::make_tuple("FIEDLER", Termination::BIC, false),
+                                           std::make_tuple("SPECTRAL2", Termination::AIC, true),
+                                           std::make_tuple("FIEDLER", Termination::AIC, true),
+                                           std::make_tuple("SPECTRAL2", Termination::BIC, true),
+                                           std::make_tuple("FIEDLER", Termination::BIC, true)));
 
 } // namespace

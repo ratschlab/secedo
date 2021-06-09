@@ -24,6 +24,7 @@ class ProgressBar {
 
     void SetFrequencyUpdate(uint64_t frequency_update_);
     void SetStyle(char unit_bar, char unit_space);
+    bool is_terminal() const;
 
     ProgressBar& operator++();
     ProgressBar& operator+=(uint64_t delta);
