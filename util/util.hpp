@@ -21,7 +21,7 @@ constexpr uint8_t CharToInt[128]
             5, 5, 5, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 5, 1, 5, 5, 5, 2,
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 };
 
-constexpr char IntToChar[5] = { 'A', 'C', 'G', 'T', 'N' };
+constexpr char IntToChar[6] = { 'A', 'C', 'G', 'T', 'N', 'N' };
 
 const std::string int_to_chr[24]
         = { "1",  "2",  "3",  "4",  "5",  "6",  "7",  "8",  "9",  "10", "11", "12",

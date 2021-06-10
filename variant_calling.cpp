@@ -87,7 +87,8 @@ void apply_map(const std::vector<ChrMap> &map,
     new_chr_data->resize(0);
     for (const ChrMap &map_entry : map) {
         while (i < map_entry.start_pos) {
-            new_chr_data->push_back(chr_data[i++]);
+            new_chr_data->push_back(chr_data[i]);
+            i++;
         }
         if (map_entry.tr == 'D') {
             for (uint32_t pos = 0; pos < map_entry.len; ++pos) {
@@ -156,7 +157,7 @@ void get_next_chromosome(std::ifstream &fasta_file,
             logger()->info("Simulating homozygous Y");
         }
         for (uint32_t i = 0; i < chr_data->size(); ++i) {
-            chr_data->at(i) |=  (chr_data->at(i) << 3);
+            chr_data->at(i) |= (chr_data->at(i) << 3);
         }
         return;
     }
@@ -214,6 +215,8 @@ bool is_same_genotype(uint8_t a, uint8_t b) {
  */
 std::vector<std::pair<char, char>> get_different_bases(uint8_t reference_genotype,
                                                        uint8_t genotype) {
+    assert((reference_genotype & 7) < 6 && (reference_genotype >> 3) < 6 && (genotype & 7) < 6
+           && (genotype >> 3) < 6);
     char r1 = IntToChar[reference_genotype & 7];
     char r2 = IntToChar[reference_genotype >> 3];
     if (r1 > r2) {
@@ -222,6 +225,8 @@ std::vector<std::pair<char, char>> get_different_bases(uint8_t reference_genotyp
 
     char g1 = IntToChar[genotype & 7];
     char g2 = IntToChar[genotype >> 3];
+
+
     if (g1 > g2) {
         std::swap(g1, g2);
     }
@@ -238,7 +243,7 @@ std::vector<std::pair<char, char>> get_different_bases(uint8_t reference_genotyp
         return { { r1, g1 }, { r2, g2 } };
     }
 }
-#include <iostream>
+
 void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                      const std::vector<uint16_t> &clusters,
                      const std::string &reference_genome_file,
@@ -305,6 +310,7 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                             alt += IntToChar[genotype >> 3];
                             gt = "0/1";
                         }
+                        assert((reference_genotype & 7) < 6);
                         vcfs[cl_idx] << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
                                      << IntToChar[reference_genotype & 7] << '\t' << alt
                                      << info_format << gt << std::endl;
