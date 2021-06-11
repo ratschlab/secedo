@@ -2,17 +2,18 @@
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
 coverage=0.05  # read coverage for each cell
-cov="cov${coverage#*.}x8K"  # e.g. cov01x for coverage 0.01x
+cov="big"  # the name of the dataset
 
 code_dir="$HOME/somatic_variant_calling/code"
 
-genomes=("${base_dir}/genomes/healthy.fa" "${base_dir}/genomes/tumor-40K-1/tumor-40K-1.fa" \
-"${base_dir}/genomes/tumor-20K-2/tumor-20K-2.fa" "${base_dir}/genomes/tumor-20K-3/tumor-20K-3.fa" \
-"${base_dir}/genomes/tumor-10K-4/tumor-10K-4.fa" "${base_dir}/genomes/tumor-15K-7/tumor-15K-7.fa" \
-"${base_dir}/genomes/tumor-5K-5/tumor-5K-5.fa" "${base_dir}/genomes/tumor-2.5K-9/tumor-2.5K-9.fa")
+genomes=("${base_dir}/genomes/healthy.fa" "${base_dir}/genomes/tumor1-h-20K/tumor1-h-20K.fa" \
+"${base_dir}/genomes/tumor2-1-10K/tumor2-1-10K.fa" "${base_dir}/genomes/tumor3-1-15K/tumor3-1-15K.fa" \
+"${base_dir}/genomes/tumor4-3-10K/tumor4-3-10K.fa" "${base_dir}/genomes/tumor5-3-5K/tumor5-3-5K.fa" \
+"${base_dir}/genomes/tumor6-3-7.5K/tumor6-3-7.5K.fa" "${base_dir}/genomes/tumor7-1-5K/tumor7-1-5K.fa" \
+"${base_dir}/genomes/tumor8-5-2.5K/tumor8-5-2.5K.fa")
 n_tumor=${#genomes[@]}
 
-n_cells=(2000 500 500 500 500 2000 500 1000) # number of cells in each group
+n_cells=(2000 500 500 500 500 2000 500 500 1000) # number of cells in each group
 
 # runs art_illumina to generate simulated reads for each group of cells with coverage #coverage
 function generate_reads() {

@@ -194,7 +194,7 @@ bool is_homozygous(uint8_t base) {
 }
 
 void write_vcf_preamble(std::ofstream &f, const std::string &reference_file, uint32_t cluster) {
-    f << "##fileformat=VCFv4.3" << std::endl;
+    f << "##fileformat=VCFv4.2" << std::endl;
     std::time_t end_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     f << "##fileDate=" << std::ctime(&end_time);
     f << "##source=SVC (Somatic Variant Caller)" << std::endl;
