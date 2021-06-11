@@ -252,9 +252,11 @@ TEST_P(DivideClusters, TwoClusters) {
     std::iota(pos_to_id.begin(), pos_to_id.end(), 0);
 
     std::vector<uint16_t> clusters(num_cells);
+    uint16_t cluster_idx = 1;
     divide_cluster({ pds }, max_read_length, id_to_group, id_to_pos, pos_to_id, mutation_rate,
                    homozygous_rate, seq_error_rate, num_threads, "data/", normalization, "BIC",
-                   clustering, use_arma_kmeans, false, min_cluster_size, "", &clusters, 1);
+                   clustering, use_arma_kmeans, false, min_cluster_size, "", &clusters,
+                   &cluster_idx);
 
     uint32_t num_clusters = *std::max_element(clusters.begin(), clusters.end());
     ASSERT_EQ(2, num_clusters);

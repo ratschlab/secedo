@@ -325,7 +325,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
                     uint32_t min_cluster_size,
                     const std::string marker,
                     std::vector<uint16_t> *clusters,
-                    uint16_t cluster_count) {
+                    uint16_t *cluster_idx) {
     if (!marker.empty()) {
         logger()->info("\n\nPerforming clustering of sub-cluster {} with {} elements", marker,
                        pos_to_id.size());
@@ -395,7 +395,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
             if (std::abs(cluster[cell_idx] - c) < 0.05) {
                 id_to_pos_new[c][cell_id] = pos_to_id_new[c].size();
                 pos_to_id_new[c].push_back(cell_id);
-                clusters->at(cell_id) = cluster_count + c;
+                clusters->at(cell_id) = *cluster_idx + c;
                 assigned = true;
             }
         }
@@ -403,6 +403,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
             clusters->at(cell_id) = 0;
         }
     }
+    *cluster_idx += num_clusters;
     write_vec(std::filesystem::path(out_dir) / "clustering", *clusters);
 
     for (uint32_t c = 0; c < num_clusters; ++c) {
@@ -415,7 +416,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
                            num_threads, out_dir, normalization, termination_str,
                            clustering_type_str, use_arma_kmeans, use_expectation_maximization,
                            min_cluster_size, marker + static_cast<char>('A' + c), clusters,
-                           cluster_count + num_clusters);
+                           cluster_idx);
         }
     }
 }

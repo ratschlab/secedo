@@ -96,6 +96,8 @@ uint32_t spectral_clustering(const Matd &similarity,
  * sub-cluster (B) of the first cluster (A)
  * @param[in, out] clusters vector of size num_cells, will contain the final clustering assignment.
  * Positions marked as zero indicate that a cluster couldn't be assigned.
+ * @param[in, out] cluster_idx keeps track of the current cluster index, in order to assign distinct
+ * cluster values to each subcluster
  */
 void divide_cluster(const std::vector<std::vector<PosData>> &pds,
                     uint32_t max_read_length,
@@ -115,7 +117,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
                     uint32_t min_cluster_size,
                     const std::string marker,
                     std::vector<uint16_t> *clusters,
-                    uint16_t cluster_count);
+                    uint16_t *cluster_idx);
 
 // TODO(ddanciu): this is brittle - just write the chromosome id into the binary pileup file
 uint32_t get_chromosome(const std::filesystem::path &filename);

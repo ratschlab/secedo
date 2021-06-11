@@ -129,16 +129,16 @@ function variant_calling() {
   svc="${code_dir}/build/svc"
   flagfile="${code_dir}/flags_sim"
   for hprob in 0.5; do
-    for seq_error_rate in 0.05; do
+    for seq_error_rate in 0.01 0.05; do
       out_dir="${work_dir}/svc_${hprob#*.}_${seq_error_rate#*.}/"
       mkdir -p "${out_dir}"
       command="${svc} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
              --not_informative_rate=${hprob} --seq_error_rate=${seq_error_rate} \
-             --clustering=${base_dir}/cov05x8K/svc_5_05/clustering \
              --reference_genome=${base_dir}/genomes/tumor-40K-1/tumor-40K-1.fa \
              --map_file=${base_dir}/genomes/tumor-40K-1/tumor-40K-1.map \
              --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 1000 | tee ${out_dir}/svc.log"
              #       --pos_file=${base_dir}/cosmic/cosmic.vcf \
+            # --clustering=${base_dir}/cov05x8K/svc_5_05/clustering \
       echo "$command"
 
       bsub -K -J "svc" -W 08:00 -n 20 -R "rusage[mem=80000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}" &

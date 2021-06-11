@@ -265,12 +265,13 @@ int main(int argc, char *argv[]) {
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 
     std::vector<uint16_t> clusters(num_cells); // contains the final clustering
+    uint16_t cluster_idx = 0;
     if (FLAGS_clustering.empty()) {
         divide_cluster(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
                        FLAGS_mutation_rate, FLAGS_not_informative_rate, FLAGS_seq_error_rate,
                        FLAGS_num_threads, FLAGS_o, FLAGS_normalization, FLAGS_termination,
                        FLAGS_clustering_type, FLAGS_arma_kmeans, FLAGS_expectation_maximization,
-                       FLAGS_min_cluster_size, "", &clusters, 1);
+                       FLAGS_min_cluster_size, "", &clusters, &cluster_idx);
     } else {
         logger()->info("Using provided clustering file {}", FLAGS_clustering);
         clusters = int_split<uint16_t>(read_file(FLAGS_clustering), ',');
