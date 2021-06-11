@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
     std::iota(cell_id_map.begin(), cell_id_map.end(), 0);
 
     std::vector<uint16_t> clusters(num_cells); // contains the final clustering
-    uint16_t cluster_idx = 0;
+    uint16_t cluster_idx = 1; // 0 means "no cluster"
     if (FLAGS_clustering.empty()) {
         divide_cluster(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
                        FLAGS_mutation_rate, FLAGS_not_informative_rate, FLAGS_seq_error_rate,

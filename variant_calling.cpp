@@ -263,7 +263,8 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
 
     std::unordered_map<std::string, std::vector<ChrMap>> map = read_map(map_file);
 
-    uint32_t num_clusters = *std::max_element(clusters.begin(), clusters.end());
+    // clusters are numbered starting with 1; 0 means "no cluster"
+    uint32_t num_clusters = *std::max_element(clusters.begin(), clusters.end()) + 1;
     std::ifstream fasta_file(reference_genome_file);
     std::vector<uint8_t> reference_chromosome, tmp1, tmp2;
     if (std::filesystem::file_size(reference_genome_file) > 1e6) { // not a test setting
@@ -289,8 +290,7 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
             std::vector<std::array<uint16_t, 4>> nbases(num_clusters);
             for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
                 for (uint32_t i = 0; i < pd.size(); ++i) {
-                    // clusters are numbered starting with 1; 0 means "no cluster"
-                    if (std::abs(static_cast<int64_t>(cl_idx + 1 - clusters[pd.cell_id(i)]))
+                    if (std::abs(static_cast<int64_t>(cl_idx - clusters[pd.cell_id(i)]))
                         <= 0.05) {
                         nbases[cl_idx][pd.base(i)]++;
                     }
