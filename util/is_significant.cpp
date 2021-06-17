@@ -4,10 +4,22 @@
 
 #include <cfenv>
 #include <numeric>
+// original Ks computed by Hana
+// std::vector<double> Filter::Ks = { 0.872,   0.872,   0.872,   -1.238,  -1.358,   -5.749, -10.139,
+//                                   -13.912, -25.998, -33.936, -34.469, -54.084,  -44.453, -56.842,
+//                                   -63.352, -88.297, -90.711, -96.841, -115.730, -112.601 };
+// Ks computed without homozygous mutations (AA->BB)
+// std::vector<double> Ks1 = { 0.872,   1.062,   0.872,   -1.24,   -1.359,   -5.75,   -10.14,
+//                            -13.913, -25.99,  -33.936, -34.469, -54.084,  -44.453, -56.843,
+//                            -63.353, -88.298, -90.711, -96.842, -115.730, -112.602 };
 
-std::vector<double> Filter::Ks = { 0.872,   0.872,   0.872,   -1.238,  -1.358,   -5.749,  -10.139,
-                                   -13.912, -25.998, -33.936, -34.469, -54.084,  -44.453, -56.842,
-                                   -63.352, -88.297, -90.711, -96.841, -115.730, -112.601 };
+// Ks computed by forcing at least one error
+std::vector<double> Filter::Ks
+        = { -5.46460057697021, -2.74922827781942, -1.86902244177512, -1.23944677317538,
+            -1.3590742606304,  -5.75028157483854, -10.1395612446068, -13.912950840633,
+            -25.9989500455454, -33.9367172602972, -34.4699181924102, -54.0848397466765,
+            -44.4537524401805, -56.8434551939116, -63.3532321623516, -88.2983812329521,
+            -90.7121595875865, -96.8420681667986, -115.730814590937, -112.602271689139 };
 
 const double log_1_4 = std::log(1. / 4);
 const double log_0998 = std::log(0.998);
@@ -64,10 +76,6 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
     if (base_count[3] < 1.5 * base_count[2]) {
         return false;
     }
-
-    //    if (is_two_sigmas_away(coverage, base_count)) {
-    //        return true;
-    //    }
 
     // choose K threshold for the closest coverage, rounding to nearest even to emulate Python
     uint32_t threshold_idx
