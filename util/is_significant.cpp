@@ -14,7 +14,7 @@
 //                            -63.353, -88.298, -90.711, -96.842, -115.730, -112.602 };
 
 // Ks computed by forcing at least one error
-//std::vector<double> Filter::Ks
+// std::vector<double> Filter::Ks
 //        = { -5.46460057697021, -2.74922827781942, -1.86902244177512, -1.23944677317538,
 //            -1.3590742606304,  -5.75028157483854, -10.1395612446068, -13.912950840633,
 //            -25.9989500455454, -33.9367172602972, -34.4699181924102, -54.0848397466765,
@@ -110,8 +110,7 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
             * std::pow(theta / 3, coverage - base_count[0]);
 
     // 2. The locus is heterozygous c1 c2
-    double prob_hetero = hetero_prior * std::pow(0.5, coverage)
-            * std::pow(1 - theta, base_count[0] + base_count[1])
+    double prob_hetero = hetero_prior * std::pow(0.5 - theta / 3, base_count[0] + base_count[1])
             * std::pow(theta / 3, base_count[2] + base_count[3]);
 
     // 3 The locus is heterozygous + somatic mutation
