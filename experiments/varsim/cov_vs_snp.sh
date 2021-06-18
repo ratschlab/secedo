@@ -156,10 +156,10 @@ cell2=$4
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
 fastas=("${base_dir}/genomes/${cell1}/${cell1}.fa" "${base_dir}/genomes/${cell2}/${cell2}.fa")
-snps=$(cut -d "-" -f2 <<< ${cell2})
+snps=$(cut -d "-" -f3 <<< ${cell2})
 
-cov="cov${coverage#*.}x_${snps}snp_imbalanced"  # e.g. cov01x_15Ksnp for coverage 0.01x and 15K snps
-n_cells=(250 750) # number of  cells in each group
+cov="cov${coverage#*.}x_${snps}snp"  # e.g. cov01x_15Ksnp for coverage 0.01x and 15K snps
+n_cells=(500 500) # number of  cells in each group
 code_dir="$HOME/somatic_variant_calling/code"
 
 echo "Writing to directory: ${cov}"
