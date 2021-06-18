@@ -1,5 +1,20 @@
-# projects2020-scvariant_calling
-Master thesis for hanap
+# SVC (Somatic Variant Caller)
+`SVC` is able to cluster cells and perform variant calling based on information obtained from single-cell DNA sequencing. `SVC` takes as input `BAM` files containing the aligned data for each cell and provides as output a clustering of the cells and, optionally, VCF files pinpointing the changes relative to a reference genome.
+
+## Prerequisites
+* GNU GCC with C++17 (gcc-8.0.1 or higher), LLVM Clang (clang-7 or higher), or AppleClang
+* cmake 3.13 or newer
+* omp
+* openblas
+
+## Installation
+Clone the latest version of the code from the git repository:
+
+git clone https://github.com/ratschlab/svc.git
+
+### Building on Mac
+* `brew install libomp openblas`
+* `mkdir build
 
 ## What is where
 * 00_filtering, ..., 06_varCalling - the individual steps of the algorithm (see below)
