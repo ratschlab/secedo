@@ -23,7 +23,7 @@ git clone https://github.com/ratschlab/silver.git
 
 ## Usage examples
 ### Creating the input pileup files
-If you have a bunch of BAM files, the first step is to create a pileup (a file that contains all the sequenced bases for each locus) file. You can either split the BAM files by chromosome and then distribute the pileup creation to 23 jobs, or you can just go the easy way and pile up all the data in one go. This step doesn't require much RAM, as the pileup is streamed to disk while being created - 35GB should suffice even when processing 8000 cells at coverage 0.5x (~1TB of data):
+If you have a bunch of BAM files, the first step is to create a pileup (a file that contains all the sequenced bases for each locus) file. You can either split the BAM files by chromosome and then distribute the pileup creation to 23 jobs, or you can just go the easy way and pile up all the data in one go. This step doesn't require much RAM, as the pileup is streamed to disk while being created - 35GB should suffice even when processing 8000 cells at coverage 0.5x (~1.4TB of data):
 ```
 ./preprocess -i <BAM_DIR> -o <OUT_DIR>/chr1/ --num_threads 20 --log_level=trace --min_base_quality 30 --max_coverage 1000 --chromosomes 1
 ```
