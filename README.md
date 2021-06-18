@@ -1,7 +1,7 @@
-# SVC (Somatic Variant Caller)
-`SVC` is able to cluster cells and perform variant calling based on information obtained from single-cell DNA sequencing. `SVC` takes as input `BAM` files containing the aligned data for each cell and provides as output a clustering of the cells and, optionally, VCF files pinpointing the changes relative to a reference genome.
+# SILVER (SIngle celL Variant callER)
+`SILVER` is able to cluster cells and perform variant calling based on information obtained from single-cell DNA sequencing. `SILVER` takes as input `BAM` files containing the aligned data for each cell and provides as output a clustering of the cells and, optionally, VCF files pinpointing the changes relative to a reference genome.
 
-`SVC` is descirbed in detail in the following paper: [Clustering cells based on single-cell DNA-sequencing data withultra-low coverage](coming soon)
+`SILVER` is descirbed in detail in the following paper: [Clustering cells based on single-cell DNA-sequencing data withultra-low coverage](coming soon)
 
 ## Prerequisites
 * GNU GCC with C++17 (gcc-8.0.1 or higher), LLVM Clang (clang-7 or higher), or AppleClang
@@ -29,7 +29,7 @@ If you have a bunch of BAM files, the first step is to create a pileup (a file t
 ```
 The command above will create a pileup for the first chromosome. If you ommit the `--chromosome` parameter, the pileup file will contain all chromosomes.
 
-The pileup files are created in SVC's binary format (extension .bin) and in the `samtools` compatible textual format (extension .txt), which is useful for debugging and manual inspection.
+The pileup files are created in SILVER's binary format (extension .bin) and in the `samtools` compatible textual format (extension .txt), which is useful for debugging and manual inspection.
 
 ### Clustering and variant calling
 ```
@@ -41,4 +41,4 @@ The pileup files are created in SVC's binary format (extension .bin) and in the 
 
 This will run the clustering and variant calling on the pileup files available in `PILEUP_DIR` and write the clustering information to `OUT_DIR/clustering`. If a reference genome was provided via `--reference_genome`, the VCF files for each cluster will be written to `OUT_DIR/cluster_<cluster_no>.vcf`.
 
-Take a look at [breast_cancer/variant_call.sh](https://github.com/ratschlab/silver/blob/main/experiments/breast_cancer/variant_call.sh) for inspiration on how to use `SVC`.
+Take a look at [breast_cancer/variant_call.sh](https://github.com/ratschlab/silver/blob/main/experiments/breast_cancer/variant_call.sh) for inspiration on how to use `SILVER`.
