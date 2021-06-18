@@ -369,7 +369,6 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
         uint16_t pos = id_to_pos[id_to_group[cell_id]];
         id_to_cluster[cell_id] = pos == NO_POS ? NO_POS : cluster[pos];
     }
-    write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), id_to_cluster);
 
     if (use_expectation_maximization && num_clusters == 2) {
         logger()->info("Performing clustering refinement via expectation maximization...");

@@ -92,11 +92,8 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
     uint32_t threshold_idx
             = static_cast<uint32_t>(std::clamp(round_nearest_even((coverage / 10.)) - 1, 0., 19.));
 
-    // the multinomial coefficient
-    double log_multinomial_coeff = log_fact(coverage) - log_fact(base_count[0])
-            - log_fact(base_count[1]) - log_fact(base_count[2]) - log_fact(base_count[3]);
     // log P(base_count|wt) for wt=homo
-    double log_prob_homozygous = log_multinomial_coeff + base_count[3] * log_one_minus_theta
+    double log_prob_homozygous = base_count[3] * log_one_minus_theta
             + (coverage - base_count[3]) * log_theta_3;
     // add prior on the most probable genotype (1/4, because all four homozygous genotypes are
     // equally likely)
@@ -106,17 +103,17 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
     // the normalizing coefficient (probability of the evidence P(c1,c2,c3,c4)
     // double log_evidence = log_fact(coverage + 3) - log_6 - log_fact(coverage);
     // 1. All true allelles are c1
-    double prob_all_c1 = homo_prior * std::pow(1 - theta, base_count[0])
-            * std::pow(theta / 3, coverage - base_count[0]);
+    double prob_all_c1 = homo_prior * std::pow(1 - theta, base_count[3])
+            * std::pow(theta / 3, coverage - base_count[3]);
 
     // 2. The locus is heterozygous c1 c2
-    double prob_hetero = hetero_prior * std::pow(0.5 - theta / 3, base_count[0] + base_count[1])
-            * std::pow(theta / 3, base_count[2] + base_count[3]);
+    double prob_hetero = hetero_prior * std::pow(0.5 - theta / 3, base_count[3] + base_count[2])
+            * std::pow(theta / 3, base_count[0] + base_count[1]);
 
     // 3 The locus is heterozygous + somatic mutation
     double prob_hetero_som = hetero_prior * mut_prior
-            * std::pow(1 - theta, base_count[0] + base_count[1] + base_count[2])
-            * std::pow(theta / 3, base_count[3]);
+            * std::pow(1 - theta, base_count[3] + base_count[2] + base_count[1])
+            * std::pow(theta / 3, base_count[0]);
     double log_evidence = log(prob_all_c1 + prob_hetero + prob_hetero_som);
     // 4. Two somatic mutations
     double prob_two_somatic = hetero_prior * mut_prior * mut_prior * std::pow(1 - theta, coverage);

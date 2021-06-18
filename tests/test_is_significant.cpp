@@ -43,42 +43,42 @@ TEST(LogFact, LargeValues) {
     }
 }
 
-TEST(Preprocess, Cov52OneDifferent) {
+TEST(IsSignificant, Cov52OneDifferent) {
     std::string bases = "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTCCCCCCCC";
     ASSERT_FALSE(is_significant_helper(bases));
 }
 
-TEST(Preprocess, Cov52TenDifferent) {
+TEST(IsSignificant, Cov52TenDifferent) {
     std::string bases = "CCACGTACGTACCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTCCCCCCCC";
     ASSERT_TRUE(is_significant_helper(bases));
 }
 
-TEST(Preprocess, Cov59TwoDifferent) {
+TEST(IsSignificant, Cov59TwoDifferent) {
     std::string bases = "tttttTTTTaTTTttTaTtTTTTtTTtTTTtTttTTtTtTtttTTttttTTttTTTTtt";
     ASSERT_FALSE(is_significant_helper(bases));
 }
 
-TEST(Preprocess, AtLimit) {
+TEST(IsSignificant, AtLimit) {
     std::string bases = "CcccccccCcccCCCCcaCcccCccACccccCCCcCcCCCC";
     // this is now considered insignificant, as 2 bases are not "convincing" enough
     ASSERT_FALSE(is_significant_helper(bases, 0.001));
 }
 
-//TEST(Preprocess, TwoSigmasAwayTrue) {
+//TEST(IsSignificant, TwoSigmasAwayTrue) {
 //    std::string bases
 //            = "GGGGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 //              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 //    ASSERT_TRUE(is_significant_helper(bases, 0.01));
 //}
 
-TEST(Preprocess, TwoSigmasAwayFalse) {
+TEST(IsSignificant, TwoSigmasAwayFalse) {
     std::string bases
             = "GGGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     ASSERT_FALSE(is_significant_helper(bases, 0.01));
 }
 
-TEST(Preprocess, Paradox) {
+TEST(IsSignificant, Paradox) {
     std::string bases = "GGGA";
     ASSERT_FALSE(is_significant_helper(bases, 0.001));
 }
@@ -89,7 +89,7 @@ TEST(Preprocess, Paradox) {
 /** Make sure we round the length of the string properly (for computing the proper threshold K),
  * i.e. length 55 in this case should generate index 5 (because we emulate rounding to nearest even
  */
-// TEST(Preprocess, LengthAtLimitRoundUp) {
+// TEST(IsSignificant, LengthAtLimitRoundUp) {
 //    std::string bases = "GGGGGGGGGGGGGTGGGGGGGGGGGAGGGGGGGGGGGGGGGTGGGGGGGGGGGGG";
 //    ASSERT_FALSE(is_significant_helper(bases, 0.001));
 //}
