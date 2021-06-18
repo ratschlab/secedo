@@ -19,7 +19,7 @@ class Filter {
     std::vector<double> log_factorial;
 
     double theta;
-    double log_theta;
+    double log_theta_3;
     double log_one_minus_theta;
 
     bool is_two_sigmas_away(uint32_t coverage, std::array<uint16_t, 4> &base_count);
