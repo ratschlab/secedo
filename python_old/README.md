@@ -1,4 +1,5 @@
-# This is the original Python implementation of SVC and it doesn't reflect the C++ version anymore. We decided not to delete the code, as some Python code snippets may 
+# DEPRECATED
+## This is the original Python implementation of SVC and it doesn't reflect the C++ version anymore. We decided not to delete the code, as some Python code snippets may 
 still be useful for quick prototyping of various ideas.
 
 ## What is where
