@@ -1,6 +1,8 @@
 # SVC (Somatic Variant Caller)
 `SVC` is able to cluster cells and perform variant calling based on information obtained from single-cell DNA sequencing. `SVC` takes as input `BAM` files containing the aligned data for each cell and provides as output a clustering of the cells and, optionally, VCF files pinpointing the changes relative to a reference genome.
 
+`SVC` is descirbed in detail in the following paper: [Clustering cells based on single-cell DNA-sequencing data withultra-low coverage](coming soon)
+
 ## Prerequisites
 * GNU GCC with C++17 (gcc-8.0.1 or higher), LLVM Clang (clang-7 or higher), or AppleClang
 * cmake 3.13 or newer
