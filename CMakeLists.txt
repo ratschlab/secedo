@@ -63,20 +63,20 @@ add_library(variant_calling ${variant_calling_files})
 target_link_libraries(variant_calling util)
 
 file(GLOB pileup_files pileup.cpp pileup.cpp)
-add_library(pileup ${pileup_files})
-target_link_libraries(pileup util)
+add_library(pileup_lib ${pileup_files})
+target_link_libraries(pileup_lib util)
 
-add_executable(svc svc_main.cpp)
-target_link_libraries(svc expectation_maximization variant_calling similarity_matrix
+add_executable(silver silver_main.cpp)
+target_link_libraries(silver expectation_maximization variant_calling similarity_matrix
     spectral_clustering util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_link_libraries(svc stdc++fs)
+  target_link_libraries(silver stdc++fs)
 endif()
 
-add_executable(preprocess preprocess_main.cpp)
-target_link_libraries(preprocess pileup util gflags spdlog::spdlog BamTools)
+add_executable(pileup pileup_main.cpp)
+target_link_libraries(pileup pileup_lib util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_link_libraries(preprocess stdc++fs)
+  target_link_libraries(pileup stdc++fs)
 endif()
 
 # TESTS
@@ -90,7 +90,8 @@ target_compile_options(gtest PRIVATE -w)
 file(GLOB test_files "tests/*.cpp")
 
 add_executable(tests ${test_files})
-target_link_libraries(tests gtest_main gtest gmock expectation_maximization pileup spectral_clustering variant_calling)
+target_link_libraries(tests gtest_main gtest gmock expectation_maximization pileup_lib spectral_clustering
+    variant_calling)
 target_include_directories(tests PRIVATE "include")
 
 gtest_discover_tests(tests)

@@ -60,6 +60,25 @@ void write_vec(const std::string &name, const std::vector<T> &vec) {
 }
 
 /**
+ * Join a vector's element into comma-separated string.
+ */
+template <typename T>
+std::string join_vec(const std::vector<T> &vec) {
+    std::stringstream out;
+    if (vec.empty()) {
+        return "";
+    }
+
+    for (uint32_t i = 0; i < vec.size() - 1; ++i) {
+        out << vec[i] << ",";
+    }
+    out << vec.back();
+    out << std::endl;
+    return out.str();
+}
+
+
+/**
  * Write a vector to a string, with elements separated by comma.
  */
 template <typename T>

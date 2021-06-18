@@ -31,7 +31,7 @@ DEFINE_double(heterozygous_prob,
               "The probability that a locus is heterozygous in the human genome");
 
 DEFINE_string(i,
-              "",
+              "./",
               "Input file or directory containing 'pileup' textual or binary format from"
               " an alignment, as written by preprocessing.py");
 
@@ -166,13 +166,19 @@ int main(int argc, char *argv[]) {
     std::vector<std::filesystem::path> input_files = { FLAGS_i };
     // if the input is a directory, get all pileup files in the directory
     if (std::filesystem::is_directory(FLAGS_i)) {
+        logger()->info("Looking for binary pileup files in {}",
+                        std::filesystem::absolute(FLAGS_i));
         input_files = get_files(FLAGS_i, ".bin");
         if (input_files.empty()) {
             logger()->info("No binary pileup files found. Looking for textual pileup files...");
             input_files = get_files(FLAGS_i, ".pileup");
+            logger()->info("Found {} textual pileup files files {}", input_files.size(),
+                           join_vec(input_files));
+        } else {
+            logger()->info("Found {} binary pileup files: {}", input_files.size(),
+                           join_vec(input_files));
         }
         std::sort(input_files.begin(), input_files.end());
-        logger()->info("Found {} input files in '{}'", input_files.size(), FLAGS_i);
     }
 
     if (input_files.empty()) {
