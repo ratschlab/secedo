@@ -41,4 +41,6 @@ The pileup files are created in SILVER's binary format (extension .bin) and in t
 
 This will run the clustering and variant calling on the pileup files available in `PILEUP_DIR` and write the clustering information to `OUT_DIR/clustering`. If a reference genome was provided via `--reference_genome`, the VCF files for each cluster will be written to `OUT_DIR/cluster_<cluster_no>.vcf`.
 
+You will need enough RAM to fit the pileups (they are loaded in memory for faster processing; if you're short on RAM it's easy to change the code to only load the relevant loci - drop me a line, should reduce the RAM usage by 10x, but it will be slower). I our case, we had 300GB worth of pileup, and needed about 600GB of RAM to handle it.
+
 Take a look at [breast_cancer/variant_call.sh](https://github.com/ratschlab/silver/blob/main/experiments/breast_cancer/variant_call.sh) for inspiration on how to use `SILVER`.
