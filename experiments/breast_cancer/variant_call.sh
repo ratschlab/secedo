@@ -6,7 +6,6 @@ slices="A B C D E"
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/all_slices"
 pileup_dir="${base_dir}/pileupsABCDE"
 code_dir="$HOME/somatic_variant_calling/code"
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 
 # split the aligned BAMs by chromosome for easier parallelization
@@ -57,7 +56,7 @@ function create_pileup() {
   echo "Generating pileups..."
 
   log_dir="${pileup_dir}/logs"
-  pileup="${code_dir}/build/preprocess"
+  pileup="${code_dir}/build/pileup"
 
   mkdir -p ${pileup_dir}
   mkdir -p ${log_dir}
@@ -93,21 +92,21 @@ function create_pileup() {
 function variant_calling() {
   echo "Running variant calling..."
   module load openblas
-  svc="${code_dir}/build/svc"
+  silver="${code_dir}/build/silver"
   flagfile="${code_dir}/flags_breast"
   for hprob in 0.5; do
     for seq_error_rate in 0.05; do
-      out_dir="${base_dir}/svc_ABCDE_${hprob#*.}_${seq_error_rate#*.}"
+      out_dir="${base_dir}/silver_ABCDE_${hprob#*.}_${seq_error_rate#*.}"
       log_dir="${out_dir}/logs"
       mkdir -p "${log_dir}"
-      command="${svc} -i ${pileup_dir}/ -o ${out_dir}/ --num_threads 20 --log_level=trace --flagfile ${flagfile} \
+      command="${silver} -i ${pileup_dir}/ -o ${out_dir}/ --num_threads 20 --log_level=trace --flagfile ${flagfile} \
                --not_informative_rate=${hprob} --seq_error_rate=${seq_error_rate} --min_cluster_size 500 \
-               --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/svc.log"
+               --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/silver.log"
       #                --merge_file="${code_dir}/experiments/breast_cancer/breast_group_2"
       echo "$command"
 
-      bsub -K -J "svc${slices}_${hprob#*.}_${seq_error_rate#*.}" -W 08:00 -n 20 -R "rusage[mem=80000]" \
-           -R  "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" "${command}" &
+      bsub -K -J "silver${slices}_${hprob#*.}_${seq_error_rate#*.}" -W 08:00 -n 20 -R "rusage[mem=80000]" \
+           -R  "span[hosts=1]" -oo "${log_dir}/silver.lsf.log" "${command}" &
     done
   done
 

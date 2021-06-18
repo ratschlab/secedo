@@ -43,7 +43,7 @@ function split_bams() {
 function create_pileup() {
   echo "Generating pileups..."
   log_dir="${pileup_dir}/logs"
-  pileup="${code_dir}/build/preprocess"
+  pileup="${code_dir}/build/pileup"
 
   mkdir -p ${pileup_dir}
   mkdir -p ${log_dir}
@@ -72,19 +72,19 @@ function create_pileup() {
 function variant_calling() {
   echo "Running variant calling..."
   module load openblas
-  svc="${code_dir}/build/svc"
+  silver="${code_dir}/build/silver"
   flagfile="${code_dir}/flags_breast"
   for hprob in 0.15 0.3 0.5; do
     for seq_error_rate in 0.001 0.01; do
-      out_dir="${base_dir}/svc_${hprob#*.}_${seq_error_rate#*.}/"
+      out_dir="${base_dir}/silver_${hprob#*.}_${seq_error_rate#*.}/"
       log_dir="${out_dir}/logs/"
       mkdir -p "${log_dir}"
-      command="${svc} -i ${pileup_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
+      command="${silver} -i ${pileup_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
                --not_informative_rate=${hprob} --seq_error_rate=${seq_error_rate} \
-               --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 100 | tee ${log_dir}/svc.log"
+               --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 100 | tee ${log_dir}/silver.log"
       echo "$command"
 
-      bsub -K -J "svc" -W 01:00 -n 20 -R "rusage[mem=20000]" -R "span[hosts=1]" -oo "${log_dir}/svc.lsf.log" \
+      bsub -K -J "silver" -W 01:00 -n 20 -R "rusage[mem=20000]" -R "span[hosts=1]" -oo "${log_dir}/silver.lsf.log" \
            "${command}" &
     done
   done
