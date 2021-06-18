@@ -9,12 +9,15 @@
 
 ## Installation
 Clone the latest version of the code from the git repository:
-
+```
 git clone https://github.com/ratschlab/svc.git
-
-### Building on Mac
-* `brew install libomp openblas`
-* `mkdir build
+```
+### Building (Mac or Linux)
+* `brew install libomp openblas` (for Mac) or `sudo apt-get install libblas-dev` (Linux)
+* `mkdir svc/build; cd svc/build` 
+* `cmake .. -DCMAKE_BUILD_TYPE=Release`
+* `make -j`
+* `./tests`
 
 ## What is where
 * 00_filtering, ..., 06_varCalling - the individual steps of the algorithm (see below)
