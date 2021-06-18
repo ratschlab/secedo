@@ -142,7 +142,8 @@ function variant_calling() {
              # --clustering=${out_dir}/clustering \
       echo "$command"
 
-      bsub -K -J "svc" -W 08:00 -n 20 -R "rusage[mem=80000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" "${command}" &
+      bsub -K -J "svc" -W 04:00 -n 20 -R "rusage[mem=40000]" -R "span[hosts=1]" -oo "${out_dir}/svc.lsf.log" \
+           "${command}" &
     done
   done
 
@@ -152,10 +153,10 @@ function variant_calling() {
 # check the command-line arguments
 if [ "$#" -ne 1 ]; then
             echo "Usage: main.sh <start_step>"
-            echo "start_step=1 -> Generate reads for healthy/tumor cells (~20 mins)"
-            echo "start_step=2 -> Align reads against the human genome (~10 mins)"
-            echo "start_step=3 -> Create pileup files (one per chromosome) (~10 mins)"
-            echo "start_step=4 -> Run variant calling (~10 mins)"
+            echo "start_step=1 -> Generate reads for healthy/tumor cells (~1h)"
+            echo "start_step=2 -> Align reads against the human genome (~1h )"
+            echo "start_step=3 -> Create pileup files (one per chromosome) (~30 mins)"
+            echo "start_step=4 -> Run variant calling (~1h for 8K cells)"
             exit 1
 fi
 
