@@ -1,10 +1,11 @@
 # Splits aligned BAM files by chromosome, creates 23 pileup files distributed on 23 machines and then runs
 # variant calling
 
-slices="A B C D E"
+slices="B"
 
 base_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/all_slices"
-pileup_dir="${base_dir}/pileupsABCDE"
+slices_no_space=${slices//[[:blank:]]/}
+pileup_dir="${base_dir}/pileups${slices_no_space}"
 code_dir="$HOME/somatic_variant_calling/code"
 
 
@@ -12,9 +13,6 @@ code_dir="$HOME/somatic_variant_calling/code"
 function split_bams() {
 
   for slice in ${slices}; do
-    if [ ${slice} == "B" ]; then
-      continue
-    fi
     slice_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/slice${slice}/processed_files"
     bam_dir="${slice_dir}/aligned_cells"
     split_dir="${slice_dir}/aligned_cells_split"
@@ -96,7 +94,7 @@ function variant_calling() {
   flagfile="${code_dir}/flags_breast"
   for hprob in 0.5; do
     for seq_error_rate in 0.05; do
-      out_dir="${base_dir}/silver_ABCDE_${hprob#*.}_${seq_error_rate#*.}"
+      out_dir="${base_dir}/silver_${slices_no_space}_${hprob#*.}_${seq_error_rate#*.}"
       log_dir="${out_dir}/logs"
       mkdir -p "${log_dir}"
       command="${silver} -i ${pileup_dir}/ -o ${out_dir}/ --num_threads 20 --log_level=trace --flagfile ${flagfile} \
@@ -105,6 +103,7 @@ function variant_calling() {
       #                --merge_file="${code_dir}/experiments/breast_cancer/breast_group_2"
       echo "$command"
 
+      # needs about 20*80GB for all slices; for a single slice 20*30GB is more than enough
       bsub -K -J "silver${slices}_${hprob#*.}_${seq_error_rate#*.}" -W 08:00 -n 20 -R "rusage[mem=80000]" \
            -R  "span[hosts=1]" -oo "${log_dir}/silver.lsf.log" "${command}" &
     done
