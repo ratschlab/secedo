@@ -25,9 +25,9 @@ git clone https://github.com/ratschlab/silver.git
 ### Creating the input pileup files
 If you have a bunch of BAM files, the first step is to create a pileup (a file that contains all the sequenced bases for each locus) file. You can either split the BAM files by chromosome and then distribute the pileup creation to 23 jobs, or you can just go the easy way and pile up all the data in one go. This step doesn't require much RAM, as the pileup is streamed to disk while being created - 35GB should suffice even when processing 8000 cells at coverage 0.5x (~1.4TB of data):
 ```
-./pileup -i <BAM_DIR> -o <OUT_DIR>/chr1/ --num_threads 20 --log_level=trace --min_base_quality 30 --max_coverage 1000 --chromosomes 1
+./pileup -i <BAM_DIR> -o <OUT_DIR>/chromosome --chromosomes 1 --num_threads 20 --log_level=trace --min_base_quality 30 --max_coverage 1000
 ```
-The command above will create a pileup for the first chromosome. If you ommit the `--chromosome` parameter, the pileup file will contain all chromosomes.
+The command above will create a pileup for the first chromosome. If you ommit the `--chromosome` parameter, `pileup` will create 24 pileup files, one for each chromosome.
 
 The pileup files are created in SILVER's binary format (extension .bin) and in the `samtools` compatible textual format (extension .txt), which is useful for debugging and manual inspection.
 
