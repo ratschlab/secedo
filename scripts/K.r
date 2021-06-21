@@ -1,17 +1,14 @@
-#### Script to understand the distribution of read-depth normalized probabilities p(data|genotype)
-#### on homozygous germline, heterozygous germline, heterozygous somatic mutations
-#### and homozygous somatic mutations, depending on the proportion of healthy and tumour cells.
-#### The total number of cells is always 140.
-#### HomoOnly version.
-#### FINAL VERSION: Add P(H_0)=0.999, add genotype prior, run for 10 %, 20 %, ..., 90 %
-#### tumour cells, objective functions: F1 score, Matthews correlation coefficient,
-#### Youden's J statistic, proficiency
-#### fix random seed
-#### Is the optimal value of K dependent on coverage? Try for different values of coverage
-#### from 10 to 200.
+# Script that computes the optimal threshold (according to Youden's J) for a locus being significant
+# For a range of per-locus coverages (e.g. 10 to 200), the script simulates various configurations of
+# the 4 bases (ACGT) for 4 cases: homozygous germline, heterozygous germline, homzygous+somatic, 
+# heterozygous + somatic. We then compute the optimal thresholds, such that as many as possible of the
+# germline loci are eliminated and as many as possible of the somatic ones are kept
 
 ### Euler number
 e <- exp(1)
+homo_prior = 0.998
+hetero_prior = 1e-3
+mut_prior = 1e-5
 factorials = NULL
 
 comp_fact <- function() {
@@ -40,11 +37,30 @@ is_significant <- function(cov, log, res) {
   # decide homo/hetero
   p_homo <- res[4]*log.oneMinusTheta + (cov-res[4])*log.theta + log.homoPrior + log.priorH0
   multinomCoef <- log_fact(cov) - log_fact(res[1]) - log_fact(res[2]) - log_fact(res[3]) - log_fact(res[4])
-  ### normalization coefficient
-  normCoeff <- log_fact(cov+3) - log_fact(cov) - log(6)
-  return (p_homo + multinomCoef + normCoeff)
+  ### normalization coefficient (probability of evidence)
+  # 1. All true allelles are c1
+  prob_all_c1 = homo_prior*((1-theta)^res[4])*(theta/3)^(cov-res[4])
+  # 2. The locus is heterozygous c1 c2
+  prob_hetero = hetero_prior * ((0.5-theta/3)^(res[3]+res[4])) * ((theta/3)^(res[1]+res[2]))
+  # 3 The locus is heterozygous + somatic mutation 
+  prob_hetero_som = hetero_prior * mut_prior * ((1-theta)^(res[4]+res[2]+res[3])) * ((theta/3)^res[1])
+  # 4. Two somatic mutations
+  prob_two_somatic = hetero_prior*mut_prior^2*(1-theta)^cov
+  normCoeff = log(prob_all_c1 + prob_hetero + prob_hetero_som + prob_two_somatic)
+#  message("Probability homozygous: ", exp(p_homo+multinomCoef))
+#  message("Prob all ", prob_all_c1, " Prob hetero ", prob_hetero, "Prob hetero som: ", prob_hetero_som, "Probability: ", exp(p_homo-normCoeff))
+  return (p_homo - normCoeff)
 }
 
+is_significant2 <- function(cov, log, res) {
+  # decide homo/hetero
+  p_homo <- res[4]*log.oneMinusTheta + (cov-res[4])*log.theta + log.homoPrior + log.priorH0
+  multinomCoef <- log_fact(cov) - log_fact(res[1]) - log_fact(res[2]) - log_fact(res[3]) - log_fact(res[4])
+  ### normalization coefficient
+  normCoeff <- log_fact(cov+3) - log_fact(cov) - log(6)
+  
+  return (p_homo + normCoeff + multinomCoef)
+}
 
 set.seed(123)
 ### Always do 100000 simulations.
@@ -68,7 +84,7 @@ factorials = comp_fact()
 for (meanCov in seq(10,200,10)) {
   message("\nCoverage: ", meanCov)
   cat("Proportion of tumor cells: ")
-  for (prop.tumour in seq(0.1,0.9,0.1)) {
+  for (prop.tumour in seq(0.5,0.5,0.1)) {
     cat(prop.tumour, " ")
     prop.healthy <- 1-prop.tumour
 
@@ -83,6 +99,9 @@ for (meanCov in seq(10,200,10)) {
       n1 <- sum(rand<theta/3)
       n2 <- sum(rand<2*theta/3)-n1
       n3 <- sum(rand<theta)-n1-n2
+      if (n1 == 0 & n2 == 0 & n3 == 0) {
+        n1 <- 1
+      }
       n4 <- cov - n1 - n2 - n3
       res <- sort(c(n1,n2,n3,n4))
       
@@ -99,6 +118,9 @@ for (meanCov in seq(10,200,10)) {
       rand <- runif(cov)
       n1 <- sum(rand<theta/3)
       n2 <- sum(rand<2*theta/3)-n1
+      if (n1 == 0 & n2 == 0) {
+        n1 <- 1
+      }
       n3 <- sum(rand<0.5+theta/3)-n1-n2
       n4 <- cov - n1 - n2 - n3
       res <- sort(c(n1,n2,n3,n4))
@@ -212,6 +234,7 @@ for (meanCov in seq(10,200,10)) {
 }
 
 ### save data_all
+message("\nWriting all probabilities to Ks_all.csv...")
 write.table(data_all, "Ks_all.csv",quote=FALSE,sep=",",row.names=FALSE)
 
 message("Computing optimal Ks...")
@@ -225,7 +248,7 @@ pos.mut <- pos.all*somMutPrior
 pos.homo <- pos.all-pos.hetero-pos.mut
 
 best.Ks <- data.frame(meanCov=rep(seq(10,200,10), each=9),
-  prop.tumour=rep(seq(0.1,0.9,0.1),20),
+  prop.tumour=rep(seq(0.5,0.5,0.1),20),
   bestK.J=rep(0,180),
   kept.pos.J=rep(0,180),
   kept.mut.J=rep(0,180),
@@ -235,7 +258,7 @@ index=1
 for (meanCov in seq(10,200,10)) {
   message("\nCoverage: ", meanCov)
   cat("Proportion of tumor cells: ")
-  for (prop.tumour in seq(0.1,0.9,0.1)) {
+  for (prop.tumour in seq(0.5,0.5,0.1)) {
    cat(prop.tumour, " ")
 
    data.tmp <- data_all[data_all$meanCov==meanCov & abs(data_all$prop.tumour-prop.tumour)<0.09,]

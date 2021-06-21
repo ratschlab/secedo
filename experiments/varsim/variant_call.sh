@@ -13,7 +13,7 @@ genomes=("${base_dir}/genomes/healthy.fa" "${base_dir}/genomes/tumor1-h-20K/tumo
 "${base_dir}/genomes/tumor8-5-2.5K/tumor8-5-2.5K.fa")
 n_tumor=${#genomes[@]}
 
-n_cells=(2000 500 500 500 500 2000 500 500 1000) # number of cells in each group
+n_cells=(2000 500 500 500 500 2000 500 750 1000) # number of cells in each group
 
 # runs art_illumina to generate simulated reads for each group of cells with coverage #coverage
 function generate_reads() {
@@ -142,7 +142,7 @@ function variant_calling() {
              # --clustering=${out_dir}/clustering \
       echo "$command"
 
-      bsub -K -J "silver" -W 04:00 -n 20 -R "rusage[mem=40000]" -R "span[hosts=1]" -oo "${out_dir}/silver.lsf.log" \
+      bsub -K -J "silver" -W 04:00 -n 20 -R "rusage[mem=50000]" -R "span[hosts=1]" -oo "${out_dir}/silver.lsf.log" \
            "${command}" &
     done
   done
