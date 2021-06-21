@@ -33,7 +33,7 @@ The pileup files are created in SILVER's binary format (extension .bin) and in t
 
 ### Clustering and variant calling
 ```
-./silver -i <PILEUP_DIR> -o <OUT_DIR> --num_threads 20 --log_level=trace --flagfile <FLAGS> \
+./silver -i <PILEUP_DIR> -o <OUT_DIR> --num_threads 20 --log_level=trace \
              --not_informative_rate=0.5 --seq_error_rate=0.01 \
              --reference_genome=OPTIONAL_REFERENCE_GENOME_FASTA \
              --max_coverage 1000 --min_cluster_size 500
