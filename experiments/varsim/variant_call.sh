@@ -112,7 +112,7 @@ function create_pileup() {
           echo "Copy command: ${copy_command}"
           echo "Pileup command: $command"
           # allocating 40G scratch space; for the 1400 simulated Varsim cells, chromosomes 1/2 (the longest) need ~22G
-          bsub  -K -J "pile-${chromosome}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
+          bsub  -K -J "pile-${chromosome}" -W 02:00 -n 20 -R "rusage[mem=8000,scratch=2000]" -R "span[hosts=1]" \
                 -oo "${log_dir}/pileup-${chromosome}.lsf.log" "${copy_command}; ${command}; rm -rf ${scratch_dir}" &
   done
 
@@ -155,7 +155,7 @@ if [ "$#" -ne 1 ]; then
             echo "Usage: main.sh <start_step>"
             echo "start_step=1 -> Generate reads for healthy/tumor cells (~1h)"
             echo "start_step=2 -> Align reads against the human genome (~1h )"
-            echo "start_step=3 -> Create pileup files (one per chromosome) (~30 mins)"
+            echo "start_step=3 -> Create pileup files (one per chromosome) (~1h for the larger chromosomes)"
             echo "start_step=4 -> Run variant calling (~1h for 8K cells)"
             exit 1
 fi
