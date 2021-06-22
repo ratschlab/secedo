@@ -42,13 +42,17 @@ is_significant <- function(cov, log, res) {
   prob_all_c1 = homo_prior*((1-theta)^res[4])*(theta/3)^(cov-res[4])
   # 2. The locus is heterozygous c1 c2
   prob_hetero = hetero_prior * ((0.5-theta/3)^(res[3]+res[4])) * ((theta/3)^(res[1]+res[2]))
-  # 3 The locus is heterozygous + somatic mutation 
-  prob_hetero_som = hetero_prior * mut_prior * ((1-theta)^(res[4]+res[2]+res[3])) * ((theta/3)^res[1])
-  # 4. Two somatic mutations
+  # 3 The locus is homozygous + somatic mutation 
+  prob_homo_som = homo_prior * mut_prior * ((0.75-0.66*theta)^res[4])*(0.25^res[3])*((theta/3)^(res[1]+res[2]))
+  # 4 The locus is heterozygous + somatic mutation 
+  prob_hetero_som = hetero_prior * mut_prior * ((0.5-theta)^res[4])*((0.25)^(res[2]+res[3])) * ((theta/3)^res[1])
+  # 5. Two somatic mutations
   prob_two_somatic = hetero_prior*mut_prior^2*(1-theta)^cov
-  normCoeff = log(prob_all_c1 + prob_hetero + prob_hetero_som + prob_two_somatic)
-#  message("Probability homozygous: ", exp(p_homo+multinomCoef))
-#  message("Prob all ", prob_all_c1, " Prob hetero ", prob_hetero, "Prob hetero som: ", prob_hetero_som, "Probability: ", exp(p_homo-normCoeff))
+  normCoeff = log(prob_all_c1 + prob_hetero + prob_homo_som + prob_hetero_som + prob_two_somatic)
+  # message("p_homo ", p_homo)
+  # message("Evidence: ", normCoeff)
+  # message("Probability homozygous: ", exp(p_homo+multinomCoef))
+  # message("Prob all ", prob_all_c1, " Prob hetero ", prob_hetero, " Prob homo som: ", prob_homo_som, " Prob hetero som: ", prob_hetero_som, " Probability: ", exp(p_homo-normCoeff))
   return (p_homo - normCoeff)
 }
 
