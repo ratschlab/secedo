@@ -120,6 +120,7 @@ void read_contig(std::ifstream &fasta_file, std::vector<uint8_t> *chr_data) {
 
 void get_next_chromosome(std::ifstream &fasta_file,
                          const std::unordered_map<std::string, std::vector<ChrMap>> &map,
+                         bool is_diploid,
                          std::vector<uint8_t> *chr_data,
                          std::vector<uint8_t> *tmp1,
                          std::vector<uint8_t> *tmp2) {
@@ -142,6 +143,12 @@ void get_next_chromosome(std::ifstream &fasta_file,
         std::swap(*tmp1, *chr_data);
     }
 
+    if(!is_diploid) { // assume all heterozygous
+        for (uint32_t i = 0; i < chr_data->size(); ++i) {
+            chr_data->at(i) = (chr_data->at(i) << 3) | chr_data->at(i);
+        }
+        return;
+    }
 
     char ch1 = fasta_file.get();
     assert(ch1 == '>' || ch1 == EOF);
@@ -244,6 +251,13 @@ std::vector<std::pair<char, char>> get_different_bases(uint8_t reference_genotyp
     }
 }
 
+bool check_is_diploid(std::ifstream &f) {
+    std::string s;
+    f >> s;
+    f.seekg(0);
+    return s.find("maternal") != s.npos;
+}
+
 void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                      const std::vector<uint16_t> &clusters,
                      const std::string &reference_genome_file,
@@ -266,6 +280,7 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
     // clusters are numbered starting with 1; 0 means "no cluster"
     uint32_t num_clusters = *std::max_element(clusters.begin(), clusters.end()) + 1;
     std::ifstream fasta_file(reference_genome_file);
+    bool is_diploid = check_is_diploid(fasta_file);
     std::vector<uint8_t> reference_chromosome, tmp1, tmp2;
     if (std::filesystem::file_size(reference_genome_file) > 1e6) { // not a test setting
         reference_chromosome.reserve(250'000'000);
@@ -285,13 +300,12 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
     std::ofstream f(out_dir / "variant");
     for (uint32_t chr_idx = 0; chr_idx < pos_data.size(); ++chr_idx) {
         const std::vector<PosData> &chromosome_data = pos_data[chr_idx];
-        get_next_chromosome(fasta_file, map, &reference_chromosome, &tmp1, &tmp2);
+        get_next_chromosome(fasta_file, map, is_diploid, &reference_chromosome, &tmp1, &tmp2);
         for (const PosData &pd : chromosome_data) {
             std::vector<std::array<uint16_t, 4>> nbases(num_clusters);
             for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
                 for (uint32_t i = 0; i < pd.size(); ++i) {
-                    if (std::abs(static_cast<int64_t>(cl_idx - clusters[pd.cell_id(i)]))
-                        <= 0.05) {
+                    if (std::abs(static_cast<int64_t>(cl_idx - clusters[pd.cell_id(i)])) <= 0.05) {
                         nbases[cl_idx][pd.base(i)]++;
                     }
                 }

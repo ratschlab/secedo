@@ -46,7 +46,7 @@ class VariantCalling : public ::testing::Test {
 TEST(ReadFasta, Empty) {
     std::ifstream f("data/empty.pileup");
     std::vector<uint8_t> chr_data, tmp1, tmp2;
-    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, {}, true, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(0, chr_data.size());
 }
 
@@ -55,14 +55,14 @@ TEST(ReadFasta, FemalGenome) {
     std::string expected_maternal = "AAAAAGGGGG";
     std::string expected_paternal = "CCCCCTTTTT";
     std::vector<uint8_t> chr_data, tmp1, tmp2;
-    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, {}, true, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(10, chr_data.size());
     for (uint32_t i = 0; i < chr_data.size(); ++i) {
         ASSERT_EQ(CharToInt[(int)expected_paternal[i]], chr_data[i] & 7);
         ASSERT_EQ(CharToInt[(int)expected_maternal[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, {}, true, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(8, chr_data.size());
 
     expected_paternal = "AAAAGGGG";
@@ -73,20 +73,43 @@ TEST(ReadFasta, FemalGenome) {
     }
 }
 
+TEST(ReadFasta, FemalGenomeHaploid) {
+    std::ifstream f("data/genome_female.fa");
+    std::string expected = "AAAAAGGGGG";
+    std::vector<uint8_t> chr_data, tmp1, tmp2;
+    bool is_diploid = check_is_diploid(f);
+    get_next_chromosome(f, {}, is_diploid, &chr_data, &tmp1, &tmp2);
+    ASSERT_EQ(10, chr_data.size());
+    for (uint32_t i = 0; i < chr_data.size(); ++i) {
+        ASSERT_EQ(CharToInt[(int)expected[i]], chr_data[i] & 7);
+        ASSERT_EQ(CharToInt[(int)expected[i]], chr_data[i] >> 3);
+    }
+
+    get_next_chromosome(f, {}, is_diploid, &chr_data, &tmp1, &tmp2);
+    ASSERT_EQ(8, chr_data.size());
+
+    expected = "CCCCNNNN";
+    expected = "CCCCNNNN";
+    for (uint32_t i = 0; i < chr_data.size(); ++i) {
+        ASSERT_EQ(CharToInt[(int)expected[i]], chr_data[i] & 7);
+        ASSERT_EQ(CharToInt[(int)expected[i]], chr_data[i] >> 3);
+    }
+}
+
 TEST(ReadFasta, MaleGenome) {
     std::ifstream f("data/genome_diploid_male.fa");
     std::vector<uint8_t> chr_data;
     std::string expected_maternal = "AAAAAGGGGG";
     std::string expected_paternal = "CACCCTTTTT";
     std::vector<uint8_t> tmp1, tmp2;
-    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, {},true,  &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(10, chr_data.size());
     for (uint32_t i = 0; i < chr_data.size(); ++i) {
         ASSERT_EQ(CharToInt[(int)expected_paternal[i]], chr_data[i] & 7);
         ASSERT_EQ(CharToInt[(int)expected_maternal[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, {},true,  &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(8, chr_data.size());
 
     std::string expected_X = "CCCCNNNN";
@@ -95,7 +118,7 @@ TEST(ReadFasta, MaleGenome) {
         ASSERT_EQ(CharToInt[(int)expected_X[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, {}, &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, {},true,  &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(8, chr_data.size());
 
     std::string expected_Y = "AAAAGGGG";
@@ -112,14 +135,14 @@ TEST(ReadFasta, MaleGenomeMapped) {
     std::string expected_paternal = "NCACCCTTTTT";
     auto map = read_map("data/genome_diploid_male.map");
     std::vector<uint8_t> tmp1, tmp2;
-    get_next_chromosome(f, map, &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, map, true, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(11, chr_data.size());
     for (uint32_t i = 0; i < chr_data.size(); ++i) {
         ASSERT_EQ(CharToInt[(int)expected_paternal[i]], chr_data[i] & 7);
         ASSERT_EQ(CharToInt[(int)expected_maternal[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, map, &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, map, true, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(7, chr_data.size());
 
     std::string expected_X = "CCCNNNN";
@@ -128,7 +151,7 @@ TEST(ReadFasta, MaleGenomeMapped) {
         ASSERT_EQ(CharToInt[(int)expected_X[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, map, &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, map, true, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(6, chr_data.size());
 
     std::string expected_Y = "AAAGGG";
@@ -388,6 +411,12 @@ TEST(ApplyMap, InsertionMidDeletionBeg) {
     apply_map({ map_el1, map_el2 }, chromosome, &result);
     ASSERT_EQ(expected, result);
 }
+
+TEST(IsDiploid, Haploid) {
+    std::ifstream f("data/genome_female.fa");
+    ASSERT_FALSE(check_is_diploid(f));
+}
+
 
 
 } // namespace
