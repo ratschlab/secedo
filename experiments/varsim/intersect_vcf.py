@@ -31,7 +31,7 @@ if __name__ == '__main__':
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--vcf1', help='First VCF file', default=None)
     parser.add_argument('--vcf2', help='Second VCF file', default=None)
-    parser.add_argument('--out', help='Where to write the resulting intersection')
+    parser.add_argument('--out', help='Where to write the resulting intersection and diff', default="./res")
 
     args = parser.parse_args()
 
@@ -60,7 +60,8 @@ if __name__ == '__main__':
 
         j += 1
 
-    print('Total matches: ', matches, 'out of ', len(list1), '/', len(list2))
+    print('Total matches: ', matches, ' out of ', len(list1), '/', len(list2))
+    print(matches/len(list2), matches/len(list1), ' ', matches, ' SNVs\n', len(list1), ' ', len(list2))
     print('Total positions in first file that are not in the 2nd: ', diffs)
     print(f'Intersection written to {args.out}.intersect')
     print(f'Diff written to {args.out}.diff')

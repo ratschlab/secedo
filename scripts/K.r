@@ -88,7 +88,7 @@ factorials = comp_fact()
 for (meanCov in seq(10,200,10)) {
   message("\nCoverage: ", meanCov)
   cat("Proportion of tumor cells: ")
-  for (prop.tumour in seq(0.5,0.5,0.1)) {
+  for (prop.tumour in seq(0.1,0.9,0.1)) {
     cat(prop.tumour, " ")
     prop.healthy <- 1-prop.tumour
 
@@ -252,7 +252,7 @@ pos.mut <- pos.all*somMutPrior
 pos.homo <- pos.all-pos.hetero-pos.mut
 
 best.Ks <- data.frame(meanCov=rep(seq(10,200,10), each=9),
-  prop.tumour=rep(seq(0.5,0.5,0.1),20),
+  prop.tumour=rep(seq(0.1,0.9,0.1),20),
   bestK.J=rep(0,180),
   kept.pos.J=rep(0,180),
   kept.mut.J=rep(0,180),
@@ -262,7 +262,7 @@ index=1
 for (meanCov in seq(10,200,10)) {
   message("\nCoverage: ", meanCov)
   cat("Proportion of tumor cells: ")
-  for (prop.tumour in seq(0.5,0.5,0.1)) {
+  for (prop.tumour in seq(0.1,0.9,0.1)) {
    cat(prop.tumour, " ")
 
    data.tmp <- data_all[data_all$meanCov==meanCov & abs(data_all$prop.tumour-prop.tumour)<0.09,]

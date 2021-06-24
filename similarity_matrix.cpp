@@ -422,8 +422,6 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     }
 
     // compute log(P(diff)/P(same))
-    // i.e., simMat_diff[i,j] = -w(i,j) for w(i,j) as defined in the draft:
-    // https://www.overleaf.com/3934821935gjttfmhfzkyf
     mat_diff -= mat_same;
 
     normalize(normalization, &mat_diff);
