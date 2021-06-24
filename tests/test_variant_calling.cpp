@@ -193,7 +193,7 @@ TEST_F(VariantCalling, OnePosOneVariant) {
     variant_calling(pds, clusters, "data/genome_diploid_female.fa", "", 1e-3, 1e-3,
                     "data/" + name());
 
-    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_0.vcf");
+    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_1.vcf");
 
     ASSERT_EQ(1, vcfs.size());
     ASSERT_EQ(vcfs[0].ref, 'C');
@@ -220,7 +220,7 @@ TEST_F(VariantCalling, OnePosOneVariantHomozygous) {
     variant_calling(pds, clusters, "data/genome_diploid_male.fa", "", 1e-3, 1e-3,
                     "data/" + name() + "/");
 
-    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_0.vcf");
+    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_1.vcf");
 
     ASSERT_EQ(1, vcfs.size());
     ASSERT_EQ(vcfs[0].ref, 'A');
@@ -247,7 +247,7 @@ TEST_F(VariantCalling, OnePosNoVariant) {
     variant_calling(pds, clusters, "data/genome_diploid_female.fa", "", 1e-3, 1e-3,
                     "data/" + name());
 
-    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_0.vcf");
+    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_1.vcf");
 
     ASSERT_EQ(0, vcfs.size());
 }
@@ -271,7 +271,7 @@ TEST_F(VariantCalling, OnePosTwoVariants) {
     variant_calling(pds, clusters, "data/genome_diploid_female.fa", "", 1e-3, 1e-3,
                     "data/" + name());
 
-    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_0.vcf");
+    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_1.vcf");
 
     ASSERT_EQ(2, vcfs.size());
 
@@ -310,7 +310,7 @@ TEST_F(VariantCalling, TwoPosTwoVariants) {
     variant_calling(pds, clusters, "data/genome_diploid_female.fa", "", 1e-3, 1e-3,
                     "data/" + name());
 
-    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_0.vcf");
+    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_1.vcf");
 
     ASSERT_EQ(2, vcfs.size());
 
