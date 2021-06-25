@@ -102,14 +102,14 @@ TEST(ReadFasta, MaleGenome) {
     std::string expected_maternal = "AAAAAGGGGG";
     std::string expected_paternal = "CACCCTTTTT";
     std::vector<uint8_t> tmp1, tmp2;
-    get_next_chromosome(f, {},true,  &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, {}, true, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(10, chr_data.size());
     for (uint32_t i = 0; i < chr_data.size(); ++i) {
         ASSERT_EQ(CharToInt[(int)expected_paternal[i]], chr_data[i] & 7);
         ASSERT_EQ(CharToInt[(int)expected_maternal[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, {},true,  &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, {}, true, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(8, chr_data.size());
 
     std::string expected_X = "CCCCNNNN";
@@ -118,7 +118,7 @@ TEST(ReadFasta, MaleGenome) {
         ASSERT_EQ(CharToInt[(int)expected_X[i]], chr_data[i] >> 3);
     }
 
-    get_next_chromosome(f, {},true,  &chr_data, &tmp1, &tmp2);
+    get_next_chromosome(f, {}, true, &chr_data, &tmp1, &tmp2);
     ASSERT_EQ(8, chr_data.size());
 
     std::string expected_Y = "AAAAGGGG";
@@ -415,6 +415,34 @@ TEST(ApplyMap, InsertionMidDeletionBeg) {
 TEST(IsDiploid, Haploid) {
     std::ifstream f("data/genome_female.fa");
     ASSERT_FALSE(check_is_diploid(f));
+}
+
+TEST(MostLikelyGenotype, AllSame) {
+    ASSERT_EQ(0, most_likely_genotype({ 10, 0, 0, 0 }, 1e-3, 1e-3));
+    ASSERT_EQ((1 << 3) + 1, most_likely_genotype({ 0, 10, 0, 0 }, 1e-3, 1e-3));
+    ASSERT_EQ((2 << 3) + 2, most_likely_genotype({ 0, 0, 10, 0 }, 1e-3, 1e-3));
+    ASSERT_EQ((3 << 3) + 3, most_likely_genotype({ 0, 0, 0, 10 }, 1e-3, 1e-3));
+}
+
+TEST(MostLikelyGenotype, OneDifferent) {
+    ASSERT_EQ(0, most_likely_genotype({ 10, 1, 0, 0 }, 1e-3, 1e-3));
+    ASSERT_EQ((1 << 3) + 1, most_likely_genotype({ 1, 10, 0, 0 }, 1e-3, 1e-3));
+    ASSERT_EQ((2 << 3) + 2, most_likely_genotype({ 1, 0, 10, 0 }, 1e-3, 1e-3));
+    ASSERT_EQ((3 << 3) + 3, most_likely_genotype({ 1, 0, 0, 10 }, 1e-3, 1e-3));
+}
+
+TEST(MostLikelyGenotype, TwoDifferent) {
+    ASSERT_EQ(0, most_likely_genotype({ 10, 2, 0, 0 }, 1e-3, 0.05));
+    ASSERT_EQ((1 << 3) + 1, most_likely_genotype({ 2, 10, 0, 0 }, 1e-3, 0.05));
+    ASSERT_EQ((2 << 3) + 2, most_likely_genotype({ 2, 0, 10, 0 }, 1e-3, 0.05));
+    ASSERT_EQ((3 << 3) + 3, most_likely_genotype({ 2, 0, 0, 10 }, 1e-3, 0.05));
+}
+
+TEST(MostLikelyGenotype, ThreeDifferent) {
+    ASSERT_EQ(0, most_likely_genotype({ 10, 3, 0, 0 }, 1e-3, 0.05));
+    ASSERT_EQ((1 << 3) + 1, most_likely_genotype({ 3, 10, 0, 0 }, 1e-3, 0.05));
+    ASSERT_EQ((2 << 3) + 2, most_likely_genotype({ 3, 0, 10, 0 }, 1e-3, 0.05));
+    ASSERT_EQ((3 << 3) + 3, most_likely_genotype({ 3, 0, 0, 10 }, 1e-3, 0.05));
 }
 
 } // namespace

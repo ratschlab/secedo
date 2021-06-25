@@ -1,23 +1,19 @@
 #include "variant_calling.hpp"
 
-/**
- * Find the most likely genotype, if we observe bases counts
- * @parm nBases (array of length 4: number of As, Cs, etc.)
- * @param heteroPrior the prior on heterozygous genotype
- * @param theta sequencing error rate
- */
 uint8_t
-mostLikelyGenotype(const std::array<uint16_t, 4> &nBases, double heteroPrior, double theta) {
-    double logTheta = std::log(theta / 3);
-    double logOneMinusTheta = std::log(1 - theta);
-    double logHalfMinusTheta = std::log(0.5 - theta / 3);
-
-    std::vector<uint32_t> idx = argsort(nBases.begin(), nBases.end());
+most_likely_genotype(const std::array<uint16_t, 4> &nBases, double heteroPrior, double theta) {
     // coverage for the given position; // we require coverage at least 9
     uint32_t cov = sum(nBases.begin(), nBases.end());
     if (cov < 9) {
         return NO_GENOTYPE;
     }
+
+    double logTheta = std::log(theta / 3);
+    double logOneMinusTheta = std::log(1 - theta);
+    double logHalfMinusTheta = std::log(0.5 - theta / 3);
+
+    std::vector<uint32_t> idx = argsort(nBases.begin(), nBases.end());
+
 
     // probability of the most likely homozygous genotype
     double logProb_homo = nBases[idx[3]] * logOneMinusTheta + (cov - nBases[idx[3]]) * logTheta;
@@ -308,7 +304,7 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
             // -1 because PosData is 1-based to emulate samtools et all
             uint8_t reference_genotype = reference_chromosome[pd.position - 1];
             for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
-                uint8_t genotype = mostLikelyGenotype(nbases[cl_idx], hetero_prior, theta);
+                uint8_t genotype = most_likely_genotype(nbases[cl_idx], hetero_prior, theta);
                 // write position to file if different
                 if (!is_same_genotype(genotype, reference_genotype) && genotype != NO_GENOTYPE) {
                     if (is_homozygous(reference_genotype)) {
@@ -319,16 +315,21 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                             gt = "0/1";
                         }
                         assert((reference_genotype & 7) < 6);
+                        // TODO: remove the bases
                         vcfs[cl_idx] << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
                                      << IntToChar[reference_genotype & 7] << '\t' << alt
-                                     << info_format << gt << std::endl;
+                                     << info_format << gt << nbases[cl_idx][0] << " "
+                                     << nbases[cl_idx][1] << " " << nbases[cl_idx][2] << " "
+                                     << nbases[cl_idx][3] << " " << std::endl;
                     } else {
                         std::vector<std::pair<char, char>> bases
                                 = get_different_bases(reference_genotype, genotype);
                         for (const auto &p : bases) {
                             vcfs[cl_idx] << id_to_chromosome(chr_idx) << '\t' << pd.position
                                          << "\t.\t" << p.first << '\t' << p.second << info_format
-                                         << "1/1" << std::endl;
+                                         << "1/1" << nbases[cl_idx][0] << " " << nbases[cl_idx][1]
+                                         << " " << nbases[cl_idx][2] << " " << nbases[cl_idx][3]
+                                         << " " << std::endl;
                         }
                     }
                 }

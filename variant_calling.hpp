@@ -79,3 +79,13 @@ void apply_map(const std::vector<ChrMap> &map,
  * @VisibleForTesting
  */
 bool check_is_diploid(std::ifstream &f);
+
+/**
+ * Find the most likely genotype, if we observe bases counts
+ * @parm nBases (array of length 4: number of As, Cs, etc.)
+ * @param heteroPrior the prior on heterozygous genotype
+ * @param theta sequencing error rate
+ * @VisibleForTesting
+ */
+uint8_t
+most_likely_genotype(const std::array<uint16_t, 4> &nBases, double heteroPrior, double theta);

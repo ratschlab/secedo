@@ -1,5 +1,5 @@
 '''
-Code to perform variant calling. 
+Code to perform variant calling.
 '''
 
 import numpy as np
@@ -18,7 +18,7 @@ inverseIndex = {0:'A', 1:'C', 2:'G', 3:'T'}
 Function to find the most likely genotype, if we observe bases counts nBases (array of length 4: number
 of As, Cs, etc.) , the prior on heterozygous genotype is heteroPrior and the sequencing error rate theta.
 '''
-def mostLikelyGenotype(nBases, heteroPrior, theta):
+def most_likely_genotype(nBases, heteroPrior, theta):
 	logTheta = math.log(theta/3)
 	logOneMinusTheta = math.log(1-theta)
 	logHalfMinusTheta = math.log(0.5-theta/3)
@@ -28,11 +28,11 @@ def mostLikelyGenotype(nBases, heteroPrior, theta):
 	cov = np.sum(data)
 	# we require coverage at least 8
 	if cov>=9:
-		# probability of the most likely homozygous genotype 
-		logProb_homo = data[3]*logOneMinusTheta + (cov-data[3])*logTheta 
+		# probability of the most likely homozygous genotype
+		logProb_homo = data[3]*logOneMinusTheta + (cov-data[3])*logTheta
 		# probability of the most likely heterozygous genotype
 		logProb_hetero = (data[2]+data[3])*logHalfMinusTheta + (data[0]+data[1])*logTheta + math.log(heteroPrior)
-			
+
 		# if logProb_homo == logProb_hetero, we are not able to decide
 		if logProb_homo == logProb_hetero:
 			return "nan"
@@ -79,9 +79,9 @@ def varCalling(mpileupFile, labels, theta, heteroPrior, ind):
 	rf = open("varCalls_chr"+str(ind), 'w')
 
 	# read the mpileupFile line by line and call genotype for each position in the file for both clusters
-	mf = open(mpileupFile, 'r') 
+	mf = open(mpileupFile, 'r')
 	# position of the last mutation
-	while True: 
+	while True:
 		# Get next line from file
 		line = mf.readline()
 		# if line is empty, end of file is reached
@@ -105,8 +105,8 @@ def varCalling(mpileupFile, labels, theta, heteroPrior, ind):
 		# compute the weighted number of bases
 		nBases_0 = [0,0,0,0]
 		nBases_1 = [0,0,0,0]
-		
-		
+
+
 		for i in range(cov):
 			cell_id = int(int(cell_ids[i])/4)
 			# iterative
@@ -116,12 +116,12 @@ def varCalling(mpileupFile, labels, theta, heteroPrior, ind):
 			#w1 = weights_iterative_1[cell_id]
 			w1 = 1 if labels[cell_id]>=0.95 else 0
 			nBases_1[index[bases[i]]] += w1
-		
-			
-			
+
+
+
 		### iterative
-		genotype_0 = mostLikelyGenotype(nBases_0, heteroPrior, theta)
-		genotype_1 = mostLikelyGenotype(nBases_1, heteroPrior, theta)
+		genotype_0 = most_likely_genotype(nBases_0, heteroPrior, theta)
+		genotype_1 = most_likely_genotype(nBases_1, heteroPrior, theta)
 
 
 		################### output
@@ -129,8 +129,8 @@ def varCalling(mpileupFile, labels, theta, heteroPrior, ind):
 		if genotype_0!=genotype_1 and genotype_0!="nan" and genotype_1!="nan":
 			toWrite = [chrom, str(position), str(nBases_0), genotype_0, str(nBases_1), genotype_1]
 			rf.write('\t'.join(toWrite)+"\n")
-		
-	mf.close() 
+
+	mf.close()
 	rf.close()
 
 
@@ -139,7 +139,7 @@ def main(argv):
 	theta=0.01
 	# labels file
 	labelsFile = ""
-	
+
 	# parse the arguments
 	try:
 		opts, args = getopt.getopt(argv,"l:f:t:h:i:")
@@ -156,11 +156,11 @@ def main(argv):
 			heteroPrior = arg
 		if opt == '-i':
 			ind = arg
-		
+
 	with open(labelsFile, 'r') as f:
 		labels = f.read().split()
 	labels = [float(x) for x in labels]
-	
+
 	varCalling(mpileupFile, labels, theta, heteroPrior, ind)
 
 

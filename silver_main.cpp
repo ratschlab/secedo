@@ -166,8 +166,7 @@ int main(int argc, char *argv[]) {
     std::vector<std::filesystem::path> input_files = { FLAGS_i };
     // if the input is a directory, get all pileup files in the directory
     if (std::filesystem::is_directory(FLAGS_i)) {
-        logger()->info("Looking for binary pileup files in {}",
-                        std::filesystem::absolute(FLAGS_i));
+        logger()->info("Looking for binary pileup files in {}", std::filesystem::absolute(FLAGS_i));
         input_files = get_files(FLAGS_i, ".bin");
         if (input_files.empty()) {
             logger()->info("No binary pileup files found. Looking for textual pileup files...");
@@ -289,8 +288,8 @@ int main(int argc, char *argv[]) {
 
     if (!FLAGS_reference_genome.empty()) {
         logger()->info("Performing variant calling against {}", FLAGS_reference_genome);
-        variant_calling(pos_data, clusters, FLAGS_reference_genome, FLAGS_map_file,
-                        FLAGS_heterozygous_prob, FLAGS_seq_error_rate, FLAGS_o);
+        variant_calling(pos_data, clusters, FLAGS_reference_genome, FLAGS_map_file, 1e-3,
+                        FLAGS_seq_error_rate, FLAGS_o);
     } else {
         logger()->info("Skipping variant calling, because no reference genome was provided");
     }
