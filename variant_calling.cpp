@@ -210,7 +210,7 @@ bool is_same_genotype(uint8_t a, uint8_t b) {
  * Get the bases that are not the same in the given genotypes. E.g. if the first is A/C and the
  * second is A/T,the result will be {C,T}.
  */
-std::vector<std::pair<char, char>> get_different_bases(uint8_t reference_genotype,
+std::vector<std::pair<char, char>> get_differing_bases(uint8_t reference_genotype,
                                                        uint8_t genotype) {
     assert((reference_genotype & 7) < 6 && (reference_genotype >> 3) < 6 && (genotype & 7) < 6
            && (genotype >> 3) < 6);
@@ -301,6 +301,10 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                 }
             }
 
+            // this happens when the chromosome has an insert right at the end
+            if (pd.position -1 >= reference_chromosome.size()) {
+                break;
+            }
             // -1 because PosData is 1-based to emulate samtools et all
             uint8_t reference_genotype = reference_chromosome[pd.position - 1];
             for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
@@ -323,14 +327,13 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                                      << nbases[cl_idx][3] << " " << std::endl;
                     } else {
                         std::vector<std::pair<char, char>> bases
-                                = get_different_bases(reference_genotype, genotype);
+                                = get_differing_bases(reference_genotype, genotype);
                         for (const auto &p : bases) {
-                            vcfs[cl_idx]
-                                    << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
-                                    << p.first << '\t' << p.second << info_format << "1/1"
-                                    << "\t" << nbases[cl_idx][0] << " " << nbases[cl_idx][1] << " "
-                                    << nbases[cl_idx][2] << " " << nbases[cl_idx][3] << " "
-                                    << std::endl;
+                            vcfs[cl_idx] << id_to_chromosome(chr_idx) << '\t' << pd.position
+                                         << "\t.\t" << p.first << '\t' << p.second << info_format
+                                         << "1/1" << "\t" << nbases[cl_idx][0]
+                                         << " " << nbases[cl_idx][1] << " " << nbases[cl_idx][2]
+                                         << " " << nbases[cl_idx][3] << " " << std::endl;
                         }
                     }
                 }
