@@ -417,6 +417,4 @@ TEST(IsDiploid, Haploid) {
     ASSERT_FALSE(check_is_diploid(f));
 }
 
-
-
 } // namespace

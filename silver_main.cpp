@@ -287,9 +287,13 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    logger()->info("Performing variant calling against {}", FLAGS_reference_genome);
-    variant_calling(pos_data, clusters, FLAGS_reference_genome, FLAGS_map_file,
-                    FLAGS_heterozygous_prob, FLAGS_seq_error_rate, FLAGS_o);
+    if (!FLAGS_reference_genome.empty()) {
+        logger()->info("Performing variant calling against {}", FLAGS_reference_genome);
+        variant_calling(pos_data, clusters, FLAGS_reference_genome, FLAGS_map_file,
+                        FLAGS_heterozygous_prob, FLAGS_seq_error_rate, FLAGS_o);
+    } else {
+        logger()->info("Skipping variant calling, because no reference genome was provided");
+    }
 
     logger()->info("Done.");
 }

@@ -143,13 +143,6 @@ void get_next_chromosome(std::ifstream &fasta_file,
         std::swap(*tmp1, *chr_data);
     }
 
-    if(!is_diploid) { // assume all heterozygous
-        for (uint32_t i = 0; i < chr_data->size(); ++i) {
-            chr_data->at(i) = (chr_data->at(i) << 3) | chr_data->at(i);
-        }
-        return;
-    }
-
     char ch1 = fasta_file.get();
     assert(ch1 == '>' || ch1 == EOF);
 
@@ -157,11 +150,12 @@ void get_next_chromosome(std::ifstream &fasta_file,
 
     fasta_file.putback(ch1);
 
-    if (chromosome == 'X' || chromosome == 'Y') {
+    // Varsim fasta chromosomes are called >X_maternal, >Y_paternal, etc.
+    if (!is_diploid || (chromosome == 'X' && ch2 == 'Y') || chromosome == 'Y') {
         if (ch2 == 'Y') {
             logger()->info("Male genome detected; Simulating homozygous X");
         } else {
-            logger()->info("Simulating homozygous Y");
+            logger()->info("Simulating homozygous {}", line);
         }
         for (uint32_t i = 0; i < chr_data->size(); ++i) {
             chr_data->at(i) |= (chr_data->at(i) << 3);
