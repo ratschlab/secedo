@@ -315,10 +315,10 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                             gt = "0/1";
                         }
                         assert((reference_genotype & 7) < 6);
-                        // TODO: remove the bases
+                        // TODO: remove the nbases[] - debug only
                         vcfs[cl_idx] << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
                                      << IntToChar[reference_genotype & 7] << '\t' << alt
-                                     << info_format << gt << nbases[cl_idx][0] << " "
+                                     << info_format << gt << "\t" << nbases[cl_idx][0] << " "
                                      << nbases[cl_idx][1] << " " << nbases[cl_idx][2] << " "
                                      << nbases[cl_idx][3] << " " << std::endl;
                     } else {
@@ -327,9 +327,9 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                         for (const auto &p : bases) {
                             vcfs[cl_idx] << id_to_chromosome(chr_idx) << '\t' << pd.position
                                          << "\t.\t" << p.first << '\t' << p.second << info_format
-                                         << "1/1" << nbases[cl_idx][0] << " " << nbases[cl_idx][1]
-                                         << " " << nbases[cl_idx][2] << " " << nbases[cl_idx][3]
-                                         << " " << std::endl;
+                                         << "1/1" << nbases[cl_idx][0] << "\t"
+                                         << " " << nbases[cl_idx][1] << " " << nbases[cl_idx][2]
+                                         << " " << nbases[cl_idx][3] << " " << std::endl;
                         }
                     }
                 }

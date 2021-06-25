@@ -438,11 +438,14 @@ TEST(MostLikelyGenotype, TwoDifferent) {
     ASSERT_EQ((3 << 3) + 3, most_likely_genotype({ 2, 0, 0, 10 }, 1e-3, 0.05));
 }
 
-TEST(MostLikelyGenotype, ThreeDifferent) {
-    ASSERT_EQ(0, most_likely_genotype({ 10, 3, 0, 0 }, 1e-3, 0.05));
-    ASSERT_EQ((1 << 3) + 1, most_likely_genotype({ 3, 10, 0, 0 }, 1e-3, 0.05));
-    ASSERT_EQ((2 << 3) + 2, most_likely_genotype({ 3, 0, 10, 0 }, 1e-3, 0.05));
-    ASSERT_EQ((3 << 3) + 3, most_likely_genotype({ 3, 0, 0, 10 }, 1e-3, 0.05));
+TEST(MostLikelyGenotype, EqualProportions) {
+    uint8_t genotype = most_likely_genotype({ 10, 10, 0, 0 }, 1e-3, 0.05);
+    ASSERT_TRUE((0 << 3) + 1 == genotype || (1 << 3) + 0 == genotype);
+}
+
+TEST(MostLikelyGenotype, NearEqualProportions) {
+    uint8_t genotype = most_likely_genotype({ 10, 13, 0, 0 }, 1e-3, 0.05);
+    ASSERT_TRUE((0 << 3) + 1 == genotype || (1 << 3) + 0 == genotype);
 }
 
 } // namespace
