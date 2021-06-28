@@ -175,6 +175,16 @@ std::vector<uint32_t> argsort(iterator b, iterator e) {
     return result;
 }
 
+template <typename T, uint32_t C>
+std::array<uint32_t, C> argsort(const std::array<T, C> &array) {
+    std::array<uint32_t, C> result;
+    std::iota(result.begin(), result.end(), 0);
+    std::sort(result.begin(), result.end(),
+              [&array](int left, int right) -> bool { return array[left] < array[right]; });
+
+    return result;
+}
+
 template <class T>
 inline std::ostream &operator<<(std::ostream &os, const std::vector<T> &v) {
     os << "[";

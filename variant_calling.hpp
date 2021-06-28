@@ -83,12 +83,15 @@ bool check_is_diploid(std::ifstream &f);
 /**
  * Find the most likely genotype, if we observe bases counts
  * @parm nBases (array of length 4: number of As, Cs, etc.)
- * @param heteroPrior the prior on heterozygous genotype
+ * @param hetero_prior the prior on heterozygous genotype
  * @param theta sequencing error rate
  * @VisibleForTesting
  */
-uint8_t
-most_likely_genotype(const std::array<uint16_t, 4> &nBases, double heteroPrior, double theta);
+uint8_t most_likely_genotype(const std::array<uint16_t, 4> &nBases,
+                             const std::array<uint16_t, 4> &n_bases_total,
+                             const std::array<uint32_t, 4> &nbases_total_idx,
+                             double hetero_prior,
+                             double theta);
 
 /**
  * Checks if a locus is likely homozygous and returns the homozygous genotype if yes.

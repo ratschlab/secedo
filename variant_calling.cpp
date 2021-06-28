@@ -1,39 +1,54 @@
 #include "variant_calling.hpp"
 
-uint8_t likely_homozygous(const std::array<uint16_t, 4> &nBases, double theta) {
-    uint32_t cov = sum(nBases.begin(), nBases.end());
+uint8_t likely_homozygous(const std::array<uint16_t, 4> &n_bases, double theta) {
+    uint32_t cov = sum(n_bases.begin(), n_bases.end());
     if (cov < 9) {
         return NO_GENOTYPE;
     }
-    auto max = std::max_element(nBases.begin(), nBases.end());
+    auto max = std::max_element(n_bases.begin(), n_bases.end());
     // first term is expected bases, second term is standard deviation
     if (cov - *max <= std::round(cov * theta + std::sqrt(cov * theta * (1 - theta)))) {
-        uint32_t base = max - nBases.begin();
+        uint32_t base = max - n_bases.begin();
         return base + (base << 3);
     }
     return NO_GENOTYPE;
 }
 
-uint8_t
-most_likely_genotype(const std::array<uint16_t, 4> &nBases, double heteroPrior, double theta) {
+uint8_t most_likely_genotype(const std::array<uint16_t, 4> &n_bases,
+                             const std::array<uint16_t, 4> &n_bases_total,
+                             const std::array<uint32_t, 4> &nbases_total_idx,
+                             double hetero_prior,
+                             double theta) {
     // coverage for the given position; // we require coverage at least 9
-    uint32_t cov = sum(nBases.begin(), nBases.end());
-    if (cov < 9) {
-        return NO_GENOTYPE;
-    }
+    uint32_t cov = sum(n_bases.begin(), n_bases.end());
 
     double logTheta = std::log(theta / 3);
     double logOneMinusTheta = std::log(1 - theta);
     double logHalfMinusTheta = std::log(0.5 - theta / 3);
 
-    std::vector<uint32_t> idx = argsort(nBases.begin(), nBases.end());
+    std::vector<uint32_t> idx = argsort(n_bases.begin(), n_bases.end());
+
+    if (cov < 9) {
+        if (n_bases[idx[3]] >= cov - 1) {
+            return (idx[3] << 3) | idx[3];
+        }
+        uint8_t b1 = idx[3];
+        uint8_t b2 = idx[2];
+        uint8_t b3 = idx[1];
+        uint8_t bt1 = nbases_total_idx[3];
+        uint8_t bt2 = nbases_total_idx[2];
+        if (n_bases[b2] > n_bases[b3] && (b1 == bt1 || b1 == bt2) && (b2 == bt1 || b2 == bt2)) {
+            return (idx[3] << 3) | idx[2];
+        }
+        return NO_GENOTYPE;
+    }
 
 
     // probability of the most likely homozygous genotype
-    double logProb_homo = nBases[idx[3]] * logOneMinusTheta + (cov - nBases[idx[3]]) * logTheta;
+    double logProb_homo = n_bases[idx[3]] * logOneMinusTheta + (cov - n_bases[idx[3]]) * logTheta;
     // probability of the most likely heterozygous genotype
-    double logProb_hetero = (nBases[idx[2]] + nBases[idx[3]]) * logHalfMinusTheta
-            + (nBases[idx[0]] + nBases[idx[1]]) * logTheta + std::log(heteroPrior);
+    double logProb_hetero = (n_bases[idx[2]] + n_bases[idx[3]]) * logHalfMinusTheta
+            + (n_bases[idx[0]] + n_bases[idx[1]]) * logTheta + std::log(hetero_prior);
 
     // if logProb_homo == logProb_hetero, we are not able to decide
     if (logProb_homo == logProb_hetero) {
@@ -43,14 +58,14 @@ most_likely_genotype(const std::array<uint16_t, 4> &nBases, double heteroPrior, 
     // homozygous genotype
     if (logProb_homo > logProb_hetero) {
         // check that the genotype is unique
-        if (nBases[idx[2]] == nBases[idx[3]]) {
+        if (n_bases[idx[2]] == n_bases[idx[3]]) {
             return NO_GENOTYPE;
         }
         return (idx[3] << 3) | idx[3];
     }
 
     // heterozygous genotype
-    if (nBases[idx[2]] == nBases[idx[1]]) // check uniqueness
+    if (n_bases[idx[2]] == n_bases[idx[1]]) // check uniqueness
         return NO_GENOTYPE;
     return (idx[3] << 3) | idx[2];
 }
@@ -313,30 +328,32 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                 break;
             }
 
-            std::array<uint16_t, 4> nbases_total = {0,0,0,0};
+            std::array<uint16_t, 4> n_bases_total = { 0, 0, 0, 0 };
             std::vector<std::array<uint16_t, 4>> nbases(num_clusters);
             for (uint32_t i = 0; i < pd.size(); ++i) {
                 uint32_t cl_idx = std::round(clusters[pd.cell_id(i)]);
                 if (std::abs(static_cast<int64_t>(cl_idx - clusters[pd.cell_id(i)])) <= 0.05) {
                     nbases[cl_idx][pd.base(i)]++;
                 }
-                nbases_total[pd.base(i)]++;
+                n_bases_total[pd.base(i)]++;
             }
 
-            uint8_t pooled_genotype = likely_homozygous(nbases_total, theta);
+            uint8_t pooled_genotype = likely_homozygous(n_bases_total, theta);
 
-            // -1 because PosData is 1-based to emulate samtools et all
+            // -1 because PosData is 1-based to emulate samtools et al
             uint8_t reference_genotype = reference_chromosome[pd.position - 1];
 
             if (pooled_genotype != NO_GENOTYPE && pooled_genotype != reference_genotype) {
                 vcf_global << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
                            << IntToChar[reference_genotype & 7] << '\t'
                            << IntToChar[pooled_genotype & 7] << info_format << "0/1"
-                           << "\t" << nbases_total[0] << " " << nbases_total[1] << " "
-                           << nbases_total[2] << " " << nbases_total[3] << " " << std::endl;
+                           << "\t" << n_bases_total[0] << " " << n_bases_total[1] << " "
+                           << n_bases_total[2] << " " << n_bases_total[3] << " " << std::endl;
             }
+            std::array<uint32_t, 4> n_bases_total_idx = argsort<uint16_t , 4>(n_bases_total);
             for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
-                uint8_t genotype = most_likely_genotype(nbases[cl_idx], hetero_prior, theta);
+                uint8_t genotype = most_likely_genotype(nbases[cl_idx], n_bases_total,
+                                                        n_bases_total_idx, hetero_prior, theta);
                 // skip if it's same as the pooled genotype
                 if (pooled_genotype != NO_GENOTYPE && genotype == pooled_genotype) {
                     continue;
