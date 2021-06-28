@@ -16,9 +16,13 @@ def parse_file(name, out=None):
                 out.write(line)
             continue
         tokens = line.split('\t')
-        if not (tokens[0] == 'X' or tokens[0] == 'Y' or int(tokens[0]) < 23):
-            print(tokens[0])
+        if not (tokens[0] == 'X' or tokens[0] == 'Y' or int(tokens[0]) < 25):
+            print('Invalid chromosome name: ', tokens[0])
             exit(1)
+        if tokens[0] == '23':
+            tokens[0] = 'X'
+        elif tokens[0] == '24':
+            tokens[0] = 'Y'
         if tokens[1][-1] == '\n':
             tokens[1] = tokens[1][:-1]
         list1.append((tokens[0], tokens[1]))

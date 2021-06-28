@@ -89,3 +89,11 @@ bool check_is_diploid(std::ifstream &f);
  */
 uint8_t
 most_likely_genotype(const std::array<uint16_t, 4> &nBases, double heteroPrior, double theta);
+
+/**
+ * Checks if a locus is likely homozygous and returns the homozygous genotype if yes.
+ * A locus is declared homozygous if the number of the non-dominant bases is no more than one
+ * standard deviation away from the expected number.
+ * @VisibleForTesting
+ */
+uint8_t likely_homozygous(const std::array<uint16_t, 4> &nBases, double theta);

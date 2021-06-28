@@ -1,5 +1,19 @@
 #include "variant_calling.hpp"
 
+uint8_t likely_homozygous(const std::array<uint16_t, 4> &nBases, double theta) {
+    uint32_t cov = sum(nBases.begin(), nBases.end());
+    if (cov < 9) {
+        return NO_GENOTYPE;
+    }
+    auto max = std::max_element(nBases.begin(), nBases.end());
+    // first term is expected bases, second term is standard deviation
+    if (cov - *max <= std::round(cov * theta + std::sqrt(cov * theta * (1 - theta)))) {
+        uint32_t base = max - nBases.begin();
+        return base + (base << 3);
+    }
+    return NO_GENOTYPE;
+}
+
 uint8_t
 most_likely_genotype(const std::array<uint16_t, 4> &nBases, double heteroPrior, double theta) {
     // coverage for the given position; // we require coverage at least 9
@@ -283,6 +297,7 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
         vcfs[i].open(std::filesystem::path(out_dir) / ("cluster_" + std::to_string(i) + ".vcf"));
         write_vcf_preamble(vcfs[i], reference_genome_file, i);
     }
+    std::ofstream vcf_global(std::filesystem::path(out_dir) / "common.vcf");
 
     // the qual,filter,info,format fields are identical for all rows.
     std::string info_format = "\t.\t.\tVARIANT_OVERALL_TYPE=SNP\tGT\t";
@@ -291,24 +306,41 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
     for (uint32_t chr_idx = 0; chr_idx < pos_data.size(); ++chr_idx) {
         const std::vector<PosData> &chromosome_data = pos_data[chr_idx];
         get_next_chromosome(fasta_file, map, is_diploid, &reference_chromosome, &tmp1, &tmp2);
+        logger()->trace("Calling variants on chromosome {}", chr_idx + 1);
         for (const PosData &pd : chromosome_data) {
-            std::vector<std::array<uint16_t, 4>> nbases(num_clusters);
-            for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
-                for (uint32_t i = 0; i < pd.size(); ++i) {
-                    if (std::abs(static_cast<int64_t>(cl_idx - clusters[pd.cell_id(i)])) <= 0.05) {
-                        nbases[cl_idx][pd.base(i)]++;
-                    }
-                }
-            }
-
             // this happens when the chromosome has an insert right at the end
-            if (pd.position -1 >= reference_chromosome.size()) {
+            if (pd.position - 1 >= reference_chromosome.size()) {
                 break;
             }
+
+            std::array<uint16_t, 4> nbases_total = {0,0,0,0};
+            std::vector<std::array<uint16_t, 4>> nbases(num_clusters);
+            for (uint32_t i = 0; i < pd.size(); ++i) {
+                uint32_t cl_idx = std::round(clusters[pd.cell_id(i)]);
+                if (std::abs(static_cast<int64_t>(cl_idx - clusters[pd.cell_id(i)])) <= 0.05) {
+                    nbases[cl_idx][pd.base(i)]++;
+                }
+                nbases_total[pd.base(i)]++;
+            }
+
+            uint8_t pooled_genotype = likely_homozygous(nbases_total, theta);
+
             // -1 because PosData is 1-based to emulate samtools et all
             uint8_t reference_genotype = reference_chromosome[pd.position - 1];
+
+            if (pooled_genotype != NO_GENOTYPE && pooled_genotype != reference_genotype) {
+                vcf_global << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
+                           << IntToChar[reference_genotype & 7] << '\t'
+                           << IntToChar[pooled_genotype & 7] << info_format << "0/1"
+                           << "\t" << nbases_total[0] << " " << nbases_total[1] << " "
+                           << nbases_total[2] << " " << nbases_total[3] << " " << std::endl;
+            }
             for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
                 uint8_t genotype = most_likely_genotype(nbases[cl_idx], hetero_prior, theta);
+                // skip if it's same as the pooled genotype
+                if (pooled_genotype != NO_GENOTYPE && genotype == pooled_genotype) {
+                    continue;
+                }
                 // write position to file if different
                 if (!is_same_genotype(genotype, reference_genotype) && genotype != NO_GENOTYPE) {
                     if (is_homozygous(reference_genotype)) {
@@ -329,11 +361,12 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                         std::vector<std::pair<char, char>> bases
                                 = get_differing_bases(reference_genotype, genotype);
                         for (const auto &p : bases) {
-                            vcfs[cl_idx] << id_to_chromosome(chr_idx) << '\t' << pd.position
-                                         << "\t.\t" << p.first << '\t' << p.second << info_format
-                                         << "1/1" << "\t" << nbases[cl_idx][0]
-                                         << " " << nbases[cl_idx][1] << " " << nbases[cl_idx][2]
-                                         << " " << nbases[cl_idx][3] << " " << std::endl;
+                            vcfs[cl_idx]
+                                    << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
+                                    << p.first << '\t' << p.second << info_format << "1/1"
+                                    << "\t" << nbases[cl_idx][0] << " " << nbases[cl_idx][1] << " "
+                                    << nbases[cl_idx][2] << " " << nbases[cl_idx][3] << " "
+                                    << std::endl;
                         }
                     }
                 }

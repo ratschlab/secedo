@@ -323,6 +323,50 @@ TEST_F(VariantCalling, TwoPosTwoVariants) {
     ASSERT_EQ(vcfs[1].gt, "1/1");
 }
 
+/**
+ * On pos 0 of chr2, the reference genome is haploid A, so we just assume diploid AA. The new genome
+ * will be TT for each cluster, so the position should get written into "common.vcf". On position 0
+ * of chr1, all cells have the same genotype as the reference genome (AA) so that position will e
+ * skipped.
+ */
+TEST_F(VariantCalling, HomozygousCommon) {
+    const uint32_t num_cells = 50;
+    std::vector<uint32_t> read_ids(num_cells);
+    std::vector<uint16_t> cell_ids_bases1(num_cells);
+    std::vector<uint16_t> cell_ids_bases2(num_cells);
+    std::iota(read_ids.begin(), read_ids.end(), 0);
+    for (uint32_t i = 0; i < num_cells; ++i) {
+        cell_ids_bases1[i] = i << 2; // cells have AA genotype
+    }
+    for (uint32_t i = 0; i < num_cells; ++i) {
+        cell_ids_bases2[i] = i << 2 | 3; // cells have TT at this position
+    }
+    PosData pd1(1, read_ids, cell_ids_bases1);
+    PosData pd2(1, read_ids, cell_ids_bases2);
+    const std::vector<std::vector<PosData>> pds = { { pd1 }, { pd2 } };
+
+    // first half of the cells are cluster 1, second half cluster 2
+    std::vector<uint16_t> clusters(num_cells, 1);
+    for (uint32_t i = num_cells / 2; i < num_cells; ++i) {
+        clusters[i] = 2;
+    }
+
+    variant_calling(pds, clusters, "data/genome_female.fa", "", 1e-3, 1e-3, "data/" + name());
+
+    std::vector<Vcf> vcfs1 = read_vcf_file("data/" + name() + "/cluster_1.vcf");
+    std::vector<Vcf> vcfs2 = read_vcf_file("data/" + name() + "/cluster_2.vcf");
+    std::vector<Vcf> vcf_common = read_vcf_file("data/" + name() + "/common.vcf");
+
+    ASSERT_EQ(0, vcfs1.size());
+    ASSERT_EQ(0, vcfs2.size());
+    ASSERT_EQ(1, vcf_common.size());
+
+    ASSERT_EQ(vcf_common[0].ref, 'C');
+    ASSERT_EQ(vcf_common[0].alt, 'T');
+    ASSERT_EQ(vcf_common[0].gt, "0/1");
+}
+
+
 TEST(ReadMap, EmptyName) {
     ASSERT_TRUE(read_map("").empty());
 }
@@ -447,5 +491,19 @@ TEST(MostLikelyGenotype, NearEqualProportions) {
     uint8_t genotype = most_likely_genotype({ 10, 13, 0, 0 }, 1e-3, 0.05);
     ASSERT_TRUE((0 << 3) + 1 == genotype || (1 << 3) + 0 == genotype);
 }
+
+TEST(LikelyHomozygous, AllSame) {
+    ASSERT_EQ(0, likely_homozygous({ 10, 0, 0, 0 }, 0.05));
+}
+
+TEST(LikelyHomozygous, OneDifferent) {
+    ASSERT_EQ((1 << 3) + 1, likely_homozygous({ 1, 10, 0, 0 }, 0.05));
+}
+
+TEST(LikelyHomozygous, NotHomozygous) {
+    ASSERT_EQ(NO_GENOTYPE, likely_homozygous({ 2, 10, 0, 0 }, 0.05));
+    ASSERT_EQ(NO_GENOTYPE, likely_homozygous({ 5, 5, 5, 5 }, 0.05));
+}
+
 
 } // namespace
