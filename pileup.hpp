@@ -29,4 +29,4 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
                                  uint32_t max_coverage,
                                  uint32_t min_base_quality,
                                  uint32_t num_threads,
-                                 uint16_t min_different = 3);
+                                 uint16_t min_different);

@@ -9,18 +9,26 @@ namespace {
 using namespace ::testing;
 
 /**
- * Tests that reading BAM files where all positions are identical returns an empty result.
+ * Tests that reading BAM files where to few positions differ from the majority returns an empty
+ * result.
  */
-TEST(pileup, read_identical) {
+TEST(pileup, read_too_few_differnt) {
     uint32_t chromosome_id = 0;
     uint32_t max_coverage = 10;
     std::vector<PosData> data
-            = pileup_bams({ "data/test1.bam", "data/test1.bam", "data/test1.bam" },
-                          "data/test_pileup", true, chromosome_id, max_coverage, 1, 1);
+            = pileup_bams({ "data/test1.bam", "data/test1.bam", "data/test1.bam", "data/test2.bam",
+                            "data/test2.bam" },
+                          "data/test_pileup", true, chromosome_id, max_coverage, 1, 1, 3);
     ASSERT_EQ(0, data.size());
 
     auto [data2, cell_ids, max_len] = read_pileup("data/test_pileup.bin", { 0, 1 });
     ASSERT_EQ(0, data2.size());
+
+    data = pileup_bams({ "data/test1.bam", "data/test1.bam", "data/test1.bam", "data/test2.bam",
+                         "data/test2.bam" },
+                       "data/test_pileup", true, chromosome_id, max_coverage, 1, 1, 1);
+    // only the first position is identical in both files, we we get 9 out of 10 positions
+    ASSERT_EQ(9, data.size());
 }
 
 /**

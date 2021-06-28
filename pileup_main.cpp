@@ -36,6 +36,11 @@ DEFINE_uint32(max_coverage,
               "Positions with higher coverage are considered anomalies and discarded during "
               "preprocessing (also at clustering time)");
 
+DEFINE_uint32(min_different,
+              3,
+              "Minimum number of bases that need to differ from the majority in order to add the "
+              "locus to the pileup");
+
 //============================================================================
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -69,7 +74,8 @@ int main(int argc, char *argv[]) {
     for (const auto &chromosome : split(FLAGS_chromosomes, ',')) {
         auto output_file = std::filesystem::path(FLAGS_o + "_" + chromosome + ".pileup");
         pileup_bams(input_files, output_file, true, chromosome_to_id(chromosome),
-                    FLAGS_max_coverage, FLAGS_min_base_quality, FLAGS_num_threads);
+                    FLAGS_max_coverage, FLAGS_min_base_quality, FLAGS_num_threads,
+                    FLAGS_min_different);
         logger()->trace("Done processing chromosome {}", chromosome);
     }
 }
