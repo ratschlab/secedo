@@ -266,15 +266,13 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
             if (coverage < 2 || coverage >= max_coverage) {
                 continue; // positions with too low or too high coverage are ignored
             }
-            bool all_same = true;
+            std::array<uint16_t, 4> nbases = { 0, 0, 0, 0 };
             for (uint32_t i = 1; i < coverage; ++i) {
-                if (data[pos][i].base() != data[pos][0].base()) {
-                    all_same = false;
-                    break;
-                }
+                nbases[data[pos][i].base()]++;
             }
+            uint16_t max_bases = *std::max_element(nbases.begin(), nbases.end());
 
-            if (all_same) { // all bases are the same; boring
+            if (coverage - max_bases < 3) { // assuming homozgous germline, thus irrelevant
                 continue;
             }
             pos_count++;
