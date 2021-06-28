@@ -224,7 +224,8 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
                                  uint32_t chromosome_id,
                                  uint32_t max_coverage,
                                  uint32_t min_base_quality,
-                                 uint32_t num_threads) {
+                                 uint32_t num_threads,
+                                 uint32_t min_different) {
     size_t total_size = (chromosome_lengths[chromosome_id] / CHUNK_SIZE) + 1;
 
     logger()->trace("Allocating data structures...");
@@ -267,12 +268,12 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
                 continue; // positions with too low or too high coverage are ignored
             }
             std::array<uint16_t, 4> nbases = { 0, 0, 0, 0 };
-            for (uint32_t i = 1; i < coverage; ++i) {
+            for (uint32_t i = 0; i < coverage; ++i) {
                 nbases[data[pos][i].base()]++;
             }
             uint16_t max_bases = *std::max_element(nbases.begin(), nbases.end());
 
-            if (coverage - max_bases < 3) { // assuming homozgous germline, thus irrelevant
+            if (coverage - max_bases < min_different) { // assuming homozgous germline, thus irrelevant
                 continue;
             }
             pos_count++;

@@ -14,9 +14,12 @@
  * @param write_text_file if true, a text pileup file will be generated for debugging purposes;
  * otherwise the pileup information will be written in our own binary format to save disk space
  * @param chromosome_id the chromosome (1-23) for which information will be piled up
- * @param max_coverage remove positions that have coverage > max_coverage as noise due to amplificaiton artifacts (greatly improves results in real datasets)
+ * @param max_coverage remove positions that have coverage > max_coverage as noise due to
+ * amplificaiton artifacts (greatly improves results in real datasets)
  * @param min_base_quality only consider positions with base quality at least min_base
  * @param num_threads threads to use for processing the information
+ * @param min_different minimum number of bases that must be different from the majority for a locus
+ * to be included in the pileup
  * @return the pileup information, one entry for each allele
  */
 std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_files,
@@ -25,4 +28,5 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
                                  uint32_t chromosome_id,
                                  uint32_t max_coverage,
                                  uint32_t min_base_quality,
-                                 uint32_t num_threads);
+                                 uint32_t num_threads,
+                                 uint32_t min_different = 3);
