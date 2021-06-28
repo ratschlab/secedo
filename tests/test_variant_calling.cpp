@@ -176,7 +176,7 @@ TEST_F(VariantCalling, EmptyPos) {
 
 /**
  * On pos 0 of chromosome 0, the reference genome is heterozygous AC. The new genome will be
- * homozygous AA and the VCF should reflect this.
+ * homozygous AA (globaly) and the common VCF should reflect this.
  */
 TEST_F(VariantCalling, OnePosOneVariant) {
     const uint32_t num_cells = 10;
@@ -193,7 +193,10 @@ TEST_F(VariantCalling, OnePosOneVariant) {
     variant_calling(pds, clusters, "data/genome_diploid_female.fa", "", 1e-3, 1e-3,
                     "data/" + name());
 
-    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_1.vcf");
+    std::vector<Vcf> vcfs1 = read_vcf_file("data/" + name() + "/cluster_1.vcf");
+    ASSERT_TRUE(vcfs1.empty());
+
+    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/common.vcf");
 
     ASSERT_EQ(1, vcfs.size());
     ASSERT_EQ(vcfs[0].ref, 'C');
@@ -203,7 +206,7 @@ TEST_F(VariantCalling, OnePosOneVariant) {
 
 /**
  * On pos 0 of chromosome 0, the reference genome is homozygous AA. The new genome will be
- * homozygous CC and the VCF should reflect this.
+ * homozygous CC and the common VCF should reflect this.
  */
 TEST_F(VariantCalling, OnePosOneVariantHomozygous) {
     const uint32_t num_cells = 10;
@@ -220,7 +223,7 @@ TEST_F(VariantCalling, OnePosOneVariantHomozygous) {
     variant_calling(pds, clusters, "data/genome_diploid_male.fa", "", 1e-3, 1e-3,
                     "data/" + name() + "/");
 
-    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_1.vcf");
+    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/common.vcf");
 
     ASSERT_EQ(1, vcfs.size());
     ASSERT_EQ(vcfs[0].ref, 'A');
@@ -288,7 +291,7 @@ TEST_F(VariantCalling, OnePosTwoVariants) {
  * On pos 0 of chromosome 0, the reference genome is heterozygous AC. The new genome will be
  * AT, so the VCF should contain one row for C->T.
  * On pos 0 of chromosome 1, the reference genome is heterozygous CA. The new genome will be
- * AA, so the VCF should contain one row for C->A.
+ * AA, so the common VCF should contain one row for C->A.
  */
 TEST_F(VariantCalling, TwoPosTwoVariants) {
     const uint32_t num_cells = 10;
@@ -310,17 +313,21 @@ TEST_F(VariantCalling, TwoPosTwoVariants) {
     variant_calling(pds, clusters, "data/genome_diploid_female.fa", "", 1e-3, 1e-3,
                     "data/" + name());
 
-    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/cluster_1.vcf");
+    std::vector<Vcf> vcfs = read_vcf_file("data/" + name() + "/common.vcf");
 
-    ASSERT_EQ(2, vcfs.size());
+    ASSERT_EQ(1, vcfs.size());
 
     ASSERT_EQ(vcfs[0].ref, 'C');
-    ASSERT_EQ(vcfs[0].alt, 'T');
+    ASSERT_EQ(vcfs[0].alt, 'A');
     ASSERT_EQ(vcfs[0].gt, "1/1");
 
-    ASSERT_EQ(vcfs[1].ref, 'C');
-    ASSERT_EQ(vcfs[1].alt, 'A');
-    ASSERT_EQ(vcfs[1].gt, "1/1");
+    std::vector<Vcf> vcfs1 = read_vcf_file("data/" + name() + "/cluster_1.vcf");
+
+    ASSERT_EQ(1, vcfs1.size());
+
+    ASSERT_EQ(vcfs1[0].ref, 'C');
+    ASSERT_EQ(vcfs1[0].alt, 'T');
+    ASSERT_EQ(vcfs1[0].gt, "1/1");
 }
 
 /**
@@ -363,7 +370,7 @@ TEST_F(VariantCalling, HomozygousCommon) {
 
     ASSERT_EQ(vcf_common[0].ref, 'C');
     ASSERT_EQ(vcf_common[0].alt, 'T');
-    ASSERT_EQ(vcf_common[0].gt, "0/1");
+    ASSERT_EQ(vcf_common[0].gt, "1/1");
 }
 
 

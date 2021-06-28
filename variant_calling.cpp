@@ -338,24 +338,29 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                 n_bases_total[pd.base(i)]++;
             }
 
-            uint8_t pooled_genotype = likely_homozygous(n_bases_total, theta);
+            // check if this is likely a homozygous (germline) locus
+            uint8_t pooled_homo_genotype = likely_homozygous(n_bases_total, theta);
 
             // -1 because PosData is 1-based to emulate samtools et al
             uint8_t reference_genotype = reference_chromosome[pd.position - 1];
 
-            if (pooled_genotype != NO_GENOTYPE && pooled_genotype != reference_genotype) {
+            if (pooled_homo_genotype != NO_GENOTYPE && pooled_homo_genotype != reference_genotype) {
+                uint8_t new_base = pooled_homo_genotype & 7;
+                uint8_t ref_base = (reference_genotype & 7) == new_base
+                        ? (reference_genotype >> 3) & 7
+                        : reference_genotype & 7;
                 vcf_global << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
-                           << IntToChar[reference_genotype & 7] << '\t'
-                           << IntToChar[pooled_genotype & 7] << info_format << "0/1"
+                           << IntToChar[ref_base] << '\t' << IntToChar[new_base]
+                           << info_format << "1/1"
                            << "\t" << n_bases_total[0] << " " << n_bases_total[1] << " "
                            << n_bases_total[2] << " " << n_bases_total[3] << " " << std::endl;
             }
-            std::array<uint32_t, 4> n_bases_total_idx = argsort<uint16_t , 4>(n_bases_total);
+            std::array<uint32_t, 4> n_bases_total_idx = argsort<uint16_t, 4>(n_bases_total);
             for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
                 uint8_t genotype = most_likely_genotype(nbases[cl_idx], n_bases_total,
                                                         n_bases_total_idx, hetero_prior, theta);
                 // skip if it's same as the pooled genotype
-                if (pooled_genotype != NO_GENOTYPE && genotype == pooled_genotype) {
+                if (pooled_homo_genotype != NO_GENOTYPE && genotype == pooled_homo_genotype) {
                     continue;
                 }
                 // write position to file if different
