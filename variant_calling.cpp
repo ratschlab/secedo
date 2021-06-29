@@ -315,6 +315,8 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
     std::ofstream vcf_global(std::filesystem::path(out_dir) / "common.vcf");
 
     std::vector<double> cell_scores(clusters.size());
+    std::vector<uint32_t> cell_loci(clusters.size());
+
 
     // the qual,filter,info,format fields are identical for all rows.
     std::string info_format = "\t.\t.\tVARIANT_OVERALL_TYPE=SNP\tGT\t";
@@ -338,6 +340,7 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                     nbases[cl_idx][pd.base(i)]++;
                 }
                 n_bases_total[pd.base(i)]++;
+                cell_loci[pd.cell_id(i)]++;
             }
 
             // check if this is likely a homozygous (germline) locus
@@ -412,6 +415,9 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                 }
             }
         }
+    }
+    for (uint32_t i = 0; i < cell_scores.size(); ++i) {
+        cell_scores[i] /= cell_loci[i];
     }
     write_vec(std::filesystem::path(out_dir) / "scores", cell_scores);
 }
