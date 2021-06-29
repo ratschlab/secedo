@@ -314,6 +314,8 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
     }
     std::ofstream vcf_global(std::filesystem::path(out_dir) / "common.vcf");
 
+    std::vector<double> cell_scores(clusters.size());
+
     // the qual,filter,info,format fields are identical for all rows.
     std::string info_format = "\t.\t.\tVARIANT_OVERALL_TYPE=SNP\tGT\t";
 
@@ -350,26 +352,31 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                         ? (reference_genotype >> 3) & 7
                         : reference_genotype & 7;
                 vcf_global << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
-                           << IntToChar[ref_base] << '\t' << IntToChar[new_base]
-                           << info_format << "1/1"
+                           << IntToChar[ref_base] << '\t' << IntToChar[new_base] << info_format
+                           << "1/1"
                            << "\t" << n_bases_total[0] << " " << n_bases_total[1] << " "
                            << n_bases_total[2] << " " << n_bases_total[3] << " " << std::endl;
             }
             std::array<uint32_t, 4> n_bases_total_idx = argsort<uint16_t, 4>(n_bases_total);
+            std::vector<uint8_t> genotypes(num_clusters, NO_GENOTYPE);
+            std::vector<uint8_t> coverage(num_clusters);
             for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
-                uint8_t genotype = most_likely_genotype(nbases[cl_idx], n_bases_total,
-                                                        n_bases_total_idx, hetero_prior, theta);
+                genotypes[cl_idx] = most_likely_genotype(nbases[cl_idx], n_bases_total,
+                                                         n_bases_total_idx, hetero_prior, theta);
                 // skip if it's same as the pooled genotype
-                if (pooled_homo_genotype != NO_GENOTYPE && genotype == pooled_homo_genotype) {
+                if (pooled_homo_genotype != NO_GENOTYPE
+                    && genotypes[cl_idx] == pooled_homo_genotype) {
                     continue;
                 }
+
                 // write position to file if different
-                if (!is_same_genotype(genotype, reference_genotype) && genotype != NO_GENOTYPE) {
+                if (!is_same_genotype(genotypes[cl_idx], reference_genotype)
+                    && genotypes[cl_idx] != NO_GENOTYPE) {
                     if (is_homozygous(reference_genotype)) {
-                        std::string alt(1, IntToChar[genotype & 7]);
+                        std::string alt(1, IntToChar[genotypes[cl_idx] & 7]);
                         std::string gt = "1/1"; // VCF genotype indicator
-                        if (!is_homozygous(genotype)) {
-                            alt += IntToChar[genotype >> 3];
+                        if (!is_homozygous(genotypes[cl_idx])) {
+                            alt += IntToChar[genotypes[cl_idx] >> 3];
                             gt = "0/1";
                         }
                         assert((reference_genotype & 7) < 6);
@@ -381,7 +388,7 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                                      << nbases[cl_idx][3] << " " << std::endl;
                     } else {
                         std::vector<std::pair<char, char>> bases
-                                = get_differing_bases(reference_genotype, genotype);
+                                = get_differing_bases(reference_genotype, genotypes[cl_idx]);
                         for (const auto &p : bases) {
                             vcfs[cl_idx]
                                     << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
@@ -393,6 +400,18 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                     }
                 }
             }
+
+            // now let's see which cells don't match the inferred genotype and penalize their score
+            for (uint32_t i = 0; i < pd.size(); ++i) {
+                uint32_t cluster = std::round(clusters[pd.cell_id(i)]);
+                uint8_t base = pd.base(i);
+                if (genotypes[cluster] != NO_GENOTYPE && base != (genotypes[cluster] & 7)
+                    && base != (genotypes[cluster] >> 3)
+                    && sum(nbases[cluster].begin(), nbases[cluster].end()) > 9) {
+                    cell_scores[pd.cell_id(i)]++;
+                }
+            }
         }
     }
+    write_vec(std::filesystem::path(out_dir) / "scores", cell_scores);
 }

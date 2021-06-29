@@ -70,9 +70,9 @@ function create_pileup() {
           num_files=`ls -l ${source_files} | wc -l`
           echo "Found ${num_files} files for chromosome ${chromosome}"
           copy_command="echo Copying data...; mkdir ${scratch_dir}; cp ${source_files} ${scratch_dir}"
-          command="echo Running pileup binary...; ${pileup} -i ${scratch_dir}/ -o ${pileup_dir}/chromosome \
-              --num_threads  20 --log_level=trace --min_base_quality 35 --max_coverage 1000 \
-              --chromosomes ${chromosome} | tee ${log_dir}/pileup-${chromosome}.log"
+          command="echo Running pileup binary...; /usr/bin/time ${pileup} -i ${scratch_dir}/ \
+            -o ${pileup_dir}/chromosome --num_threads  20 --log_level=trace --min_base_quality 35 --max_coverage 1000 \
+            --chromosomes ${chromosome} | tee ${log_dir}/pileup-${chromosome}.log"
           echo "Copy command: ${copy_command}"
           echo "Pileup command: $command"
           # allocating 40G scratch space; for the 1400 simulated Varsim cells, chromosomes 1/2 (the longest) need ~22G
@@ -97,10 +97,11 @@ function variant_calling() {
       out_dir="${base_dir}/silver_${slices_no_space}_${hprob#*.}_${seq_error_rate#*.}"
       log_dir="${out_dir}/logs"
       mkdir -p "${log_dir}"
-      command="${silver} -i ${pileup_dir}/ -o ${out_dir}/ --num_threads 20 --log_level=trace --flagfile ${flagfile} \
-               --not_informative_rate=${hprob} --seq_error_rate=${seq_error_rate} --min_cluster_size 500 \
-               --reference_genome=/cluster/work/grlab/share/databases/genomes/H_sapiens/Homo_sapiens.GRCh37.ENSEMBL75/genome/Homo_sapiens.GRCh37.75.dna.primary_assembly.STAR.fa \
-               --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/silver.log"
+      command="/usr/bin/time ${silver} -i ${pileup_dir}/ -o ${out_dir}/ --num_threads 20 --log_level=trace \
+        --flagfile ${flagfile} \
+        --not_informative_rate=${hprob} --seq_error_rate=${seq_error_rate} --min_cluster_size 500 \
+        --reference_genome=/cluster/work/grlab/share/databases/genomes/H_sapiens/Homo_sapiens.GRCh37.ENSEMBL75/genome/Homo_sapiens.GRCh37.75.dna.primary_assembly.STAR.fa \
+        --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/silver.log"
       #                --merge_file="${code_dir}/experiments/breast_cancer/breast_group_2"
       echo "$command"
 

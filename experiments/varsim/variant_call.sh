@@ -106,9 +106,9 @@ function create_pileup() {
           num_files=`ls -l ${source_files} | wc -l`
           echo "Found ${num_files} files for chromosome ${chromosome}"
           copy_command="echo Copying data...; mkdir ${scratch_dir}; cp ${source_files} ${scratch_dir}"
-          command="echo Running pileup binary...; ${pileup} -i ${scratch_dir}/ -o ${out_dir}/chromosome --num_threads 20 \
-                  --log_level=trace --min_base_quality 30 --max_coverage 1000 \
-                  --chromosomes ${chromosome} | tee ${log_dir}/pileup-${chromosome}.log"
+          command="echo Running pileup binary...; /usr/bin/time ${pileup} -i ${scratch_dir}/ -o ${out_dir}/chromosome \
+            --num_threads 20 --log_level=trace --min_base_quality 30 --max_coverage 1000 \
+            --chromosomes ${chromosome} | tee ${log_dir}/pileup-${chromosome}.log"
           echo "Copy command: ${copy_command}"
           echo "Pileup command: $command"
           # allocating 40G scratch space; for the 1400 simulated Varsim cells, chromosomes 1/2 (the longest) need ~22G
@@ -133,7 +133,8 @@ function variant_calling() {
     for seq_error_rate in 0.01 0.05; do
       out_dir="${work_dir}/silver_${hprob#*.}_${seq_error_rate#*.}/"
       mkdir -p "${out_dir}"
-      command="${silver} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace --flagfile ${flagfile} \
+      command="/usr/bin/time ${silver} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace \
+             --flagfile ${flagfile} \
              --not_informative_rate=${hprob} --seq_error_rate=${seq_error_rate} \
              --reference_genome=${base_dir}/genomes/healthy.fa \
              --map_file=${base_dir}/genomes/healthy.map \
