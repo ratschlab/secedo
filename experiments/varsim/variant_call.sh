@@ -1,6 +1,6 @@
 # Simulates data using Varsim+dwgsim, aligns it, piles it up and runs variant calling on it
 
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
+base_dir="/cluster/work/grlab/projects/projects2019-silver/datasets/varsim"
 coverage=0.05  # read coverage for each cell
 cov="big"  # the name of the dataset
 
