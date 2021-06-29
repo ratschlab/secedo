@@ -143,7 +143,7 @@ function variant_calling() {
              # --clustering=${out_dir}/clustering \
       echo "$command"
 
-      bsub -K -J "silver" -W 04:00 -n 20 -R "rusage[mem=50000]" -R "span[hosts=1]" -oo "${out_dir}/silver.lsf.log" \
+      bsub -K -J "silver" -W 04:00 -n 20 -R "rusage[mem=5000]" -R "span[hosts=1]" -oo "${out_dir}/silver.lsf.log" \
            "${command}" &
     done
   done
