@@ -5,7 +5,7 @@ base_dir="/cluster/work/grlab/projects/projects2019-silver/datasets/melanoma/pro
 bam_dir="${base_dir}/aligned_cells"
 split_dir="${base_dir}/aligned_cells_split"
 pileup_dir="${base_dir}/pileups"
-code_dir="$HOME/somatic_variant_calling/code"
+code_dir="/cluster/work/grlab/projects/projects2019-silver/code"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 
@@ -74,8 +74,8 @@ function variant_calling() {
   module load openblas
   silver="${code_dir}/build/silver"
   flagfile="${code_dir}/flags_breast"
-  for hprob in 0.15 0.3 0.5; do
-    for seq_error_rate in 0.001 0.01; do
+  for hprob in 0.5; do
+    for seq_error_rate in 0.05; do
       out_dir="${base_dir}/silver_${hprob#*.}_${seq_error_rate#*.}/"
       log_dir="${out_dir}/logs/"
       mkdir -p "${log_dir}"

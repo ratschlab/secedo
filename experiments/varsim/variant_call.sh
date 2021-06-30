@@ -4,7 +4,7 @@ base_dir="/cluster/work/grlab/projects/projects2019-silver/datasets/varsim"
 coverage=0.05  # read coverage for each cell
 cov="big"  # the name of the dataset
 
-code_dir="$HOME/somatic_variant_calling/code"
+code_dir="/cluster/work/grlab/projects/projects2019-silver/code"
 
 genomes=("${base_dir}/genomes/healthy.fa" "${base_dir}/genomes/tumor1-h-20K/tumor1-h-20K.fa" \
 "${base_dir}/genomes/tumor2-1-10K/tumor2-1-10K.fa" "${base_dir}/genomes/tumor3-1-15K/tumor3-1-15K.fa" \

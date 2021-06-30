@@ -6,7 +6,7 @@ slices="B"
 base_dir="/cluster/work/grlab/projects/projects2019-silver/datasets/breastcancer/all_slices"
 slices_no_space=${slices//[[:blank:]]/}
 pileup_dir="${base_dir}/pileups${slices_no_space}"
-code_dir="$HOME/somatic_variant_calling/code"
+code_dir="/cluster/work/grlab/projects/projects2019-silver/code"
 
 
 # split the aligned BAMs by chromosome for easier parallelization
