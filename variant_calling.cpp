@@ -17,10 +17,15 @@ uint8_t likely_homozygous(const std::array<uint16_t, 4> &n_bases, double theta) 
 uint8_t most_likely_genotype(const std::array<uint16_t, 4> &n_bases,
                              const std::array<uint16_t, 4> &n_bases_total,
                              const std::array<uint32_t, 4> &nbases_total_idx,
+                             bool likely_homozygous_total,
                              double hetero_prior,
-                             double theta) {
+                             double theta,
+                             uint16_t *coverage) {
     // coverage for the given position; // we require coverage at least 9
     uint32_t cov = sum(n_bases.begin(), n_bases.end());
+    if (coverage != nullptr) {
+        *coverage = cov;
+    }
 
     double logTheta = std::log(theta / 3);
     double logOneMinusTheta = std::log(1 - theta);
@@ -29,17 +34,18 @@ uint8_t most_likely_genotype(const std::array<uint16_t, 4> &n_bases,
     std::vector<uint32_t> idx = argsort(n_bases.begin(), n_bases.end());
 
     if (cov < 9) {
-        if (n_bases[idx[3]] >= cov - 1) {
+        if (n_bases[idx[3]] >= cov - 1 && likely_homozygous_total) {
             return (idx[3] << 3) | idx[3];
         }
-        uint8_t b1 = idx[3];
-        uint8_t b2 = idx[2];
-        uint8_t b3 = idx[1];
-        uint8_t bt1 = nbases_total_idx[3];
-        uint8_t bt2 = nbases_total_idx[2];
-        if (n_bases[b2] > n_bases[b3] && (b1 == bt1 || b1 == bt2) && (b2 == bt1 || b2 == bt2)) {
-            return (idx[3] << 3) | idx[2];
-        }
+        //        uint8_t b1 = idx[3];
+        //        uint8_t b2 = idx[2];
+        //        uint8_t b3 = idx[1];
+        //        uint8_t bt1 = nbases_total_idx[3];
+        //        uint8_t bt2 = nbases_total_idx[2];
+        //        if (n_bases[b2] > n_bases[b3] && (b1 == bt1 || b1 == bt2) && (b2 == bt1 || b2 ==
+        //        bt2)) {
+        //            return (idx[3] << 3) | idx[2];
+        //        }
         return NO_GENOTYPE;
     }
 
@@ -50,7 +56,7 @@ uint8_t most_likely_genotype(const std::array<uint16_t, 4> &n_bases,
     double logProb_hetero = (n_bases[idx[2]] + n_bases[idx[3]]) * logHalfMinusTheta
             + (n_bases[idx[0]] + n_bases[idx[1]]) * logTheta + std::log(hetero_prior);
 
-    // if logProb_homo == logProb_hetero, we are not able to decide
+    // if logProb_homo == logProb_hetero, we are not able to decide (almost never happens, I guess)
     if (logProb_homo == logProb_hetero) {
         return NO_GENOTYPE;
     }
@@ -398,19 +404,24 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
             std::array<uint32_t, 4> n_bases_total_idx = argsort<uint16_t, 4>(n_bases_total);
             std::vector<uint8_t> genotypes(num_clusters, NO_GENOTYPE);
             std::vector<uint8_t> coverage(num_clusters);
-            for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
-                genotypes[cl_idx] = most_likely_genotype(nbases[cl_idx], n_bases_total,
-                                                         n_bases_total_idx, hetero_prior, theta);
-            }
             bool all_same = true;
-            // starting at 2, because cluster0 means "no cluster", so we don't care what genotype
-            // those cells have
-            for (uint32_t cl_idx = 2; cl_idx < num_clusters; ++cl_idx) {
-                if (!is_same_genotype(genotypes[cl_idx - 1], genotypes[cl_idx])) {
+            uint8_t first_genotype = NO_GENOTYPE;
+            for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
+                uint16_t cov = 0;
+                genotypes[cl_idx]
+                        = most_likely_genotype(nbases[cl_idx], n_bases_total, n_bases_total_idx,
+                                               (pooled_homo_genotype != NO_GENOTYPE), hetero_prior,
+                                               theta, &cov);
+                if (genotypes[cl_idx] != NO_GENOTYPE && first_genotype == NO_GENOTYPE
+                    && cl_idx > 0) {
+                    first_genotype = genotypes[cl_idx];
+                }
+                if (first_genotype != NO_GENOTYPE && cov > 0
+                    && first_genotype != genotypes[cl_idx]) {
                     all_same = false;
-                    break;
                 }
             }
+
             if (all_same) {
                 // write position to the common VCF file if different from reference genotype
                 write_vcf_line(chr_idx, pd.position, reference_genotype, genotypes[0],

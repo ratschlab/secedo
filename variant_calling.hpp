@@ -83,20 +83,27 @@ bool check_is_diploid(std::ifstream &f);
 /**
  * Find the most likely genotype, if we observe bases counts
  * @parm nBases (array of length 4: number of As, Cs, etc.)
+ * @param n_bases_total total number for each base at the locus (for all clusters)
+ * @param nbases_total_idx idx to sort n_bases_total in increasing order
+ * @param likely_homozygous_total true if we are likely dealing with a homozygous locus (almost all
+ * bases are identical)
  * @param hetero_prior the prior on heterozygous genotype
  * @param theta sequencing error rate
+ * @param[out] coverage if not null, the function will write the total coverage to this value
  * @VisibleForTesting
  */
 uint8_t most_likely_genotype(const std::array<uint16_t, 4> &nBases,
                              const std::array<uint16_t, 4> &n_bases_total,
                              const std::array<uint32_t, 4> &nbases_total_idx,
+                             bool likely_homozygous_total,
                              double hetero_prior,
-                             double theta);
+                             double theta,
+                             uint16_t *coverage = nullptr);
 
 /**
  * Checks if a locus is likely homozygous and returns the homozygous genotype if yes.
  * A locus is declared homozygous if the number of the non-dominant bases is no more than one
- * standard deviation away from the expected number.
+ * standard deviation away from the expected number (given theta, the sequencing error rate).
  * @VisibleForTesting
  */
 uint8_t likely_homozygous(const std::array<uint16_t, 4> &nBases, double theta);
