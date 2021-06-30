@@ -270,6 +270,7 @@ TEST_F(VariantCalling, OnePosTwoVariants) {
     PosData pd(1, read_ids, cell_ids_bases);
     const std::vector<std::vector<PosData>> pds = { { pd } };
     std::vector<uint16_t> clusters(num_cells, 1);
+    clusters.back() = 2; // make sure there are at last 2 clusters
 
     variant_calling(pds, clusters, "data/genome_diploid_female.fa", "", 1e-3, 1e-3,
                     "data/" + name());
@@ -309,6 +310,7 @@ TEST_F(VariantCalling, TwoPosTwoVariants) {
     PosData pd2(1, read_ids, cell_ids_bases2);
     const std::vector<std::vector<PosData>> pds = { { pd1 }, { pd2 } };
     std::vector<uint16_t> clusters(num_cells, 1);
+    clusters.back() = 2; // make sure there are at last 2 clusters
 
     variant_calling(pds, clusters, "data/genome_diploid_female.fa", "", 1e-3, 1e-3,
                     "data/" + name());

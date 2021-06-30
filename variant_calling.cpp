@@ -277,6 +277,41 @@ bool check_is_diploid(std::ifstream &f) {
     return s.find("maternal") != s.npos;
 }
 
+void write_vcf_line(uint8_t chr_idx,
+                    uint32_t position,
+                    uint8_t reference_genotype,
+                    uint8_t genotype,
+                    const std::array<uint16_t, 4> nbases,
+                    const std::string &info_format,
+                    std::ofstream &vcf_file) {
+    // write position to file if different
+    if (!is_same_genotype(genotype, reference_genotype) && genotype != NO_GENOTYPE) {
+        if (is_homozygous(reference_genotype)) {
+            std::string alt(1, IntToChar[genotype & 7]);
+            std::string gt = "1/1"; // VCF genotype indicator
+            if (!is_homozygous(genotype)) {
+                alt += IntToChar[genotype >> 3];
+                gt = "0/1";
+            }
+            assert((reference_genotype & 7) < 6);
+            // TODO: remove the nbases[] - debug only
+            vcf_file << id_to_chromosome(chr_idx) << '\t' << position << "\t.\t"
+                     << IntToChar[reference_genotype & 7] << '\t' << alt << info_format << gt
+                     << "\t" << nbases[0] << " " << nbases[1] << " " << nbases[2] << " "
+                     << nbases[3] << " " << std::endl;
+        } else {
+            std::vector<std::pair<char, char>> bases
+                    = get_differing_bases(reference_genotype, genotype);
+            for (const auto &p : bases) {
+                vcf_file << id_to_chromosome(chr_idx) << '\t' << position << "\t.\t" << p.first
+                         << '\t' << p.second << info_format << "1/1"
+                         << "\t" << nbases[0] << " " << nbases[1] << " " << nbases[2] << " "
+                         << nbases[3] << " " << std::endl;
+            }
+        }
+    }
+}
+
 void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                      const std::vector<uint16_t> &clusters,
                      const std::string &reference_genome_file,
@@ -366,6 +401,23 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
             for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
                 genotypes[cl_idx] = most_likely_genotype(nbases[cl_idx], n_bases_total,
                                                          n_bases_total_idx, hetero_prior, theta);
+            }
+            bool all_same = true;
+            // starting at 2, because cluster0 means "no cluster", so we don't care what genotype
+            // those cells have
+            for (uint32_t cl_idx = 2; cl_idx < num_clusters; ++cl_idx) {
+                if (!is_same_genotype(genotypes[cl_idx - 1], genotypes[cl_idx])) {
+                    all_same = false;
+                    break;
+                }
+            }
+            if (all_same) {
+                // write position to the common VCF file if different from reference genotype
+                write_vcf_line(chr_idx, pd.position, reference_genotype, genotypes[0],
+                               n_bases_total, info_format, vcf_global);
+                continue;
+            }
+            for (uint32_t cl_idx = 0; cl_idx < num_clusters; ++cl_idx) {
                 // skip if it's same as the pooled genotype
                 if (pooled_homo_genotype != NO_GENOTYPE
                     && genotypes[cl_idx] == pooled_homo_genotype) {
@@ -373,35 +425,8 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
                 }
 
                 // write position to file if different
-                if (!is_same_genotype(genotypes[cl_idx], reference_genotype)
-                    && genotypes[cl_idx] != NO_GENOTYPE) {
-                    if (is_homozygous(reference_genotype)) {
-                        std::string alt(1, IntToChar[genotypes[cl_idx] & 7]);
-                        std::string gt = "1/1"; // VCF genotype indicator
-                        if (!is_homozygous(genotypes[cl_idx])) {
-                            alt += IntToChar[genotypes[cl_idx] >> 3];
-                            gt = "0/1";
-                        }
-                        assert((reference_genotype & 7) < 6);
-                        // TODO: remove the nbases[] - debug only
-                        vcfs[cl_idx] << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
-                                     << IntToChar[reference_genotype & 7] << '\t' << alt
-                                     << info_format << gt << "\t" << nbases[cl_idx][0] << " "
-                                     << nbases[cl_idx][1] << " " << nbases[cl_idx][2] << " "
-                                     << nbases[cl_idx][3] << " " << std::endl;
-                    } else {
-                        std::vector<std::pair<char, char>> bases
-                                = get_differing_bases(reference_genotype, genotypes[cl_idx]);
-                        for (const auto &p : bases) {
-                            vcfs[cl_idx]
-                                    << id_to_chromosome(chr_idx) << '\t' << pd.position << "\t.\t"
-                                    << p.first << '\t' << p.second << info_format << "1/1"
-                                    << "\t" << nbases[cl_idx][0] << " " << nbases[cl_idx][1] << " "
-                                    << nbases[cl_idx][2] << " " << nbases[cl_idx][3] << " "
-                                    << std::endl;
-                        }
-                    }
-                }
+                write_vcf_line(chr_idx, pd.position, reference_genotype, genotypes[cl_idx],
+                               nbases[cl_idx], info_format, vcfs[cl_idx]);
             }
 
             // now let's see which cells don't match the inferred genotype and penalize their score
