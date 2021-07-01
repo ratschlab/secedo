@@ -34,18 +34,13 @@ uint8_t most_likely_genotype(const std::array<uint16_t, 4> &n_bases,
     std::vector<uint32_t> idx = argsort(n_bases.begin(), n_bases.end());
 
     if (cov < 9) {
-        if (n_bases[idx[3]] >= cov - 1 && likely_homozygous_total) {
+        // declare the locus as homozygous, if the global locus is homozygous and all but one baes
+        // are identical or if we have more than 5 identical bases (which corresponds to 97% chances
+        // homozygous)
+        if ((n_bases[idx[3]] >= cov - 1 && likely_homozygous_total)
+            || (n_bases_total[idx[3]] == cov && cov >= 5)) {
             return (idx[3] << 3) | idx[3];
         }
-        //        uint8_t b1 = idx[3];
-        //        uint8_t b2 = idx[2];
-        //        uint8_t b3 = idx[1];
-        //        uint8_t bt1 = nbases_total_idx[3];
-        //        uint8_t bt2 = nbases_total_idx[2];
-        //        if (n_bases[b2] > n_bases[b3] && (b1 == bt1 || b1 == bt2) && (b2 == bt1 || b2 ==
-        //        bt2)) {
-        //            return (idx[3] << 3) | idx[2];
-        //        }
         return NO_GENOTYPE;
     }
 
@@ -73,7 +68,17 @@ uint8_t most_likely_genotype(const std::array<uint16_t, 4> &n_bases,
     // heterozygous genotype
     if (n_bases[idx[2]] == n_bases[idx[1]]) // check uniqueness
         return NO_GENOTYPE;
-    return (idx[3] << 3) | idx[2];
+    // if the base counts are more than 1 std deviation away from the expected mean, don't call a
+    // genotype, as the locus may be either homozygous or affected by impurities from misclassified
+    // cells
+    double std_dev = sqrt(0.25 * (n_bases[idx[3]] + n_bases[idx[2]]));
+    double mean = (n_bases[idx[3]] + n_bases[idx[2]]) / 2;
+    if (cov > 15 && std::abs(n_bases[idx[3]] - mean) <= std_dev
+        && std::abs(n_bases[idx[2]] - mean) < std_dev) {
+        return (idx[3] << 3) | idx[2];
+    } else {
+        return NO_GENOTYPE;
+    }
 }
 
 std::unordered_map<std::string, std::vector<ChrMap>> read_map(const std::string &map_file) {
