@@ -25,7 +25,7 @@ def parse_file(name, out=None):
             tokens[0] = 'Y'
         if tokens[1][-1] == '\n':
             tokens[1] = tokens[1][:-1]
-        list1.append((tokens[0], tokens[1]))
+        list1.append((tokens[0], int(tokens[1])))
     return list1
 
 
@@ -54,11 +54,11 @@ if __name__ == '__main__':
     diffs = 0
     while i < len(list1) and j < len(list2):
         while i < len(list1) and list1[i] < list2[j]:
-            diff_file.write(list1[i][0] + '\t' + list1[i][1] + '\n')
+            diff_file.write(list1[i][0] + '\t' + str(list1[i][1]) + '\n')
             diffs += 1
             i += 1
         if i < len(list1) and list1[i] == list2[j]:
-            intersect_file.write(list1[i][0] + '\t' + list1[i][1] + '\n')
+            intersect_file.write(list1[i][0] + '\t' + str(list1[i][1]) + '\n')
             matches += 1
             i += 1
 
