@@ -30,7 +30,7 @@ cmd="${mutect} \
   --intervals $chromosome"
 
 bsub -J "mutect_${cluster}_${chromosome}" -W 04:00 -n 2 -R "rusage[mem=8000]" \
-  -R  "span[hosts=1]" -oo "${log_dir}/mutect_${cluster}_${chromosome}.lsf.log" "${command}"
+  -R  "span[hosts=1]" -oo "${log_dir}/mutect_${cluster}_${chromosome}.lsf.log" "${cmd}"
 
 echo ${cmd}
 

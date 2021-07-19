@@ -9,7 +9,7 @@ namespace {
 using namespace ::testing;
 
 /**
- * Tests that reading BAM files where to few positions differ from the majority returns an empty
+ * Tests that reading BAM files where too few positions differ from the majority returns an empty
  * result.
  */
 TEST(pileup, read_too_few_differnt) {
