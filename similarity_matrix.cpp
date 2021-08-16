@@ -171,7 +171,12 @@ double log_prob_same_genotype(uint32_t x_s, uint32_t x_d, const Cache &c, Matd &
 struct Read {
     std::vector<char> bases; // the DNA sequence corresponding to this read
     uint32_t cell_id;
-    std::vector<uint64_t> pos;
+    // the positions for each base in bases (they are not necessarily continuous, as only relevant
+    // positions are kept)
+    std::vector<uint32_t> pos;
+    // the start position for the read; typically, this is equal to pos[0], with the exception being
+    // when the first position was removed, because the paired reads overlapped and disagreed
+    uint32_t start;
 };
 
 /**
@@ -195,11 +200,6 @@ void compare_with_reads(const std::unordered_map<uint32_t, Read> &active_reads,
         uint32_t index1 = cell_id_to_cell_idx[read1.cell_id];
         uint32_t index2 = cell_id_to_cell_idx[read2.cell_id];
 
-        if (emulate_python && read1.pos.front() > read2.pos.front()) {
-            logger()->trace("Read 1 pos {}, Read 2 pos {}", read1.pos.front(), read2.pos.front());
-            logger()->trace("Read 1 id: {} Read 2 id: {}", active_keys[start_idx],
-                            active_keys[idx]);
-        }
         // if a removed paired read that doesn't match happens to be the first read, then it's
         // not anymore guaranteed that the active_reads are sorted by the first position
         assert(!emulate_python || read1.pos.front() <= read2.pos.front());
@@ -342,7 +342,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
         for (const PosData &pd : chromosome_data) {
             // update the number of complete reads
             for (uint32_t i = completed; i < active_keys.size()
-                 && active_reads[active_keys[i]].pos[0] + max_fragment_length <= pd.position;
+                 && active_reads[active_keys[i]].start + max_fragment_length <= pd.position;
                  ++i) {
                 ++completed;
             }
@@ -373,14 +373,13 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                 auto read_it = active_reads.find(pd.read_ids[i]);
                 const char curr_base = pd.base(i);
                 if (read_it == active_reads.end()) { // a new read just started
-                    Read read = { { curr_base }, pd.cell_id(i), { pd.position } };
+                    Read read = { { curr_base }, pd.cell_id(i), { pd.position }, pd.position };
                     active_reads[pd.read_ids[i]] = read;
                     active_keys.push_back(pd.read_ids[i]);
                 } else {
                     Read &read = read_it->second;
                     // if we have two reads at the same position (happens due to paired-end
                     // sequencing)
-
                     if (!read.pos.empty() && read.pos.back() == pd.position) {
                         // different reads at the same position, so we remove the existing read, as
                         // there's a 50% chance of error
