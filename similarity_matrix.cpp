@@ -195,8 +195,14 @@ void compare_with_reads(const std::unordered_map<uint32_t, Read> &active_reads,
                         Matd &log_probs_diff,
                         Mat32u &combs_xs_xd) {
     const Read &read1 = active_reads.at(active_keys.at(start_idx));
+    if (read1.pos.empty()) {
+        return;
+    }
     for (uint32_t idx = start_idx + 1; idx < active_keys.size(); ++idx) {
         const Read &read2 = active_reads.at(active_keys[idx]);
+        if (read2.pos.empty()) {
+            continue;
+        }
         uint32_t index1 = cell_id_to_cell_idx[read1.cell_id];
         uint32_t index2 = cell_id_to_cell_idx[read2.cell_id];
 
