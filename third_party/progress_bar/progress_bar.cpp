@@ -54,7 +54,7 @@ ProgressBar::ProgressBar(uint64_t total,
         *out << description_ << std::endl;
 
     frequency_update
-            = logging_mode_ ? total_ / 10 : std::max(static_cast<uint64_t>(1), total_ / 1000);
+            = std::max(static_cast<uint64_t>(1), logging_mode_ ? total_ / 10 : total_ / 1000);
 
     description_.resize(kMessageSize, ' ');
 
