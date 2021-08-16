@@ -231,7 +231,7 @@ uint32_t spectral_clustering(const Matd &similarity,
             // at lest in the tests. Maybe this comment from scikit.SpectralClustering is relevant:
             // "The first eigenvector is constant only for fully connected graphs and should be kept
             // for spectral clustering"
-            uint32_t col_idx = clustering == ClusteringType::SPECTRAL2 ? 2 : 2;
+            uint32_t col_idx = clustering == ClusteringType::SPECTRAL2 ? 2 : 6;
             arma::mat ev = eigenvectors.cols(
                     0, std::min(col_idx, static_cast<uint32_t>(eigenvectors.n_cols - 1)));
             // normalize each row
