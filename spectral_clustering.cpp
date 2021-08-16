@@ -336,8 +336,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
     std::ofstream filtered(std::filesystem::path(out_dir) / ("significant_positions" + marker));
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         for (uint32_t j = 0; j < pos_data[i].size(); ++j) {
-            filtered << id_to_chromosome(i) << '\t' << pos_data[i][j].position
-                     << std::endl;
+            filtered << id_to_chromosome(i) << '\t' << pos_data[i][j].position << std::endl;
         }
     }
     filtered.close();
@@ -410,13 +409,15 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
         if (pos_to_id_new[c].size() < min_cluster_size) {
             logger()->trace("Cluster {} size is too small ({} vs {}). Stopping.", c,
                             pos_to_id_new[c].size(), min_cluster_size);
+        } else if (n_cells_subcluster - pos_to_id_new[c].size() < min_cluster_size) {
+            logger()->trace("Cluster {} size is too large relative to total ({} vs {}). Stopping.",
+                            c, pos_to_id_new[c].size(), n_cells_subcluster);
         } else {
-            divide_cluster(pds, max_read_length, id_to_group, id_to_pos_new[c],
-                           pos_to_id_new[c], mutation_rate, homozygous_rate, seq_error_rate,
-                           num_threads, out_dir, normalization, termination_str,
-                           clustering_type_str, use_arma_kmeans, use_expectation_maximization,
-                           min_cluster_size, marker + static_cast<char>('A' + c), clusters,
-                           cluster_idx);
+            divide_cluster(pds, max_read_length, id_to_group, id_to_pos_new[c], pos_to_id_new[c],
+                           mutation_rate, homozygous_rate, seq_error_rate, num_threads, out_dir,
+                           normalization, termination_str, clustering_type_str, use_arma_kmeans,
+                           use_expectation_maximization, min_cluster_size,
+                           marker + static_cast<char>('A' + c), clusters, cluster_idx);
         }
     }
 }
