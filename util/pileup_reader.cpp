@@ -216,7 +216,7 @@ read_pileup_bin(const std::string fname,
         uint32_t doubles = 0;
         for (uint32_t read_idx = 0; read_idx < read_ids.size(); ++read_idx) {
             uint16_t cell_id = cell_ids_and_bases[read_idx] >> 2;
-            if (read_idx > 1 && cell_id == (cell_ids_and_bases[read_idx-1] >> 2)) {
+            if (read_idx > 0 && cell_id == (cell_ids_and_bases[read_idx-1] >> 2)) {
                 doubles++;
             }
             max_cell_id = std::max(max_cell_id, cell_id);
