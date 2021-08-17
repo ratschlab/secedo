@@ -220,12 +220,12 @@ PosData create_pos_data(uint32_t pos, std::vector<CellData> cell_data, uint32_t 
 
 std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_files,
                                  const std::filesystem::path &out_pileup,
-                                 bool write_text_file,
+                                 bool,
                                  uint32_t chromosome_id,
                                  uint32_t max_coverage,
                                  uint32_t min_base_quality,
                                  uint32_t num_threads,
-                                 uint16_t min_different) {
+                                 uint16_t) {
     size_t total_size = (chromosome_lengths[chromosome_id] / CHUNK_SIZE) + 1;
 
     logger()->trace("Allocating data structures...");
@@ -285,28 +285,6 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
             PosData pd = create_pos_data(position, data[pos], coverage);
             result.push_back(pd);
 
-            if (write_text_file) {
-                out_text << chromosome << '\t' << position << '\t' << coverage << '\t';
-                std::sort(data[pos].begin(), data[pos].begin() + coverage,
-                          [](CellData &a, CellData &b) { return a.cell_id() < b.cell_id(); });
-
-                for (uint32_t i = 0; i < coverage; ++i) {
-                    out_text << IntToChar[data[pos][i].base()];
-                }
-                out_text << '\t';
-                for (uint32_t i = 0; i < coverage - 1U; ++i) {
-                    out_text << data[pos][i].cell_id() << ",";
-                }
-                out_text << data[pos][coverage - 1].cell_id();
-
-                out_text << '\t';
-                for (uint32_t i = 0; i < coverage - 1U; ++i) {
-                    out_text << data[pos][i].read_id << ",";
-                }
-                out_text << data[pos][coverage - 1].read_id;
-
-                out_text << std::endl;
-            }
             out_bin.write(reinterpret_cast<char *>(&position), sizeof(position));
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
             out_bin.write(reinterpret_cast<char *>(pd.read_ids.data()),
