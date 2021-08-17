@@ -226,6 +226,8 @@ int main(int argc, char *argv[]) {
 
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
     read_progress.SetFrequencyUpdate(total_size / 100);
+    std::vector<uint32_t> coverage_hist(200);
+    uint32_t cov0_glob=0, cov1_glob=0, cov2_glob=0;
 
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < input_files.size(); ++i) {
@@ -235,13 +237,25 @@ int main(int argc, char *argv[]) {
             logger()->trace("Skipping {} (not in --chromosomes)", input_files[i]);
             continue;
         }
+        std::vector<uint32_t> coverage_hist_local(200);
+        uint32_t cov0=0, cov1=0, cov2=0;
         std::tie(pos_data[chromosome_id], num_cells_chr[chromosome_id],
                  max_read_lengths[chromosome_id])
                 = read_pileup(
-                        input_files[i], id_to_group,
+                        input_files[i], id_to_group, coverage_hist_local, cov0, cov1, cov2,
                         [&read_progress](uint32_t progress) { read_progress += progress; },
                         FLAGS_max_coverage, positions[chromosome_id], FLAGS_compute_read_stats);
+#pragma omp critical
+        {
+            for (uint32_t j = 0; j < coverage_hist.size(); ++j) {
+                coverage_hist[j] += coverage_hist_local[j];
+            }
+            cov0_glob+=cov0;
+            cov1_glob+=cov1;
+            cov2_glob+=cov2;
+        };
     }
+    write_vec(FLAGS_o + "/coverage_hist", coverage_hist);
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
     uint32_t num_cells = *std::max_element(num_cells_chr.begin(), num_cells_chr.end());
 

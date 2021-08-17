@@ -142,6 +142,10 @@ read_pileup_bin(const std::string fname,
                 const std::function<void(uint64_t)> &progress,
                 uint32_t max_coverage,
                 const std::vector<uint32_t> &positions,
+                std::vector<uint32_t> &coverage_hist,
+                uint32_t &cov0,
+                uint32_t &cov1,
+                uint32_t &cov2,
                 bool compute_max_read_length) {
     std::vector<PosData> result;
 
@@ -170,6 +174,9 @@ read_pileup_bin(const std::string fname,
             break;
         }
         f.read(reinterpret_cast<char *>(&coverage), sizeof(coverage));
+        if (coverage < coverage_hist.size()) {
+            coverage_hist[coverage]++;
+        }
 
         std::vector<uint32_t> read_ids(coverage);
         std::vector<uint16_t> cell_ids_and_bases(coverage);
@@ -205,8 +212,13 @@ read_pileup_bin(const std::string fname,
             assert(positions[pos_idx] == position);
         }
 
+        cov0 += 2224 - coverage;
+        uint32_t doubles = 0;
         for (uint32_t read_idx = 0; read_idx < read_ids.size(); ++read_idx) {
             uint16_t cell_id = cell_ids_and_bases[read_idx] >> 2;
+            if (read_idx > 1 && cell_id == (cell_ids_and_bases[read_idx-1] >> 2)) {
+                doubles++;
+            }
             max_cell_id = std::max(max_cell_id, cell_id);
             if (cell_id >= id_to_group.size()) {
                 logger()->error(
@@ -231,6 +243,8 @@ read_pileup_bin(const std::string fname,
                 }
             }
         }
+        cov1 += (coverage-2*doubles);
+        cov2 += doubles;
 
         result.emplace_back(position, std::move(read_ids), std::move(cell_ids_and_bases));
     }
@@ -259,13 +273,17 @@ read_pileup_bin(const std::string fname,
 std::tuple<std::vector<PosData>, uint16_t, uint32_t>
 read_pileup(const std::string fname,
             const std::vector<uint16_t> &id_to_group,
+            std::vector<uint32_t> &coverage_hist,
+            uint32_t &cov0,
+            uint32_t &cov1,
+            uint32_t &cov2,
             const std::function<void(uint64_t)> &progress,
             uint32_t max_coverage,
             const std::vector<uint32_t> positions,
             bool compute_max_read_len) {
     return ends_with(fname, ".bin")
             ? read_pileup_bin(fname, id_to_group, progress, max_coverage, positions,
-                              compute_max_read_len)
+                              coverage_hist, cov0, cov1, cov2, compute_max_read_len)
             : read_pileup_text(fname, id_to_group, progress, max_coverage, positions);
 }
 

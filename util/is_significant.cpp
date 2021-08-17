@@ -76,6 +76,7 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
         return false;
     }
 
+    // this simple heuristic is used for eliminating germline heterozygous loci
     if (base_count[3] < 1.5 * base_count[2]) {
         return false;
     }
