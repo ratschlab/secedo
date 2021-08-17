@@ -212,11 +212,10 @@ read_pileup_bin(const std::string fname,
             assert(positions[pos_idx] == position);
         }
 
-        cov0 += 2224 - coverage;
         uint32_t doubles = 0;
         for (uint32_t read_idx = 0; read_idx < read_ids.size(); ++read_idx) {
             uint16_t cell_id = cell_ids_and_bases[read_idx] >> 2;
-            if (read_idx > 0 && cell_id == (cell_ids_and_bases[read_idx-1] >> 2)) {
+            if (read_idx > 0 && cell_id == (cell_ids_and_bases[read_idx - 1] >> 2)) {
                 doubles++;
             }
             max_cell_id = std::max(max_cell_id, cell_id);
@@ -243,7 +242,8 @@ read_pileup_bin(const std::string fname,
                 }
             }
         }
-        cov1 += (coverage-2*doubles);
+        cov0 += (2224 + doubles - coverage);
+        cov1 += (coverage - 2 * doubles);
         cov2 += doubles;
 
         result.emplace_back(position, std::move(read_ids), std::move(cell_ids_and_bases));
@@ -282,8 +282,8 @@ read_pileup(const std::string fname,
             const std::vector<uint32_t> positions,
             bool compute_max_read_len) {
     return ends_with(fname, ".bin")
-            ? read_pileup_bin(fname, id_to_group, progress, max_coverage, positions,
-                              coverage_hist, cov0, cov1, cov2, compute_max_read_len)
+            ? read_pileup_bin(fname, id_to_group, progress, max_coverage, positions, coverage_hist,
+                              cov0, cov1, cov2, compute_max_read_len)
             : read_pileup_text(fname, id_to_group, progress, max_coverage, positions);
 }
 
