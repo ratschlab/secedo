@@ -264,18 +264,18 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
 
         for (uint32_t pos = 0; pos < CHUNK_SIZE; ++pos) {
             uint16_t coverage = data_size[pos];
-            if (coverage < 2 || coverage >= max_coverage) {
-                continue; // positions with too low or too high coverage are ignored
-            }
+//            if (coverage < 2 || coverage >= max_coverage) {
+//                continue; // positions with too low or too high coverage are ignored
+//            }
             std::array<uint16_t, 4> nbases = { 0, 0, 0, 0 };
             for (uint32_t i = 0; i < coverage; ++i) {
                 nbases[data[pos][i].base()]++;
             }
             uint16_t max_bases = *std::max_element(nbases.begin(), nbases.end());
 
-            if (coverage - max_bases < min_different) { // assuming homozgous germline, thus irrelevant
-                continue;
-            }
+//            if (coverage - max_bases < min_different) { // assuming homozgous germline, thus irrelevant
+//                continue;
+//            }
             pos_count++;
             uint32_t chromosome = chromosome_id + 1;
             // adding 1 to pos to emulate samtools, which is 1-based
