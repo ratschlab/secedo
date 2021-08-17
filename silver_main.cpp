@@ -256,6 +256,9 @@ int main(int argc, char *argv[]) {
         };
     }
     write_vec(FLAGS_o + "/coverage_hist", coverage_hist);
+    std::ofstream f(FLAGS_o + "/coverage_site");
+    f << cov2_glob << " " << cov2_glob << " " << cov2_glob << std::endl;
+    f.close();
     uint32_t max_read_length = *std::max_element(max_read_lengths.begin(), max_read_lengths.end());
     uint32_t num_cells = *std::max_element(num_cells_chr.begin(), num_cells_chr.end());
 
