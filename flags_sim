@@ -1,5 +1,5 @@
 # parameters for spectral clustering
---not_informative_rate=0.15
+--homozygous_filtered_rate=0.15
 --seq_error_rate=0.001
 --mutation_rate=0.01
 
