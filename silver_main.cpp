@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
     ProgressBar read_progress(total_size, "Reading progress", std::cout);
     read_progress.SetFrequencyUpdate(total_size / 100);
     std::vector<uint32_t> coverage_hist(200);
-    uint32_t cov0_glob=0, cov1_glob=0, cov2_glob=0;
+    uint64_t cov0_glob=0, cov1_glob=0, cov2_glob=0;
 
 #pragma omp parallel for num_threads(FLAGS_num_threads)
     for (uint32_t i = 0; i < input_files.size(); ++i) {
@@ -238,7 +238,7 @@ int main(int argc, char *argv[]) {
             continue;
         }
         std::vector<uint32_t> coverage_hist_local(200);
-        uint32_t cov0=0, cov1=0, cov2=0;
+        uint64_t cov0=0, cov1=0, cov2=0;
         std::tie(pos_data[chromosome_id], num_cells_chr[chromosome_id],
                  max_read_lengths[chromosome_id])
                 = read_pileup(

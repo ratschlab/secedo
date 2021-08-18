@@ -69,14 +69,14 @@ struct Cache {
 
     /**
      * @param mutation_rate estimated mutation rate
-     * @param homozygous_rate estimated probability that a loci is heterozygous
+     * @param not_significant_rate estimated probability that a loci is heterozygous
      * @param seq_error_rate estimated error rate in the sequencing technology
      */
     Cache(double mutation_rate,
-          double homozygous_rate,
+          double not_significant_rate,
           double seq_error_rate,
           uint32_t max_read_size)
-        : epsilon(mutation_rate), h(homozygous_rate), theta(seq_error_rate) {
+        : epsilon(mutation_rate), h(not_significant_rate), theta(seq_error_rate) {
         auto extend = [](std::vector<double> &a) { a.push_back(a.back() * a[1]); };
         for (uint32_t p = 2; p < max_read_size; ++p) {
             extend(pow_p_same_same);
@@ -299,7 +299,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t max_fragment_length,
                              const std::vector<uint32_t> &cell_id_to_cell_idx,
                              double mutation_rate,
-                             double homozygous_rate,
+                             double not_significant_rate,
                              double seq_error_rate,
                              const uint32_t num_threads,
                              const std::string &marker,
@@ -329,7 +329,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
     // value: A Read struct, containing: sequence, line number, cell_id and position in genome
     std::unordered_map<uint32_t, Read> active_reads;
 
-    Cache cache(mutation_rate, homozygous_rate, seq_error_rate,
+    Cache cache(mutation_rate, not_significant_rate, seq_error_rate,
                 max_fragment_length); // store intermediate values to avoid recomputation
 
     uint64_t total_positions = 0;
