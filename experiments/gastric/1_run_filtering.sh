@@ -1,11 +1,11 @@
-DIR="/cluster/home/ddanciu/silver/datasets/gastric"
-OLD_BAM=$DIR"/mkn45_5k_750k_rpc_possorted_bam.bam"
-NEW_BAM=$DIR"/processed_files/mkn45_5k_750k_rpc_possorted_bam_filtered.bam"
+DIR="/Volumes/Elements"
+OLD_BAM="${DIR}/possorted_bam.bam"
+NEW_BAM="${DIR}/possorted_bam_filtered.bam"
 LOG="log_1_filtering"
 echo > $LOG
 
 echo "Number of reads in the original BAM:" >> $LOG
-samtools view -c $OLD_BAM >> $LOG
+samtools view -@ 4 -c $OLD_BAM >> $LOG
 echo >> $LOG
 
 #### filtering
