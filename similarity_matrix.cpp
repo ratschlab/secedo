@@ -69,7 +69,8 @@ struct Cache {
 
     /**
      * @param mutation_rate estimated mutation rate
-     * @param homozygous_rate estimated probability that a loci is heterozygous
+     * @param homozygous_rate estimated probability that a filtered locus is homozygous germline
+     * (versus heterozygous germline or mutated)
      * @param seq_error_rate estimated error rate in the sequencing technology
      */
     Cache(double mutation_rate,

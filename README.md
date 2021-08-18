@@ -34,7 +34,7 @@ The pileup files are created in SCATTER's binary format (extension .bin) and in 
 ### Clustering and variant calling
 ```
 ./scatter -i <PILEUP_DIR> -o <OUT_DIR> --num_threads 20 --log_level=trace \
-             --not_informative_rate=0.5 --seq_error_rate=0.01 \
+             --homozygous_filtered_rate=0.5 --seq_error_rate=0.01 \
              --reference_genome=OPTIONAL_REFERENCE_GENOME_FASTA \
              --max_coverage 1000 --min_cluster_size 500
 ```

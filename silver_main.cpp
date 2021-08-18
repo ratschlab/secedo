@@ -18,14 +18,16 @@ DEFINE_double(mutation_rate,
               0.01,
               "epsilon, estimated frequency of mutated loci in the pre-processed data set");
 // The filtering step attempts to eliminate positions not consistent with the "all cells have the
-// same homozygous genotype". This value approximates the percentage of positions that snuck through
-// although they are homozygous and have the same genotype (they were mis-labeled as 'interesting'
-// due to sequencing errors)
-DEFINE_double(not_informative_rate,
+// same  (heterozygous or homozygous) genotype". This value approximates the percentage of positions
+// that snuck through although they are homozygous and have the same genotype (they were mis-labeled
+// as 'interesting' due to sequencing errors)
+DEFINE_double(homozygous_filtered_rate,
               0.5,
-              "The faction of non-informative loci, i.e. the probability that cells at a filtered "
-              "locus actually have identical (heterozygous or homozygous) genotype.");
+              "The faction of homozygous non-informative loci, i.e. the probability that cells "
+              "at a filtered locus actually have identical homozygous genotype.");
 
+// While the value above refers to the filtered loci, this value refers to all loci and it simply
+// estimates the rate of heterozygous loci in the human genome
 DEFINE_double(heterozygous_prob,
               1e-3,
               "The probability that a locus is heterozygous in the human genome");
@@ -273,7 +275,7 @@ int main(int argc, char *argv[]) {
     uint16_t cluster_idx = 1; // 0 means "no cluster"
     if (FLAGS_clustering.empty()) {
         divide_cluster(pos_data, max_read_length, id_to_group, cell_id_map, cell_id_map,
-                       FLAGS_mutation_rate, FLAGS_not_informative_rate, FLAGS_seq_error_rate,
+                       FLAGS_mutation_rate, FLAGS_homozygous_filtered_rate, FLAGS_seq_error_rate,
                        FLAGS_num_threads, FLAGS_o, FLAGS_normalization, FLAGS_termination,
                        FLAGS_clustering_type, FLAGS_arma_kmeans, FLAGS_expectation_maximization,
                        FLAGS_min_cluster_size, "", &clusters, &cluster_idx);

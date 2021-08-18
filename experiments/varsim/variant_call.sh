@@ -135,7 +135,7 @@ function variant_calling() {
       mkdir -p "${out_dir}"
       command="/usr/bin/time ${silver} -i ${input_dir}/ -o ${out_dir} --num_threads 20 --log_level=trace \
              --flagfile ${flagfile} \
-             --not_informative_rate=${hprob} --seq_error_rate=${seq_error_rate} \
+             --homozygous_filtered_rate=${hprob} --seq_error_rate=${seq_error_rate} \
              --reference_genome=${base_dir}/genomes/healthy.fa \
              --map_file=${base_dir}/genomes/healthy.map \
              --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 1000 | tee ${out_dir}/silver.log"
