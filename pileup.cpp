@@ -50,6 +50,8 @@ bool read_bam_file(const uint16_t cell_id,
                    uint32_t chromosome,
                    uint32_t max_coverage,
                    uint32_t min_base_quality,
+                   uint32_t min_map_quality,
+                   uint32_t min_alignment_score,
                    uint32_t start_pos,
                    uint32_t end_pos,
                    BamTools::BamReader &reader,
@@ -136,6 +138,16 @@ bool read_bam_file(const uint16_t cell_id,
                         < min_base_quality) {
                 continue;
             }
+            // if mapping quality is too low, skip the read
+            if (al.MapQuality < min_map_quality) {
+                continue;
+            }
+            // if mapping score is too low, skip the read
+            uint32_t alignment_score = 0;
+            al.GetTag("AS", alignment_score);
+            if (alignment_score < min_alignment_score) {
+                continue;
+            }
 
             assert(al.Position + i < end_pos + MAX_INSERT_SIZE);
             uint32_t pos = al.Position + i - start_pos;
@@ -161,6 +173,8 @@ bool read_bam_chunk(const std::vector<std::filesystem::path> &input_files,
                     uint32_t chromosome_id,
                     uint32_t max_coverage,
                     uint32_t min_base_quality,
+                    uint32_t min_map_quality,
+                    uint32_t min_alignment_score,
                     uint32_t num_threads,
                     uint32_t start_pos,
                     uint32_t end_pos,
@@ -186,8 +200,8 @@ bool read_bam_chunk(const std::vector<std::filesystem::path> &input_files,
             continue;
         }
         is_done &= read_bam_file(batch_start + i, chromosome_id, max_coverage, min_base_quality,
-                                 start_pos, end_pos, *reader, out_map, data, data_size,
-                                 &(read_name_to_id->at(i)), last_read_id);
+                                 min_map_quality, min_alignment_score, start_pos, end_pos, *reader,
+                                 out_map, data, data_size, &(read_name_to_id->at(i)), last_read_id);
     }
 
     return is_done;
@@ -224,6 +238,8 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
                                  uint32_t chromosome_id,
                                  uint32_t max_coverage,
                                  uint32_t min_base_quality,
+                                 uint32_t min_map_quality,
+                                 uint32_t min_alignment_score,
                                  uint32_t num_threads,
                                  uint16_t min_different) {
     size_t total_size = (chromosome_lengths[chromosome_id] / CHUNK_SIZE) + 1;
@@ -257,7 +273,8 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
         is_done = true;
         for (uint32_t i = 0; i < file_batches.size(); ++i) {
             is_done &= read_bam_chunk(file_batches[i], i * MAX_OPEN_FILES, chromosome_id,
-                                      max_coverage, min_base_quality, num_threads, start_pos,
+                                      max_coverage, min_base_quality, min_map_quality,
+                                      min_alignment_score, num_threads, start_pos,
                                       start_pos + CHUNK_SIZE, out_map, &data, &data_size,
                                       &read_name_to_id, &last_read_id);
         }
@@ -273,7 +290,8 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
             }
             uint16_t max_bases = *std::max_element(nbases.begin(), nbases.end());
 
-            if (coverage - max_bases < min_different) { // assuming homozgous germline, thus irrelevant
+            if (coverage - max_bases
+                < min_different) { // assuming homozgous germline, thus irrelevant
                 continue;
             }
             pos_count++;

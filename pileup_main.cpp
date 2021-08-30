@@ -26,10 +26,23 @@ DEFINE_string(log_level,
               "The log verbosity: debug, trace, info, warn, error, critical, off");
 
 DEFINE_uint32(min_base_quality,
-              13,
+              30,
               "Minimum Phred quality score for the sequencer. A quality score of 20 corresponds to "
               "a sequencing error rate of 0.01");
 
+DEFINE_uint32(min_map_quality,
+              30,
+              "Minimum score for the mapping quality (how certain bowtie is that it mapped the "
+              "read to the right part of the genome. A quality score of 10 corresponds to a "
+              "mapping error rate of 0.1");
+
+DEFINE_uint32(
+        min_map_score,
+        10000, // large enough that we don't filter by this value
+        "Minimum score for a read to be accepted. The score measures how close the read is to the "
+        "sequence in the genome that is being mapped to (each mismatch/insert/del is penalized. "
+        "Datasets are inconsistent on how this value is being used, so make sure you take a good "
+        "look at the dataset before setting a value.");
 
 DEFINE_uint32(max_coverage,
               100,
@@ -74,8 +87,8 @@ int main(int argc, char *argv[]) {
     for (const auto &chromosome : split(FLAGS_chromosomes, ',')) {
         auto output_file = std::filesystem::path(FLAGS_o + "_" + chromosome + ".pileup");
         pileup_bams(input_files, output_file, true, chromosome_to_id(chromosome),
-                    FLAGS_max_coverage, FLAGS_min_base_quality, FLAGS_num_threads,
-                    FLAGS_min_different);
+                    FLAGS_max_coverage, FLAGS_min_base_quality, FLAGS_min_map_quality,
+                    FLAGS_min_map_score, FLAGS_num_threads, FLAGS_min_different);
         logger()->trace("Done processing chromosome {}", chromosome);
     }
 }

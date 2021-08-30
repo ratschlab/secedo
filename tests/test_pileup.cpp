@@ -15,10 +15,12 @@ using namespace ::testing;
 TEST(pileup, read_too_few_differnt) {
     uint32_t chromosome_id = 0;
     uint32_t max_coverage = 10;
-    std::vector<PosData> data
-            = pileup_bams({ "data/test1.bam", "data/test1.bam", "data/test1.bam", "data/test2.bam",
-                            "data/test2.bam" },
-                          "data/test_pileup", true, chromosome_id, max_coverage, 1, 1, 3);
+    uint32_t min_map_quality = 0;
+    uint32_t min_alignment_score = 0;
+    std::vector<PosData> data = pileup_bams({ "data/test1.bam", "data/test1.bam", "data/test1.bam",
+                                              "data/test2.bam", "data/test2.bam" },
+                                            "data/test_pileup", true, chromosome_id, max_coverage,
+                                            1, min_map_quality, min_alignment_score, 1, 3);
     ASSERT_EQ(0, data.size());
 
     auto [data2, cell_ids, max_len] = read_pileup("data/test_pileup.bin", { 0, 1 });
@@ -26,7 +28,8 @@ TEST(pileup, read_too_few_differnt) {
 
     data = pileup_bams({ "data/test1.bam", "data/test1.bam", "data/test1.bam", "data/test2.bam",
                          "data/test2.bam" },
-                       "data/test_pileup", true, chromosome_id, max_coverage, 1, 1, 1);
+                       "data/test_pileup", true, chromosome_id, max_coverage, 1, min_map_quality,
+                       min_alignment_score, 1, 1);
     // only the first position is identical in both files, we we get 9 out of 10 positions
     ASSERT_EQ(9, data.size());
 }
@@ -62,9 +65,11 @@ void check_content(const std::vector<PosData> &data) {
 TEST(pileup, read) {
     uint32_t chromosome_id = 0;
     uint32_t max_coverage = 10;
-    std::vector<PosData> data
-            = pileup_bams({ "data/test1.bam", "data/test2.bam" }, "data/test_pileup_1", true,
-                          chromosome_id, max_coverage, 1, 1, 1);
+    uint32_t min_map_quality = 0;
+    uint32_t min_alignment_score = 0;
+    std::vector<PosData> data = pileup_bams({ "data/test1.bam", "data/test2.bam" },
+                                            "data/test_pileup_1", true, chromosome_id, max_coverage,
+                                            1, min_map_quality, min_alignment_score, 1, 1);
     check_content(data);
     std::filesystem::remove_all("data/test_pileup_1*");
 }
@@ -75,8 +80,10 @@ TEST(pileup, read) {
 TEST(pileup, read_file) {
     uint32_t chromosome_id = 0;
     uint32_t max_coverage = 10;
+    uint32_t min_map_quality = 0;
+    uint32_t min_alignment_score = 0;
     pileup_bams({ "data/test1.bam", "data/test2.bam" }, "data/test_pileup_2", true, chromosome_id,
-                max_coverage, 1, 1, 1);
+                max_coverage, 1, min_map_quality, min_alignment_score, 1, 1);
     auto [data, cell_count, max_len] = read_pileup("data/test_pileup_2.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
@@ -91,8 +98,10 @@ TEST(pileup, read_file) {
 TEST(pileup, soft_clipping) {
     uint32_t chromosome_id = 0;
     uint32_t max_coverage = 10;
+    uint32_t min_map_quality = 0;
+    uint32_t min_alignment_score = 0;
     pileup_bams({ "data/soft_clipping.bam", "data/test2.bam" }, "data/test_pileup_3", true,
-                chromosome_id, max_coverage, 1, 1, 1);
+                chromosome_id, max_coverage, 1, min_map_quality, min_alignment_score, 1, 1);
     auto [data, cell_count, max_len] = read_pileup("data/test_pileup_3.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
@@ -107,8 +116,10 @@ TEST(pileup, soft_clipping) {
 TEST(pileup, hard_clipping) {
     uint32_t chromosome_id = 0;
     uint32_t max_coverage = 10;
+    uint32_t min_map_quality = 0;
+    uint32_t min_alignment_score = 0;
     pileup_bams({ "data/hard_clipping.bam", "data/test2.bam" }, "data/test_pileup_4", true,
-                chromosome_id, max_coverage, 1, 1, 1);
+                chromosome_id, max_coverage, 1, min_map_quality, min_alignment_score, 1, 1);
     auto [data, cell_count, max_len] = read_pileup("data/test_pileup_4.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
@@ -124,8 +135,10 @@ TEST(pileup, hard_clipping) {
 TEST(pileup, insert_at_end) {
     uint32_t chromosome_id = 0;
     uint32_t max_coverage = 10;
+    uint32_t min_map_quality = 0;
+    uint32_t min_alignment_score = 0;
     pileup_bams({ "data/insert_at_end.bam", "data/test2.bam" }, "data/test_pileup_5", true,
-                chromosome_id, max_coverage, 1, 1, 1);
+                chromosome_id, max_coverage, 1, min_map_quality, min_alignment_score, 1, 1);
     auto [data, cell_count, max_len] = read_pileup("data/test_pileup_4.bin", { 0, 1 });
     // first pos is 2 because pos 1 is eliminated, last post is 425 -> 425-2 = 423
     ASSERT_EQ(423, max_len);
@@ -134,5 +147,47 @@ TEST(pileup, insert_at_end) {
     std::filesystem::remove_all("data/test_pileup_4*");
 }
 
+/**
+ * Tests that filtering BAM files by mapping quality works as expected
+ */
+TEST(pileup, test_mapping_quality) {
+    uint32_t chromosome_id = 0;
+    uint32_t max_coverage = 10;
+    uint32_t min_map_quality = 7;
+    uint32_t min_alignment_score = 0;
+    std::vector<PosData> data = pileup_bams({ "data/test1.bam", "data/test2.bam" },
+                                            "data/test_pileup", true, chromosome_id, max_coverage,
+                                            1, min_map_quality, min_alignment_score, 1, 1);
+    ASSERT_TRUE(data.empty());
+
+    min_map_quality = 6; // the mapping quality is exactly 6, so this should return all the records
+    data = pileup_bams({ "data/test1.bam", "data/test2.bam" }, "data/test_pileup", true,
+                       chromosome_id, max_coverage, 1, min_map_quality, min_alignment_score, 1, 1);
+    ASSERT_EQ(9, data.size());
+}
+
+/**
+ * Tests that filtering BAM files by alignment score works as expected
+ */
+TEST(pileup, test_alignment_score) {
+    uint32_t chromosome_id = 0;
+    uint32_t max_coverage = 10;
+    uint32_t min_map_quality = 0;
+    uint32_t min_alignment_score = 10;
+    std::vector<PosData> data = pileup_bams({ "data/test3.bam", "data/test3.bam" },
+                                            "data/test_pileup", true, chromosome_id, max_coverage,
+                                            1, min_map_quality, min_alignment_score, 1, 0);
+    ASSERT_EQ(168, data.size()); // 168 = 2 reads, 84 bases each
+
+    min_alignment_score = 85; // this should eliminate both reads (scores are 79 and 84)
+    data = pileup_bams({ "data/test3.bam", "data/test3.bam" }, "data/test_pileup", true,
+                       chromosome_id, max_coverage, 1, min_map_quality, min_alignment_score, 1, 1);
+    ASSERT_TRUE(data.empty());
+
+    min_alignment_score = 80; // this should eliminate one read (scores are 79 and 84)
+    data = pileup_bams({ "data/test3.bam", "data/test3.bam" }, "data/test_pileup", true,
+                       chromosome_id, max_coverage, 1, min_map_quality, min_alignment_score, 1, 0);
+    ASSERT_EQ(84,data.size());
+}
 
 } // namespace

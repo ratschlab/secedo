@@ -1,6 +1,6 @@
 # Script that computes the optimal threshold (according to Youden's J) for a locus being significant
 # For a range of per-locus coverages (e.g. 10 to 200), the script simulates various configurations of
-# the 4 bases (ACGT) for 4 cases: homozygous germline, heterozygous germline, homzygous+somatic, 
+# the 4 bases (ACGT) for 4 cases: homozygous germline, heterozygous germline, homzygous+somatic,
 # heterozygous + somatic. We then compute the optimal thresholds, such that as many as possible of the
 # germline loci are eliminated and as many as possible of the somatic ones are kept
 
@@ -25,10 +25,10 @@ comp_fact <- function() {
 ### function to compute log factorial using Stirling formula
 log_fact <- function(n) {
   if (n < 2) return (0)
-  if(n>=170) 
+  if(n>=170)
   {
     return(0.5*log(2*pi*n)+n*log(n/e))
-  } 
+  }
   else return(factorials[n])
 }
 
@@ -42,9 +42,9 @@ is_significant <- function(cov, log, res) {
   prob_all_c1 = homo_prior*((1-theta)^res[4])*(theta/3)^(cov-res[4])
   # 2. The locus is heterozygous c1 c2
   prob_hetero = hetero_prior * ((0.5-theta/3)^(res[3]+res[4])) * ((theta/3)^(res[1]+res[2]))
-  # 3 The locus is homozygous + somatic mutation 
+  # 3 The locus is homozygous + somatic mutation
   prob_homo_som = homo_prior * mut_prior * ((0.75-0.66*theta)^res[4])*(0.25^res[3])*((theta/3)^(res[1]+res[2]))
-  # 4 The locus is heterozygous + somatic mutation 
+  # 4 The locus is heterozygous + somatic mutation
   prob_hetero_som = hetero_prior * mut_prior * ((0.5-theta)^res[4])*((0.25)^(res[2]+res[3])) * ((theta/3)^res[1])
   # 5. Two somatic mutations
   prob_two_somatic = hetero_prior*mut_prior^2*(1-theta)^cov
@@ -62,7 +62,7 @@ is_significant2 <- function(cov, log, res) {
   multinomCoef <- log_fact(cov) - log_fact(res[1]) - log_fact(res[2]) - log_fact(res[3]) - log_fact(res[4])
   ### normalization coefficient
   normCoeff <- log_fact(cov+3) - log_fact(cov) - log(6)
-  
+
   return (p_homo + normCoeff + multinomCoef)
 }
 
@@ -97,7 +97,7 @@ for (meanCov in seq(10,200,10)) {
     for (i in 1:nsim) {
       # sample coverage
       cov <- rpois(1, meanCov)
-      
+
       # generate the resulting base counts
       rand <- runif(cov)
       n1 <- sum(rand<theta/3)
@@ -108,16 +108,16 @@ for (meanCov in seq(10,200,10)) {
       }
       n4 <- cov - n1 - n2 - n3
       res <- sort(c(n1,n2,n3,n4))
-      
+
       logps.germ.homo[i] <- is_significant(cov, log, res)
     }
-    
+
     ### Heterozygous germline
     logps.germ.hetero <- rep(0,nsim)
     for (i in 1:nsim) {
       # sample coverage
       cov <- rpois(1, meanCov)
-      
+
       # generate the resulting base counts
       rand <- runif(cov)
       n1 <- sum(rand<theta/3)
@@ -128,17 +128,17 @@ for (meanCov in seq(10,200,10)) {
       n3 <- sum(rand<0.5+theta/3)-n1-n2
       n4 <- cov - n1 - n2 - n3
       res <- sort(c(n1,n2,n3,n4))
-      
+
       logps.germ.hetero[i] <- is_significant(cov, log, res)
     }
-    
+
     ### Homozygous somatic mutation
     logps.som.homo <- rep(0,nsim)
     for (i in 1:nsim) {
       # sample coverage
       cov <- rpois(1, meanCov)
-      
-      # generate the resulting base counts 
+
+      # generate the resulting base counts
       # without error there is prop.tumour of one allele and prop.healthy of another allele
       # with error:
       # "healthy" allele: f_h(1-theta) + f_t*theta/3
@@ -148,8 +148,8 @@ for (meanCov in seq(10,200,10)) {
       rand <- runif(cov)
       cov.healthy <- cov*prop.healthy
       cov.tumour <- cov*prop.tumour
-      breaks <- c(theta/3, 
-        theta/3, 
+      breaks <- c(theta/3,
+        theta/3,
         cov.healthy*(1-theta)/cov+cov.tumour*theta/cov/3,
         cov.tumour*(1-theta)/cov+cov.healthy*theta/cov/3)
       cum.sum <- cumsum(breaks)
@@ -158,10 +158,10 @@ for (meanCov in seq(10,200,10)) {
       n3 <- sum(rand<cum.sum[3])-n1-n2
       n4 <- cov - n1 - n2 - n3
       res <- sort(c(n1,n2,n3,n4))
-      
+
       logps.som.homo[i] <- is_significant(cov, log, res)
     }
-    
+
     ### Heterozygous somatic mutation
     # there are two options: healthy AA, tumour AB; or healthy AB, tumour AA (loss of heterozygosity)
     # the first possibility
@@ -169,7 +169,7 @@ for (meanCov in seq(10,200,10)) {
     for (i in 1:nsim) {
       # sample coverage
       cov <- rpois(1, meanCov)
-      
+
       # generate the resulting base counts
       # without error there is prop.healthy + 1/2prop.tumour of one allele and 1/2prop.tumour of another allele
       # with error:
@@ -180,8 +180,8 @@ for (meanCov in seq(10,200,10)) {
       rand <- runif(cov)
       cov.healthy <- cov*prop.healthy
       cov.tumour <- cov*prop.tumour
-      breaks <- c(theta/3, 
-        theta/3, 
+      breaks <- c(theta/3,
+        theta/3,
         (cov.healthy+0.5*cov.tumour)*(1-theta)/cov+0.5*cov.tumour*theta/cov/3,
         0.5*cov.tumour*(1-theta)/cov+(cov.healthy+0.5*cov.tumour)*theta/cov/3)
       cum.sum <- cumsum(breaks)
@@ -190,16 +190,16 @@ for (meanCov in seq(10,200,10)) {
       n3 <- sum(rand<cum.sum[3])-n1-n2
       n4 <- cov - n1 - n2 - n3
       res <- sort(c(n1,n2,n3,n4))
-      
+
       logps.som.hetero.1[i] <- is_significant(cov, log, res)
     }
-    
+
     # the second possibility
     logps.som.hetero.2 <- rep(0,nsim)
     for (i in 1:nsim) {
       # sample coverage
       cov <- rpois(1, meanCov)
-      
+
       # generate the resulting base counts
       # without error there is 0.5*prop.healthy + prop.tumour of one allele and 1/2prop.healthy of another allele
       # with error:
@@ -210,8 +210,8 @@ for (meanCov in seq(10,200,10)) {
       rand <- runif(cov)
       cov.healthy <- cov*prop.healthy
       cov.tumour <- cov*prop.tumour
-      breaks <- c(theta/3, 
-        theta/3, 
+      breaks <- c(theta/3,
+        theta/3,
         (0.5*cov.healthy+cov.tumour)*(1-theta)/cov+0.5*cov.healthy*theta/cov/3,
         0.5*cov.healthy*(1-theta)/cov+(0.5*cov.healthy+cov.tumour)*theta/cov/3)
       cum.sum <- cumsum(breaks)
@@ -220,19 +220,19 @@ for (meanCov in seq(10,200,10)) {
       n3 <- sum(rand<cum.sum[3])-n1-n2
       n4 <- cov - n1 - n2 - n3
       res <- sort(c(n1,n2,n3,n4))
-      
+
       logps.som.hetero.2[i] <- is_significant(cov, log, res)
     }
-    
-    
-    data <- data.frame(logp = c(logps.germ.homo, logps.germ.hetero, logps.som.hetero.1, logps.som.hetero.2),
+
+
+    data <- data.frame(logp = c(logps.germ.homo, logps.som.hetero.1, logps.som.hetero.2),
      type = c(rep("homozygous germline", nsim),
-      rep("heterozygous germline", nsim),
+      #rep("heterozygous germline", nsim),
                                 #rep("homozygous mutation", nsim),
                                 rep("heterozygous mutation AA+AB", nsim),
                                 rep("heterozygous mutation AB+AA", nsim)),
-     meanCov = rep(meanCov, 4*nsim),
-     prop.tumour = rep(prop.tumour, 4*nsim))
+     meanCov = rep(meanCov, 3*nsim),
+     prop.tumour = rep(prop.tumour, 3*nsim))
     data_all <- rbind(data_all, data)
   }
 }
@@ -291,15 +291,15 @@ for (meanCov in seq(10,200,10)) {
     kept.mut <- kept.mut+sum(data.tmp$mut[i]=="yes")
     kept.pos.hetero <- kept.pos.hetero + sum(data.tmp$hetero[i]=="yes")
     kept.pos.homo <- kept.pos.homo + sum(data.tmp$mut[i]=="no" & data.tmp$hetero[i]=="no")
-    
+
     tp <- kept.mut*pos.mut/(2*nsim)
     fp <- kept.pos.homo*pos.homo/nsim + kept.pos.hetero*pos.hetero/nsim
     tn <- (pos.homo + pos.hetero)-fp
     fn <- pos.mut-tp
-    
+
     mutations <- tp/(tp+fn)
     positions <- ((1-heteroPrior)*(1-somMutPrior)*kept.pos.homo/nsim + heteroPrior*(1-somMutPrior)*kept.pos.hetero/nsim)
-    
+
     J <- tp/(tp+fn) + tn/(tn+fp) -1
     if(J >= best.J) {
       best.J <- J
@@ -308,8 +308,8 @@ for (meanCov in seq(10,200,10)) {
       best.K.J <- data.tmp$logp[i][1]
     }
   }
-  best.Ks[index,] <- c(meanCov, prop.tumour, best.K.J, best.kept.pos.J, 
-   best.kept.mut.J, best.J) 
+  best.Ks[index,] <- c(meanCov, prop.tumour, best.K.J, best.kept.pos.J,
+   best.kept.mut.J, best.J)
   index <- index+1
   }}
 
