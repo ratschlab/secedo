@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.13)
 project(SomaticVariantCalling)
 
 set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
+set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} /opt/local/include)
+
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
