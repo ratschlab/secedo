@@ -6,7 +6,6 @@
 #include <gflags/gflags.h>
 
 #include <cstdint>
-#include <unordered_set>
 #include <vector>
 
 DEFINE_string(i, "", "Input directory containing BAM files");
@@ -38,7 +37,7 @@ DEFINE_uint32(min_map_quality,
 
 DEFINE_uint32(
         min_map_score,
-        10000, // large enough that we don't filter by this value
+        0, // small enough that we don't filter by this value
         "Minimum score for a read to be accepted. The score measures how close the read is to the "
         "sequence in the genome that is being mapped to (each mismatch/insert/del is penalized. "
         "Datasets are inconsistent on how this value is being used, so make sure you take a good "
