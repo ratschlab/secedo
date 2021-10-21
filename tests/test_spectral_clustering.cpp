@@ -289,7 +289,7 @@ INSTANTIATE_TEST_SUITE_P(DC,
                                            std::make_tuple("FIEDLER", Termination::AIC, false),
                                            std::make_tuple("SPECTRAL2", Termination::BIC, false),
                                            std::make_tuple("FIEDLER", Termination::BIC, false),
-                                           std::make_tuple("SPECTRAL2", Termination::AIC, true),
+                                           //std::make_tuple("SPECTRAL2", Termination::AIC, true),
                                            std::make_tuple("FIEDLER", Termination::AIC, true),
                                            // std::make_tuple("SPECTRAL2", Termination::BIC, true),
                                            std::make_tuple("FIEDLER", Termination::BIC, true)));
