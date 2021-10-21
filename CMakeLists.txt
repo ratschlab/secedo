@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 3.13)
-project(SomaticVariantCalling)
 
-set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
-set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} /opt/local/include)
+cmake_minimum_required(VERSION 3.13)
+project(SNVBasedClustering)
+
+#set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
+#set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} /opt/local/include)
 
 
 set(CMAKE_CXX_STANDARD 20)
@@ -32,7 +33,7 @@ target_compile_options(progress_bar PUBLIC -fPIC)
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 
-# added later because glags has errors on GCC
+# added later because gflags has errors on GCC
 string(APPEND CMAKE_CXX_FLAGS " -Werror")
 
 # Armadillo Linear algebra library
