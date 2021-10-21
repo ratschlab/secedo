@@ -15,9 +15,9 @@ Clone the latest version of the code from the git repository:
 git clone https://github.com/ratschlab/scatter.git
 ```
 ### Building (Mac or Linux)
-* `brew install libomp openblas` (for Mac) or `sudo apt-get install libblas-dev` (Linux)
+* `sudo apt-get install libblas-dev` (Linux) or `brew install gcc@9 libomp openblas` (for Mac)
 * `mkdir scatter/build; cd scatter/build` 
-* `cmake .. -DCMAKE_BUILD_TYPE=Release`
+* `cmake .. -DCMAKE_BUILD_TYPE=Release` (Linux) or `cmake -DCMAKE_C_COMPILER=/usr/bin/gcc -DCMAKE_CXX_COMPILER=/usr/bin/g++ ..` (for Mac)
 * `make -j`
 * `./tests`
 
