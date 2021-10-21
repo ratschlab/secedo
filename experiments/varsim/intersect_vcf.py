@@ -79,7 +79,7 @@ if __name__ == '__main__':
         j += 1
 
 print('Total matches: ', matches, ' out of ', len(list1), '/', len(list2))
-print(matches / len(list2), matches / len(list1), ' ', matches, ' SNVs\n', len(list1), ' ', len(list2))
+print(matches / len(list1), matches / len(list2), ' ', matches, ' SNVs\n', len(list1), ' ', len(list2))
 print('Total positions in first file that are not in the 2nd: ', diffs)
 print(f'Intersection written to {args.out}.intersect')
 print(f'Diff written to {args.out}.diff')

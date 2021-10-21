@@ -11,7 +11,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 find_package(OpenMP REQUIRED)
 # no warnings
-string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Wfatal-errors -msse4 ${OpenMP_CXX_FLAGS}")
+string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Wfatal-errors ${OpenMP_CXX_FLAGS}")
+
+# only use sse4 on x86 processor (i.e. not on ARM-based M1 Macs)
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+  string(APPEND CMAKE_CXX_FLAGS " -msse4")
+endif ()
 
 include_directories(.)
 include_directories(third_party)
