@@ -1,5 +1,7 @@
 
 cmake_minimum_required(VERSION 3.13)
+SET (CMAKE_C_COMPILER_WORKS 1)
+SET (CMAKE_CXX_COMPILER_WORKS 1)
 project(SNVBasedClustering)
 
 #set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
