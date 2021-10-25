@@ -17,7 +17,7 @@ git clone https://github.com/ratschlab/scatter.git
 ### Building (Mac or Linux)
 * `sudo apt-get install libblas-dev` (Linux) or `brew install cmake gcc@9 libomp openblas` (for Mac, for M1 Macs remove gcc@9)
 * `mkdir scatter/build; cd scatter/build` 
-* `cmake .. -DCMAKE_BUILD_TYPE=Release` (Linux and M1 Macs) or `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/gcc -DCMAKE_CXX_COMPILER=/usr/bin/g++ ..` (for Intel-based Macs)
+* `cmake .. -DCMAKE_BUILD_TYPE=Release` (Linux and M1 Macs) or `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/local/bin/gcc-9 -DCMAKE_CXX_COMPILER=/usr/local/bin/g++-9 ..` (for Intel-based Macs)
 * `make -j`
 * `./tests`
 
