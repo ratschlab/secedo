@@ -34,7 +34,7 @@ uint8_t most_likely_genotype(const std::array<uint16_t, 4> &n_bases,
     std::vector<uint32_t> idx = argsort(n_bases.begin(), n_bases.end());
 
     if (cov < 9) {
-        // declare the locus as homozygous, if the global locus is homozygous and all but one baes
+        // declare the locus as homozygous, if the global locus is homozygous and all but one bases
         // are identical or if we have more than 5 identical bases (which corresponds to 97% chances
         // homozygous)
         if ((n_bases[idx[3]] >= cov - 1 && likely_homozygous_total)
