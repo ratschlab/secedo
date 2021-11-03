@@ -120,7 +120,7 @@ module load jdk # varsim doesn't work with openjdk
 # create the genome VCF+Fasta for the healthy cells
 generate_healthy_genome
 
-# create the first tumor cell, differing in 40K snps from the healthy cell
+# create the first tumor cell, differing in 20K snps from the healthy cell
 generate_tumor_genome 20000 "${base_dir}/genomes/healthy.truth.vcf" "tumor1-h-20K"
 # tumor2 is based on tumor 1 and differs in 10K SNPs
 generate_tumor_genome 10000 "${base_dir}/genomes/tumor1-h-20K/tumor1-h-20K.truth.vcf" "tumor2-1-10K"
@@ -136,3 +136,9 @@ generate_tumor_genome 5000 "${base_dir}/genomes/tumor3-1-15K/tumor3-1-15K.truth.
 generate_tumor_genome 7500 "${base_dir}/genomes/tumor3-1-15K/tumor3-1-15K.truth.vcf" "tumor6-3-7.5K"
 # tumor 8 differs in 2.5K SNPs from tumor 5
 generate_tumor_genome 2500 "${base_dir}/genomes/tumor5-3-5K/tumor5-3-5K.truth.vcf" "tumor8-5-2.5K"
+# tumor 9 differs in 1.250 SNPS from the healthy cell
+generate_tumor_genome 1250 "${base_dir}/genomes/healthy.truth.vcf" "tumor9-h-1.25K"
+# tumor 10 differs in 750 SNPS from the healthy cell
+generate_tumor_genome 750 "${base_dir}/genomes/healthy.truth.vcf" "tumor10-h-0.75K"
+# tumor 11 differs in 500 SNPS from the healthy cell
+generate_tumor_genome 500 "${base_dir}/genomes/healthy.truth.vcf" "tumor11-h-0.5K"
