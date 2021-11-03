@@ -1,7 +1,10 @@
-# SCATTER (Single Cell dATa clusTERer)
-`SCATTER` is able to cluster cells and perform variant calling based on information obtained from single-cell DNA sequencing. `SCATTER` takes as input `BAM` files containing the aligned data for each cell and provides as output a clustering of the cells and, optionally, VCF files pinpointing the changes relative to a reference genome.
+# SECEDO (SinglE CEll Data tumOr clusterer)
+`SECEDO` is able to cluster cells and perform variant calling based on information obtained from single-cell DNA 
+sequencing. `SECEDO` takes as input `BAM` files containing the aligned data for each cell and provides as output a 
+clustering of the cells and, optionally, VCF files pinpointing the changes relative to a reference genome.
 
-`SCATTER` is descirbed in detail in the following paper: [Clustering cells based on single-cell DNA-sequencing data withultra-low coverage](coming soon)
+`SECEDO` is descirbed in detail in the following paper: [Clustering cells based on single-cell DNA-sequencing data 
+withultra-low coverage](coming soon)
 
 ## Prerequisites
 * GNU GCC with C++17 (gcc-8.0.1 or higher), LLVM Clang (clang-7 or higher), or AppleClang
@@ -12,11 +15,11 @@
 ## Installation
 Clone the latest version of the code from the git repository:
 ```
-git clone https://github.com/ratschlab/scatter.git
+git clone https://github.com/ratschlab/secedo.git
 ```
 ### Building (Mac or Linux)
 * `sudo apt-get install libblas-dev` (Linux) or `brew install cmake gcc@9 libomp openblas` (for Mac, for M1 Macs remove gcc@9)
-* `mkdir scatter/build; cd scatter/build` 
+* `mkdir secedo/build; cd secedo/build` 
 * `cmake .. -DCMAKE_BUILD_TYPE=Release` (Linux and M1 Macs) or `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/local/bin/gcc-9 -DCMAKE_CXX_COMPILER=/usr/local/bin/g++-9 ..` (for Intel-based Macs)
 * `make -j`
 * `./tests`
@@ -29,11 +32,12 @@ If you have a bunch of BAM files, the first step is to create a pileup (a file t
 ```
 The command above will create a pileup for the first chromosome. If you ommit the `--chromosome` parameter, `pileup` will create 24 pileup files, one for each chromosome.
 
-The pileup files are created in SCATTER's binary format (extension .bin) and in the `samtools` compatible textual format (extension .txt), which is useful for debugging and manual inspection.
+The pileup files are created in SECEDO's binary format (extension .bin) and in the `samtools` compatible textual format 
+(extension .txt), which is useful for debugging and manual inspection.
 
 ### Clustering and variant calling
 ```
-./scatter -i <PILEUP_DIR> -o <OUT_DIR> --num_threads 20 --log_level=trace \
+./secedo -i <PILEUP_DIR> -o <OUT_DIR> --num_threads 20 --log_level=trace \
              --homozygous_filtered_rate=0.5 --seq_error_rate=0.01 \
              --reference_genome=OPTIONAL_REFERENCE_GENOME_FASTA \
              --max_coverage 1000 --min_cluster_size 500
@@ -43,4 +47,5 @@ This will run the clustering and variant calling on the pileup files available i
 
 You will need enough RAM to fit the pileups and a bit of extra - we were able to process 8K cells in 32GB of RAM, so this shouldn't be an issue. 
 
-Take a look at [breast_cancer/variant_call.sh](https://github.com/ratschlab/scatter/blob/main/experiments/breast_cancer/variant_call.sh) for inspiration on how to use `SCATTER`.
+Take a look at [breast_cancer/variant_call.sh](https://github.
+com/ratschlab/secedo/blob/main/experiments/breast_cancer/variant_call.sh) for inspiration on how to use `SECEDO`.

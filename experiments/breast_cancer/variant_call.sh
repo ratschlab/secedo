@@ -13,7 +13,7 @@ code_dir="/cluster/work/grlab/projects/projects2019-silver/code"
 function split_bams() {
 
   for slice in ${slices}; do
-    slice_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/slice${slice}/processed_files"
+    slice_dir="/cluster/work/grlab/projects/projects2019-secedo/10x_data_breastcancer/slice${slice}/processed_files"
     bam_dir="${slice_dir}/aligned_cells"
     split_dir="${slice_dir}/aligned_cells_split"
 
@@ -62,7 +62,7 @@ function create_pileup() {
           scratch_dir=$(mktemp -d -t pileup-XXXXXXXXXX --tmpdir=/scratch)
           source_files=""
           for slice in ${slices}; do
-            slice_dir="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/slice${slice}/processed_files"
+            slice_dir="/cluster/work/grlab/projects/projects2019-secedo/10x_data_breastcancer/slice${slice}/processed_files"
             split_dir="${slice_dir}/aligned_cells_split"
 
             source_files="${source_files} ${split_dir}/*_chr${chromosome}.bam*"

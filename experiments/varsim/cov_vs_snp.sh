@@ -11,7 +11,7 @@ function generate_reads() {
 
   step=100
 
-  art_illumina="/cluster/work/grlab/projects/projects2019-supervario/art_bin_MountRainier/art_illumina"
+  art_illumina="/cluster/work/grlab/projects/projects2019-secedo/art_bin_MountRainier/art_illumina"
   gen_reads="python3 ${code_dir}/experiments/varsim/generate_reads.py"
   scratch_dir=$(mktemp -d -t genome-XXXXXXXXXX --tmpdir=/scratch)
 
@@ -154,7 +154,7 @@ coverage=$2
 cell1=$3
 cell2=$4
 
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
+base_dir="/cluster/work/grlab/projects/projects2019-secedo/simulated_data/varsim"
 fastas=("${base_dir}/genomes/${cell1}/${cell1}.fa" "${base_dir}/genomes/${cell2}/${cell2}.fa")
 snps=$(cut -d "-" -f3 <<< ${cell2})
 
