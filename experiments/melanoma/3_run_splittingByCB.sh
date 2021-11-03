@@ -1,4 +1,4 @@
-DIR="/cluster/work/grlab/projects/projects2019-supervario/10x_data/"
+DIR="/cluster/work/grlab/projects/projects2019-secedo/10x_data/"
 NEW_BAM2=$DIR"processed_files/colo829_G1_1k_possorted_bam_filtered_withCBtag.bam"
 NEW_BAM2_SORTED=$DIR"processed_files/colo829_G1_1k_possorted_bam_filtered_withCBtag_sorted.bam"
 CELL_BAMS_DIR=$DIR"processed_files/cell_bams/"

@@ -1,10 +1,10 @@
 # Simulates data using Varsim+dwgsim, aligns it, piles it up and runs variant calling on it
 
-base_dir="/cluster/work/grlab/projects/projects2019-silver/datasets/varsim"
+base_dir="/cluster/work/grlab/projects/projects2019-secedo/datasets/varsim"
 coverage=0.05  # read coverage for each cell
 cov="big"  # the name of the dataset
 
-code_dir="/cluster/work/grlab/projects/projects2019-silver/code"
+code_dir="/cluster/work/grlab/projects/projects2019-secedo/code"
 
 genomes=("${base_dir}/genomes/healthy.fa" "${base_dir}/genomes/tumor1-h-20K/tumor1-h-20K.fa" \
 "${base_dir}/genomes/tumor2-1-10K/tumor2-1-10K.fa" "${base_dir}/genomes/tumor3-1-15K/tumor3-1-15K.fa" \
@@ -21,7 +21,7 @@ function generate_reads() {
 
   step=100
 
-  art_illumina="/cluster/work/grlab/projects/projects2019-supervario/art_bin_MountRainier/art_illumina"
+  art_illumina="/cluster/work/grlab/projects/projects2019-secedo/art_bin_MountRainier/art_illumina"
   gen_reads="python3 ${code_dir}/experiments/varsim/generate_reads.py"
 
   out_dir="${base_dir}/${cov}/cells"

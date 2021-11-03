@@ -1,5 +1,5 @@
 slice="C"
-DIR="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/slice${slice}/"
+DIR="/cluster/work/grlab/projects/projects2019-secedo/10x_data_breastcancer/slice${slice}/"
 NEW_BAM2=$DIR"processed_files/breast_tissue_${slice}_2k_possorted_bam_filtered_withCBtag.bam"
 NEW_BAM2_SORTED=$DIR"processed_files/breast_tissue_${slice}_2k_possorted_bam_filtered_withCBtag_sorted.bam"
 CELL_BAMS_DIR=$DIR"processed_files/cell_bams/"

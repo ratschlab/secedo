@@ -1,4 +1,4 @@
-DIR="/cluster/work/grlab/projects/projects2019-supervario/10x_data_breastcancer/sliceB/"
+DIR="/cluster/work/grlab/projects/projects2019-secedo/10x_data_breastcancer/sliceB/"
 OLD_BAM=$DIR"breast_tissue_B_2k_possorted_bam.bam"
 NEW_BAM=$DIR"processed_files/breast_tissue_B_2k_possorted_bam_filtered.bam"
 LOG="log_1_filtering"

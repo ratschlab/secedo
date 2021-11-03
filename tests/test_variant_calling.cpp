@@ -518,7 +518,7 @@ TEST(MostLikelyGenotype, NearEqualProportions) {
 TEST(MostLikelyGenotype, AllSameFewerThan9) {
     uint8_t genotype
             = most_likely_genotype({ 5, 0, 0, 0 }, { 5, 0, 0, 0 }, { 3, 1, 2, 0 }, false, 1e-3, 0.05);
-    ASSERT_EQ((0 << 3) + 0, genotype);
+    ASSERT_EQ(255, genotype);
 }
 
 TEST(MostLikelyGenotype, DISABLED_OneDifferentFewerThan9) {

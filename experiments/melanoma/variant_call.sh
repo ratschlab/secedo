@@ -1,11 +1,11 @@
 # Splits aligned BAM files by chromosome, creates 23 pileup files distributed on 23 machines and then runs
 # variant calling
 
-base_dir="/cluster/work/grlab/projects/projects2019-silver/datasets/melanoma/processed_files/"
+base_dir="/cluster/work/grlab/projects/projects2019-secedo/datasets/melanoma/processed_files/"
 bam_dir="${base_dir}/aligned_cells"
 split_dir="${base_dir}/aligned_cells_split"
 pileup_dir="${base_dir}/pileups"
-code_dir="/cluster/work/grlab/projects/projects2019-silver/code"
+code_dir="/cluster/work/grlab/projects/projects2019-secedo/code"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 

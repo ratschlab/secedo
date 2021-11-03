@@ -1,6 +1,6 @@
 # Simulates data using Varsim+dwgsim, aligns it, piles it up and runs variant calling on it
 
-base_dir="/cluster/work/grlab/projects/projects2019-supervario/simulated_data/varsim"
+base_dir="/cluster/work/grlab/projects/projects2019-secedo/simulated_data/varsim"
 
 # runs Varsim to generate a pattern for healthy cells based on the GRCh38_new.fa reference genome
 # Inputs:

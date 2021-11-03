@@ -3,10 +3,10 @@
 
 slices="B"
 
-base_dir="/cluster/work/grlab/projects/projects2019-silver/datasets/breastcancer/all_slices"
+base_dir="/cluster/work/grlab/projects/projects2019-secedo/datasets/breastcancer/all_slices"
 slices_no_space=${slices//[[:blank:]]/}
 pileup_dir="${base_dir}/pileups${slices_no_space}"
-code_dir="/cluster/work/grlab/projects/projects2019-silver/code"
+code_dir="/cluster/work/grlab/projects/projects2019-secedo/code"
 
 
 # split the aligned BAMs by chromosome for easier parallelization
@@ -100,7 +100,7 @@ function variant_calling() {
       command="/usr/bin/time ${silver} -i ${pileup_dir}/ -o ${out_dir}/ --num_threads 20 --log_level=trace \
         --flagfile ${flagfile} \
         --homozygous_filtered_rate=${hprob} --seq_error_rate=${seq_error_rate} --min_cluster_size 500 \
-        --reference_genome=/cluster/work/grlab/projects/projects2019-silver/datasets/breastcancer/GRCh37.p13.genome.fa \
+        --reference_genome=/cluster/work/grlab/projects/projects2019-secedo/datasets/breastcancer/GRCh37.p13.genome.fa \
         --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/silver.log"
       #                --merge_file="${code_dir}/experiments/breast_cancer/breast_group_2"
       echo "$command"

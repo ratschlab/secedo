@@ -1,7 +1,7 @@
 # Calls Mutect on the BAM files corresponding to the clusters found by SILVER
 slice="B"
 
-silver_dir="/cluster/work/grlab/projects/projects2019-silver"
+silver_dir="/cluster/work/grlab/projects/projects2019-secedo"
 bam_dir="${silver_dir}/datasets/breastcancer/slice${slice}/processed_files/cluster_bams"
 mutect="~/jre1.6.0_45/bin/java -Xmx8g -jar ~/mutect/muTect-1.1.4.jar --analysis_type MuTect"
 genome_dir="${silver_dir}/genomes"
