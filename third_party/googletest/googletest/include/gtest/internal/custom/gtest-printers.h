@@ -32,7 +32,7 @@
 // It will be included from gtest-printers.h and the overrides in this file
 // will be visible to everyone.
 //
-// Injection point for custom user configurations. See README for details
+// Injection point for custom user configurations. See README.md for details
 //
 // ** Custom implementation starts here **
 

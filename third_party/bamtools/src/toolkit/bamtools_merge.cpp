@@ -218,7 +218,7 @@ MergeTool::MergeTool()
                        "behavior is to leave output uncompressed. Use this flag to override and "
                        "force compression",
                        m_settings->IsForceCompression, IO_Opts);
-    Options::AddValueOption("-region", "REGION", "genomic region. See README for more details", "",
+    Options::AddValueOption("-region", "REGION", "genomic region. See README.md for more details", "",
                             m_settings->HasRegion, m_settings->Region, IO_Opts);
 }
 

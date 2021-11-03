@@ -1,7 +1,0 @@
-This directory contains the scripts to generate synthetic data using varsim and dwgsim and cluster that data.
-
-main.sh - the main script that generates and clusters in 5 stages
-generate_reads.py - called by main.sh to generate reads using dwgsim based on fasta templates for cancer and healthy
-cells
-split.sh - simple script that splits a BAM by chromosome for distributed processing
-

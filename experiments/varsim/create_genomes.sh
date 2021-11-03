@@ -1,6 +1,7 @@
 # Simulates data using Varsim+dwgsim, aligns it, piles it up and runs variant calling on it
 
-base_dir="/cluster/work/grlab/projects/projects2019-secedo/simulated_data/varsim"
+genomes_dir="/cluster/work/grlab/projects/projects2019-secedo/genomes"
+base_dir="/cluster/work/grlab/projects/projects2019-secedo/datasets/varsim"
 
 # runs Varsim to generate a pattern for healthy cells based on the GRCh38_new.fa reference genome
 # Inputs:
@@ -14,7 +15,7 @@ base_dir="/cluster/work/grlab/projects/projects2019-secedo/simulated_data/varsim
 # note the use of --disable_sim; this means that no reads are generated using Varsim (because it's slow and error
 # prone). Instead we generate the reads ourself directly using art_illumina in the next step
 function generate_healthy_genome() {
-  out_dir=${base_dir}/genomes
+  out_dir="${base_dir}/genomes"
 
   if [ -f "${out_dir}/healthy.fa" ]; then
     echo "Genome for healthy cells already exists, skipping generation: ${out_dir}/healthy.fa"
@@ -26,7 +27,7 @@ function generate_healthy_genome() {
   touch "${out_dir}/empty_file"
 
   cmd="time ${base_dir}/varsim-0.8.4/varsim.py --id healthy --vc_in_vcf ${base_dir}/genomes/common_all_20180418.vcf.gz \
-     --reference ${base_dir}/genomes/GRCh38_new.fa \
+     --reference ${genomes_dir}/GRCh38_new.fa \
      --read_length 100 --vc_num_snp 3000000 --vc_num_ins 100000 \
      --vc_num_del 100000 --vc_num_mnp 50000 --vc_num_complex 50000 \
      --sv_num_ins 0 --sv_num_del 0 --sv_num_dup 0 --sv_num_inv 0 --sv_insert_seq ${out_dir}/empty_file \
@@ -57,7 +58,9 @@ function generate_tumor_genome() {
   base_genome=$2
   tumor_genome=$3
 
-  tumor_fasta="${base_dir}/genomes/${tumor_genome}/${tumor_genome}.fa"
+  out_dir="${base_dir}/genomes"
+
+  tumor_fasta="${out_dir}/${tumor_genome}/${tumor_genome}.fa"
   if [ -f ${tumor_fasta} ]; then
     echo "Tumor file ${tumor_fasta} already exists. Skipping generation"
     return
@@ -71,7 +74,6 @@ function generate_tumor_genome() {
     echo "done"
   fi
 
-  out_dir=${base_dir}/genomes
   mkdir -p ${out_dir}
 
   touch "${out_dir}/empty_file"
@@ -85,7 +87,7 @@ function generate_tumor_genome() {
   seed=$((0x${seed%% *} % 10000))
 
   command="time python2 ${base_dir}/varsim-0.8.4/varsim_somatic.py \
-          --reference ${base_dir}/genomes/GRCh38_new.fa \
+          --reference ${genomes_dir}/GRCh38_new.fa \
           --id ${tumor_genome} \
           --seed ${seed#-} \
           --som_num_snp ${num_snps} \

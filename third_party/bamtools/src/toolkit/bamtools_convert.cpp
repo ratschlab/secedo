@@ -759,7 +759,7 @@ ConvertTool::ConvertTool()
                             m_settings->HasOutput, m_settings->OutputFilename, IO_Opts,
                             Options::StandardOut());
     Options::AddValueOption("-format", "FORMAT",
-                            "the output file format - see README for recognized formats", "",
+                            "the output file format - see README.md for recognized formats", "",
                             m_settings->HasFormat, m_settings->Format, IO_Opts);
     Options::AddValueOption("-region", "REGION",
                             "genomic region. Index file is recommended for better performance, and "
