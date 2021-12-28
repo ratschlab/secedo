@@ -29,7 +29,7 @@ function generate_reads() {
           --start ${batch} --stop $((batch + step)) --out ${out_prefix} --coverage ${coverage} --seed_offset $((tumor_type*10000))  \
           2>&1 | tee ${out_dir}/logs/sim-tumor-${tumor_type}-${batch}.log"
       echo ${cmd}
-      bsub  -K -J "sim-${tumor_type}-${batch}" -W 01:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
+      bsub  -K -J "sim-${tumor_type}-${batch}" -W 04:00 -n 20 -R "rusage[mem=4000,scratch=2000]" -R "span[hosts=1]" \
                   -oo "${out_dir}/logs/sim-tumor-${tumor_type}-${batch}.lsf.log" "${cmd}; rm -rf ${scratch_dir}" &
     done
   done
@@ -154,7 +154,7 @@ coverage=$2
 cell1=$3
 cell2=$4
 
-base_dir="/cluster/work/grlab/projects/projects2019-secedo/simulated_data/varsim"
+base_dir="/cluster/work/grlab/projects/projects2019-secedo/datasets/varsim"
 fastas=("${base_dir}/genomes/${cell1}/${cell1}.fa" "${base_dir}/genomes/${cell2}/${cell2}.fa")
 snps=$(cut -d "-" -f3 <<< ${cell2})
 
@@ -176,3 +176,4 @@ fi
 if (( action <= 4)); then
   variant_calling
 fi
+
