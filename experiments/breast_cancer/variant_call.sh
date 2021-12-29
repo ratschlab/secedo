@@ -77,7 +77,7 @@ function create_pileup() {
           echo "Pileup command: $command"
           # allocating 40G scratch space; for the 1400 simulated Varsim cells, chromosomes 1/2 (the longest) need ~22G
           bsub  -K -J "pile-${chromosome}-${slices}" -W 02:00 -n 20 \
-                -R "rusage[mem=8000,scratch=2000]" -R "span[hosts=1]" \
+                -R "rusage[mem=10000,scratch=2000]" -R "span[hosts=1]" \
                 -oo "${log_dir}/pileup-${chromosome}.lsf.log" "${copy_command}; ${command}; rm -rf ${scratch_dir}" &
   done
 
