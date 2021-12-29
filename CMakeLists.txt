@@ -74,11 +74,11 @@ file(GLOB pileup_files pileup.cpp pileup.cpp)
 add_library(pileup_lib ${pileup_files})
 target_link_libraries(pileup_lib util)
 
-add_executable(silver silver_main.cpp)
-target_link_libraries(silver expectation_maximization variant_calling similarity_matrix
+add_executable(secedo secedo_main.cpp)
+target_link_libraries(secedo expectation_maximization variant_calling similarity_matrix
     spectral_clustering util gflags spdlog::spdlog BamTools)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_link_libraries(silver stdc++fs)
+  target_link_libraries(secedo stdc++fs)
 endif()
 
 add_executable(pileup pileup_main.cpp)

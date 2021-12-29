@@ -176,3 +176,4 @@ fi
 if (( action <= 4)); then
   variant_calling
 fi
+
