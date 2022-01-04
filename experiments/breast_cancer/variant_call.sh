@@ -1,7 +1,8 @@
 # Splits aligned BAM files by chromosome, creates 23 pileup files distributed on 23 machines and then runs
 # variant calling
 
-slices="B"
+slices="A B C D E"
+coverage=2
 
 base_dir="/cluster/work/grlab/projects/projects2019-secedo/datasets/breastcancer/all_slices"
 slices_no_space=${slices//[[:blank:]]/}
@@ -13,7 +14,7 @@ code_dir="/cluster/work/grlab/projects/projects2019-secedo/code"
 function split_bams() {
 
   for slice in ${slices}; do
-    slice_dir="/cluster/work/grlab/projects/projects2019-secedo/10x_data_breastcancer/slice${slice}/processed_files"
+    slice_dir="/cluster/work/grlab/projects/projects2019-secedo/datasets/breastcancer/slice${slice}/processed_files"
     bam_dir="${slice_dir}/aligned_cells"
     split_dir="${slice_dir}/aligned_cells_split"
 
@@ -62,7 +63,7 @@ function create_pileup() {
           scratch_dir=$(mktemp -d -t pileup-XXXXXXXXXX --tmpdir=/scratch)
           source_files=""
           for slice in ${slices}; do
-            slice_dir="/cluster/work/grlab/projects/projects2019-secedo/10x_data_breastcancer/slice${slice}/processed_files"
+            slice_dir="/cluster/work/grlab/projects/projects2019-secedo/datasets/breastcancer/slice${slice}/processed_files"
             split_dir="${slice_dir}/aligned_cells_split"
 
             source_files="${source_files} ${split_dir}/*_chr${chromosome}.bam*"
@@ -71,12 +72,12 @@ function create_pileup() {
           echo "Found ${num_files} files for chromosome ${chromosome}"
           copy_command="echo Copying data...; mkdir ${scratch_dir}; cp ${source_files} ${scratch_dir}"
           command="echo Running pileup binary...; /usr/bin/time ${pileup} -i ${scratch_dir}/ \
-            -o ${pileup_dir}/chromosome --num_threads  20 --log_level=trace --min_base_quality 35 --max_coverage 1000 \
+            -o ${pileup_dir}/chromosome --num_threads  20 --log_level=trace --min_base_quality 20 --max_coverage 1000 \
             --chromosomes ${chromosome} | tee ${log_dir}/pileup-${chromosome}.log"
           echo "Copy command: ${copy_command}"
           echo "Pileup command: $command"
           # allocating 40G scratch space; for the 1400 simulated Varsim cells, chromosomes 1/2 (the longest) need ~22G
-          bsub  -K -J "pile-${chromosome}-${slices}" -W 02:00 -n 20 \
+          bsub  -K -J "pile-${chromosome}-${slices}" -W 04:00 -n 20 \
                 -R "rusage[mem=10000,scratch=2000]" -R "span[hosts=1]" \
                 -oo "${log_dir}/pileup-${chromosome}.lsf.log" "${copy_command}; ${command}; rm -rf ${scratch_dir}" &
   done
@@ -94,18 +95,20 @@ function variant_calling() {
   flagfile="${code_dir}/flags_breast"
   for hprob in 0.5; do
     for seq_error_rate in 0.05; do
-      out_dir="${base_dir}/secedo_${slices_no_space}_${hprob#*.}_${seq_error_rate#*.}"
+      out_dir="${base_dir}/secedo_${coverage}x_${slices_no_space}_${hprob#*.}_${seq_error_rate#*.}"
       log_dir="${out_dir}/logs"
       mkdir -p "${log_dir}"
       command="/usr/bin/time ${secedo} -i ${pileup_dir}/ -o ${out_dir}/ --num_threads 20 --log_level=trace \
         --flagfile ${flagfile} \
         --homozygous_filtered_rate=${hprob} --seq_error_rate=${seq_error_rate} --min_cluster_size 500 \
         --reference_genome=/cluster/work/grlab/projects/projects2019-secedo/datasets/breastcancer/GRCh37.p13.genome.fa \
-        --clustering_type SPECTRAL6 --merge_count 1 --max_coverage 300 | tee ${log_dir}/secedo.log"
-      #                --merge_file="${code_dir}/experiments/breast_cancer/breast_group_2"
+        --merge_file "${code_dir}/experiments/breast_cancer/breast_group_${slices_no_space}_${coverage}" \
+        --clustering_type SPECTRAL6 --max_coverage 300 | tee ${log_dir}/secedo.log"
       echo "$command"
 
-      # needs about 20*80GB for all slices; for a single slice 20*30GB is more than enough
+      # needs about 20*80GB for slices ABCDE with phred 20, but only 20*4GB if using reads with phred >= 25
+      # for a single slice 20*30GB is more than enough
+      # needs 1.2TB (20*60GB) for slices BCDE
       bsub -K -J "secedo${slices}_${hprob#*.}_${seq_error_rate#*.}" -W 08:00 -n 20 -R "rusage[mem=80000]" \
            -R  "span[hosts=1]" -oo "${log_dir}/secedo.lsf.log" "${command}" &
     done
