@@ -349,9 +349,9 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
     logger()->info("Computing similarity matrix...");
     uint32_t n_cells_subcluster = pos_to_id.size();
     uint32_t n_cells_total = id_to_group.size();
-    Matd sim_mat = computeSimilarityMatrix(pos_data, n_cells_subcluster, max_read_length, id_to_pos,
-                                           mutation_rate, homozygous_rate, seq_error_rate,
-                                           num_threads, marker, normalization);
+    Matd sim_mat = computeSimilarityMatrix(pos_data, n_cells_subcluster, max_read_length,
+                                           id_to_group, id_to_pos, mutation_rate, homozygous_rate,
+                                           seq_error_rate, num_threads, marker, normalization);
 
     logger()->info("Performing spectral clustering...");
     std::vector<double> cluster; // size n_cells

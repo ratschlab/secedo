@@ -75,9 +75,9 @@ uint32_t spectral_clustering(const Matd &similarity,
  * NC - number of cells in the current sub-cluster. At the first call of divide() NC=G.
  * @param pos_data
  * @param max_read_length length of the longest fragment (typically around 500)
- * @param id_to_group of size N maps cell ids to cell groups. Data from cells in the same group is
+ * @param id_to_group of size N, maps cell ids to cell groups. Data from cells in the same group is
  * treated as if it came from one cell. Used to artificially increase coverage when testing
- * @param id_to_pos of size G maps a cell id to its position in the similarity matrix as we
+ * @param id_to_pos of size G, maps a cell group id to its position in the similarity matrix as we
  * subdivide into smaller and smaller clusters. At the beginning, this is the identity permutation.
  * If a cell with id 'cell_id' is not in the current cluster, then id_to_pos[cell_id]==NO_POS. The
  * position of a cell in the similarity matrix is given by id_to_pos[id_to_group[cell_id]].

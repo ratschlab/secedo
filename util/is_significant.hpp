@@ -41,9 +41,9 @@ class Filter {
     bool is_significant(const PosData &pos_data, uint16_t *coverage);
 
     /**
-     * Filters the positions in #pos_data by keeping only the positions that are relevant
-     * (homozygous and not consistent with the null hypothesis of ‘all the cells have the same
-     * genotype at this position’)
+     * Filters the positions in #pos_data by keeping only the positions in the current sub-cluster
+     * (as given by id_to_pos) that are relevant (homozygous and not consistent with the null
+     * hypothesis of ‘all the cells have the same genotype at this position’).
      * @param pos_data pileup data containing all positions where not all nucleotides are identical
      * across all cells
      * @param id_to_group of size n_cells maps cell ids to cell groups. Data from cells in the same

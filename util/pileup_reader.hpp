@@ -10,8 +10,8 @@
  * Reads a pileup file (typically containing single cell data for one chromosome) and returns all
  * the bases read at each position.
  * @param fname file name to read from
- * @param merge_count artificially increases the coverage by grouping data from merge_count
- * consecutive cells together (this assumes that consecutive cell ids are part of the same cluster)
+ * @param id_to_group artificially increases the coverage by grouping data from cells in the same
+ * cluster together (this assumes some sort of ground truth is available)
  * @param progress callback that is invoked to report the number of bytes processed (e.g. for
  * reporting progress in the caller)
  * @param max_coverage remove positions with coverage higher than max_coverage

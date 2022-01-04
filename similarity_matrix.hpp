@@ -22,18 +22,22 @@ enum class Normalization {
  *
  * @param pos_data for each chromosome and each position, all the reads for that position (from all
  * cells)
+ * @param num_cells the total number of cells for which we compute the similarity
  * @param max_fragment_length the maximum DNA fragment length in the processed files (typically
  * around 600 bases). This value is used to figure out when reads have ended and can be processed. A
  * note on terminology: Illumina sequencing involves chopping the DNA into *fragments*, which vary
  * in size from ~50 to ~600. Each fragment is then being read from both ends (that's called a paired
  * end read). The machine reads 100 base paires from each end (so 200 total). If the DNA fragment
- * happens to be shorter than 200, then some reads will overlap. If the DAN fragment happens to be
+ * happens to be shorter than 200, then some reads will overlap. If the DNA fragment happens to be
  * longer than 200, then the middle of the fragment won't be processed. This unprocessed part is
  * called the "insert" and its length the "insert length".
- * @param cell_id_to_cell_idx re-maps the original cell ids (as they appear in #pos_data) so that
- * they form a continuous sequence starting with 0. At the first clustering step, this mapping is
- * simply the identity. At subsequent clustering steps, it maps the cells in the cluster to
- * 0..cell_count.
+ * @param id_to_group maps multiple cell ids into the same group in order to artificially increase
+ * coverage (when no increased coverage is needed, this is the identity permutation)
+ * @param cell_id_to_cell_idx re-maps the original cell group ids (as they appear in #pos_data) so
+ * that they form a continuous sequence starting with 0. At the first clustering step, this mapping
+ * is simply the identity. At subsequent clustering steps, it maps the cells in the cluster to
+ * 0..cell_count. If a cell_id is not in the current group, then cell_id_to_cell_idx[cell_id] is -1,
+ * but the filtering step made sure that no such cells are present in @pos_data
  * @param mutation_rate estimated mutation rate
  * @param homozygous_rate estimated probability that a loci is homozygous (it wasn't filtered
  * correctly due to sequencing errors being mistaken for heterozygosity)
@@ -49,6 +53,7 @@ enum class Normalization {
 Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t num_cells,
                              uint32_t max_fragment_length,
+                             const std::vector<uint16_t> &id_to_group,
                              const std::vector<uint32_t> &cell_id_to_cell_idx,
                              double mutation_rate,
                              double homozygous_rate,

@@ -188,6 +188,7 @@ struct Read {
 void compare_with_reads(const std::unordered_map<uint32_t, Read> &active_reads,
                         const std::deque<uint32_t> &active_keys,
                         uint32_t start_idx,
+                        const std::vector<uint16_t> &id_to_group,
                         const std::vector<uint32_t> &cell_id_to_cell_idx,
                         const Cache &cache,
                         Vec2<std::tuple<uint32_t, uint32_t, double>> &updates_same,
@@ -204,8 +205,8 @@ void compare_with_reads(const std::unordered_map<uint32_t, Read> &active_reads,
         if (read2.pos.empty()) {
             continue;
         }
-        uint32_t index1 = cell_id_to_cell_idx[read1.cell_id];
-        uint32_t index2 = cell_id_to_cell_idx[read2.cell_id];
+        uint32_t index1 = cell_id_to_cell_idx[id_to_group[read1.cell_id]];
+        uint32_t index2 = cell_id_to_cell_idx[id_to_group[read2.cell_id]];
 
         // if a removed paired read that doesn't match happens to be the first read, then it's
         // not anymore guaranteed that the active_reads are sorted by the first position
@@ -291,13 +292,10 @@ void normalize(const std::string &normalization, Matd *similarity_matrix) {
     sim_mat.fill_diagonal(0);
 }
 
-/**
- * Compute mat_same (the matrix giving probabilities of cells i and j given they are in
- * the same cluster) and mat_diff (prob. of cells i and j given they are in different clusters)
- */
 Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t num_cells,
                              uint32_t max_fragment_length,
+                             const std::vector<uint16_t> &id_to_group,
                              const std::vector<uint32_t> &cell_id_to_cell_idx,
                              double mutation_rate,
                              double homozygous_rate,
@@ -361,8 +359,9 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                 for (uint32_t i = 0; i < completed; ++i) {
                     // compute its overlaps with all other active reads, i.e. all
                     // reads that have some bases in the last max_fragment_length positions
-                    compare_with_reads(active_reads, active_keys, i, cell_id_to_cell_idx, cache,
-                                       updates_same, updates_diff, log_probs_same, log_probs_diff,
+                    compare_with_reads(active_reads, active_keys, i, id_to_group,
+                                       cell_id_to_cell_idx, cache, updates_same, updates_diff,
+                                       log_probs_same, log_probs_diff,
                                        combs_xs_xd[omp_get_thread_num()]);
                 }
                 apply_updates(updates_same, mat_same);
@@ -415,8 +414,8 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
 #pragma omp parallel for num_threads(num_threads)
     for (uint32_t i = 0; i < active_keys.size(); ++i) {
         // compare with all other reads in active_reads
-        compare_with_reads(active_reads, active_keys, i, cell_id_to_cell_idx, cache, updates_same,
-                           updates_diff, log_probs_same, log_probs_diff,
+        compare_with_reads(active_reads, active_keys, i, id_to_group, cell_id_to_cell_idx, cache,
+                           updates_same, updates_diff, log_probs_same, log_probs_diff,
                            combs_xs_xd[omp_get_thread_num()]);
     }
 
