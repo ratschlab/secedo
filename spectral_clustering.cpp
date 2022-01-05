@@ -347,14 +347,14 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
     }
 
     logger()->info("Computing similarity matrix...");
-    uint32_t n_cells_subcluster = pos_to_id.size();
-    uint32_t n_cells_total = id_to_group.size();
-    Matd sim_mat = computeSimilarityMatrix(pos_data, n_cells_subcluster, max_read_length,
+    uint32_t n_groups_subcluster = pos_to_id.size();
+    uint32_t n_groups_total = id_to_group.size();
+    Matd sim_mat = computeSimilarityMatrix(pos_data, n_groups_subcluster, max_read_length,
                                            id_to_pos, mutation_rate, homozygous_rate,
                                            seq_error_rate, num_threads, marker, normalization);
 
     logger()->info("Performing spectral clustering...");
-    std::vector<double> cluster; // size n_cells_subcluster
+    std::vector<double> cluster; // size n_groups_subcluster
     Termination termination = parse_termination(termination_str);
     ClusteringType clustering_type = parse_clustering_type(clustering_type_str);
     uint32_t num_clusters = spectral_clustering(sim_mat, clustering_type, termination, out_dir,
@@ -363,8 +363,8 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
         return;
     }
 
-    std::vector<uint16_t> id_to_cluster(n_cells_total);
-    for (uint16_t cell_id = 0; cell_id < n_cells_total; ++cell_id) {
+    std::vector<uint16_t> id_to_cluster(n_groups_total);
+    for (uint16_t cell_id = 0; cell_id < n_groups_total; ++cell_id) {
         uint16_t pos = id_to_pos[id_to_group[cell_id]];
         id_to_cluster[cell_id] = (pos == NO_POS ? NO_POS : cluster[pos]);
     }
@@ -373,7 +373,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
     if (use_expectation_maximization && num_clusters == 2) {
         logger()->info("Performing clustering refinement via expectation maximization...");
         expectation_maximization(pos_data, id_to_pos, num_threads, seq_error_rate, &cluster);
-        for (uint16_t i = 0; i < n_cells_total; ++i) {
+        for (uint16_t i = 0; i < n_groups_total; ++i) {
             uint32_t pos = id_to_pos[id_to_group[i]];
             id_to_cluster[i] = pos == NO_POS ? NO_POS : cluster[pos];
         }
@@ -387,19 +387,28 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
     std::vector<std::vector<uint32_t>> id_to_pos_new(
             num_clusters, std::vector<uint32_t>(id_to_pos.size(), NO_POS));
 
-    for (uint32_t cell_idx = 0; cell_idx < n_cells_subcluster; ++cell_idx) {
-        uint32_t cell_id = pos_to_id[cell_idx];
+    //TODO: move this computation out of the function
+    std::unordered_map<uint16_t, std::vector<uint16_t>> group_id_to_cell_ids;
+    for (uint32_t i = 0; i < id_to_group.size(); ++i) {
+        group_id_to_cell_ids[id_to_group[i]].push_back(i);
+    }
+    for (uint32_t cell_idx = 0; cell_idx < n_groups_subcluster; ++cell_idx) {
+        uint32_t group_id = pos_to_id[cell_idx];
         bool assigned = false;
         for (uint32_t c = 0; !assigned && c < num_clusters; ++c) {
             if (std::abs(cluster[cell_idx] - c) < 0.05) {
-                id_to_pos_new[c][cell_id] = pos_to_id_new[c].size();
-                pos_to_id_new[c].push_back(cell_id);
-                clusters->at(cell_id) = *cluster_idx + c;
+                id_to_pos_new[c][group_id] = pos_to_id_new[c].size();
+                pos_to_id_new[c].push_back(group_id);
+                for (uint32_t cell_id: group_id_to_cell_ids[group_id]) {
+                    clusters->at(cell_id) = *cluster_idx + c;
+                }
                 assigned = true;
             }
         }
         if (!assigned) { // set to 0 cluster id of cells that couldn't be assigned to a cluster
-            clusters->at(cell_id) = 0;
+            for (uint32_t cell_id: group_id_to_cell_ids[group_id]) {
+                clusters->at(cell_id) = 0;
+            }
         }
     }
     *cluster_idx += num_clusters;
@@ -409,9 +418,9 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
         if (pos_to_id_new[c].size() < min_cluster_size) {
             logger()->trace("Cluster {} size is too small ({} vs {}). Stopping.", c,
                             pos_to_id_new[c].size(), min_cluster_size);
-        } else if (n_cells_subcluster - pos_to_id_new[c].size() < min_cluster_size) {
+        } else if (n_groups_subcluster - pos_to_id_new[c].size() < min_cluster_size) {
             logger()->trace("Cluster {} size is too large relative to total ({} vs {}). Stopping.",
-                            c, pos_to_id_new[c].size(), n_cells_subcluster);
+                            c, pos_to_id_new[c].size(), n_groups_subcluster);
         } else {
             divide_cluster(pds, max_read_length, id_to_group, id_to_pos_new[c], pos_to_id_new[c],
                            mutation_rate, homozygous_rate, seq_error_rate, num_threads, out_dir,

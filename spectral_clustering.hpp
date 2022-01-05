@@ -83,7 +83,7 @@ uint32_t spectral_clustering(const Matd &similarity,
  * If a cell with id 'cell_id' is not in the current cluster, then id_to_pos[cell_id]==NO_POS. The
  * position of a cell in the similarity matrix is given by id_to_pos[id_to_group[cell_id]].
  * @param pos_to_id of size NC the inverse of #id_to_pos, it maps each position 0...pos in the
- * current subgroup to the actual cell it corresponds to
+ * current subgroup to the actual cell group it corresponds to
  * @param mutation_rate epsilon, estimated frequency of mutated loci in the pre-processed data set
  * @param homozygous_rate  the probability that a locus is homozygous, (not filtered correctly in
  * the first step)
