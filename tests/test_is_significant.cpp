@@ -107,7 +107,7 @@ PosData assemble(uint32_t pos,
 
 TEST(Filter, Empty) {
     Filter filter(1e-3);
-    auto [pos_data, coverage] = filter.filter({}, {}, {}, "", 1);
+    auto [pos_data, coverage] = filter.filter({}, {}, "", 1);
     ASSERT_TRUE(pos_data.empty());
 }
 
@@ -135,13 +135,11 @@ TEST(Filter, OnePosSignificant) {
 
     PosData pd = assemble(1, read_ids, cell_ids, bases);
 
-    std::vector<uint16_t> id_to_group(coverage);
-    std::iota(id_to_group.begin(), id_to_group.end(), 0);
     std::vector<uint32_t> id_to_pos(coverage);
     std::iota(id_to_pos.begin(), id_to_pos.end(), 0);
 
     Filter filter(1e-3);
-    auto [filtered, avg_coverage] = filter.filter({ { pd } }, id_to_group, id_to_pos, "", 1);
+    auto [filtered, avg_coverage] = filter.filter({ { pd } }, id_to_pos, "", 1);
     ASSERT_EQ(avg_coverage, 100.0);
     std::vector<PosData> chromosome_data = { pd };
     ASSERT_THAT(filtered, ElementsAre(chromosome_data));
@@ -154,7 +152,7 @@ TEST(Filter, OnePosNotSignificant) {
     PosData pd = assemble(1, read_ids, cell_ids, bases);
 
     Filter filter(1e-3);
-    auto [filtered, coverage] = filter.filter({ { pd } }, { 0, 1, 2 }, { 0, 1, 2 }, "", 1);
+    auto [filtered, coverage] = filter.filter({ { pd } }, { 0, 1, 2 }, "", 1);
     ASSERT_EQ(coverage, 0);
     ASSERT_EQ(1, filtered.size());
     ASSERT_TRUE(filtered[0].empty());
@@ -187,15 +185,13 @@ TEST(Filter, AllSignificant) {
         }
         pos_data.push_back(chromosome_data);
     }
-    std::vector<uint16_t> id_to_group(coverage);
-    std::iota(id_to_group.begin(), id_to_group.end(), 0);
     std::vector<uint32_t> id_to_pos(coverage);
     std::iota(id_to_pos.begin(), id_to_pos.end(), 0);
 
     std::vector<std::vector<PosData>> filtered;
     double avg_coverage;
     Filter filter(1e-3);
-    std::tie(filtered, avg_coverage) = filter.filter(pos_data, id_to_group, id_to_pos, "", 2);
+    std::tie(filtered, avg_coverage) = filter.filter(pos_data, id_to_pos, "", 2);
     ASSERT_EQ(avg_coverage, coverage);
     ASSERT_EQ(23, filtered.size());
     ASSERT_EQ(filtered, pos_data);
@@ -209,13 +205,11 @@ TEST(Filter, NoneSignificant) {
     for (uint32_t i = 0; i < 100; ++i) {
         chromosome_data.push_back(assemble(i + 1, read_ids, cell_ids, bases));
     }
-    std::vector<uint16_t> id_to_group(10);
-    std::iota(id_to_group.begin(), id_to_group.end(), 0);
     std::vector<uint32_t> id_to_pos(10);
     std::iota(id_to_pos.begin(), id_to_pos.end(), 0);
 
     Filter filter(1e-3);
-    auto [filtered, coverage] = filter.filter({ chromosome_data }, id_to_group, id_to_pos, "", 2);
+    auto [filtered, coverage] = filter.filter({ chromosome_data }, id_to_pos, "", 2);
     ASSERT_EQ(coverage, 0);
     ASSERT_EQ(1, filtered.size());
     ASSERT_TRUE(filtered[0].empty());

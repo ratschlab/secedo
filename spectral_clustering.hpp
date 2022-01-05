@@ -73,7 +73,8 @@ uint32_t spectral_clustering(const Matd &similarity,
  * G - number of cell groups (normally N=G, but in case we group cells to artificially increase
  * coverage we have G < N)
  * NC - number of cells in the current sub-cluster. At the first call of divide() NC=G.
- * @param pos_data
+ * @param pds for each chromosome and each locus, the data read from the pileup file; note that
+ * #PosData.group_ids_bases contains group ids rather than cell ids
  * @param max_read_length length of the longest fragment (typically around 500)
  * @param id_to_group of size N, maps cell ids to cell groups. Data from cells in the same group is
  * treated as if it came from one cell. Used to artificially increase coverage when testing

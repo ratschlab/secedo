@@ -378,12 +378,12 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
             std::array<uint16_t, 4> n_bases_total = { 0, 0, 0, 0 };
             std::vector<std::array<uint16_t, 4>> nbases(num_clusters);
             for (uint32_t i = 0; i < pd.size(); ++i) {
-                uint32_t cl_idx = std::round(clusters[pd.cell_id(i)]);
-                if (std::abs(static_cast<int64_t>(cl_idx - clusters[pd.cell_id(i)])) <= 0.05) {
+                uint32_t cl_idx = std::round(clusters[pd.group_id(i)]);
+                if (std::abs(static_cast<int64_t>(cl_idx - clusters[pd.group_id(i)])) <= 0.05) {
                     nbases[cl_idx][pd.base(i)]++;
                 }
                 n_bases_total[pd.base(i)]++;
-                cell_loci[pd.cell_id(i)]++;
+                cell_loci[pd.group_id(i)]++;
             }
 
             // check if this is likely a homozygous (germline) locus
@@ -444,12 +444,12 @@ void variant_calling(const std::vector<std::vector<PosData>> &pos_data,
 
             // now let's see which cells don't match the inferred genotype and penalize their score
             for (uint32_t i = 0; i < pd.size(); ++i) {
-                uint32_t cluster = std::round(clusters[pd.cell_id(i)]);
+                uint32_t cluster = std::round(clusters[pd.group_id(i)]);
                 uint8_t base = pd.base(i);
                 if (genotypes[cluster] != NO_GENOTYPE && base != (genotypes[cluster] & 7)
                     && base != (genotypes[cluster] >> 3)
                     && sum(nbases[cluster].begin(), nbases[cluster].end()) > 9) {
-                    cell_scores[pd.cell_id(i)]++;
+                    cell_scores[pd.group_id(i)]++;
                 }
             }
         }

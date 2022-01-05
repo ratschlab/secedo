@@ -46,9 +46,6 @@ class Filter {
      * hypothesis of ‘all the cells have the same genotype at this position’).
      * @param pos_data pileup data containing all positions where not all nucleotides are identical
      * across all cells
-     * @param id_to_group of size n_cells maps cell ids to cell groups. Data from cells in the same
-     * group is treated as if it came from one cell. Used to artificially increase coverage when
-     * testing
      * @param id_to_pos of size n_groups maps a cell id to its position in the similarity matrix as
      * we subdivide into smaller and smaller clusters. At the beginning, this is the identity
      * permutation. If a cell with id 'cell_id' is not in the current cluster, then
@@ -61,7 +58,6 @@ class Filter {
      */
     std::pair<std::vector<std::vector<PosData>>, double>
     filter(const std::vector<std::vector<PosData>> &pos_data,
-           const std::vector<uint16_t> &id_to_group,
            const std::vector<uint32_t> &id_to_pos,
            const std::string &marker,
            uint32_t num_threads);

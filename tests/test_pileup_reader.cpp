@@ -32,7 +32,7 @@ void check_binary(const std::string &fname,
         ASSERT_EQ(data2[i].size(), data[i].size());
         for (uint32_t j = 0; j < data[i].read_ids.size(); ++j) {
             ASSERT_EQ(data2[i].base(j), data[i].base(j));
-            ASSERT_EQ(data2[i].cell_id(j), data[i].cell_id(j));
+            ASSERT_EQ(data2[i].group_id(j), data[i].group_id(j));
         }
     }
     std::filesystem::remove_all(fname); // clean up
@@ -60,7 +60,7 @@ TEST(Reader, one_row) {
 
     EXPECT_EQ(16050060, data[0].position);
     ASSERT_EQ(14, data[0].read_ids.size());
-    ASSERT_EQ(14, data[0].cell_ids_bases.size());
+    ASSERT_EQ(14, data[0].group_ids_bases.size());
 
     std::vector<uint8_t> expected_bases
             = { 'C', 'A', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C' };
@@ -68,7 +68,7 @@ TEST(Reader, one_row) {
     for (uint32_t i = 0; i < data[0].size(); ++i) {
         ASSERT_EQ(data[0].read_ids[i], i);
         ASSERT_EQ(data[0].base(i), CharToInt[expected_bases[i]]);
-        ASSERT_EQ(data[0].cell_id(i), expected_cell_ids[i]);
+        ASSERT_EQ(data[0].group_id(i), expected_cell_ids[i]);
     }
 
     check_binary("data/one_row.pileup.bin", 1, "", data, 2164, max_len);
@@ -98,7 +98,7 @@ TEST(Reader, three_rows) {
         for (uint32_t j = 0; j < data[i].size(); ++j) {
             ASSERT_EQ(data[i].read_ids[j], expected_read_ids[i][j]);
             ASSERT_EQ(data[i].base(j), CharToInt[expected_bases[i][j]]);
-            ASSERT_EQ(data[i].cell_id(j), expected_cell_ids[i][j]);
+            ASSERT_EQ(data[i].group_id(j), expected_cell_ids[i][j]);
         }
     }
 
@@ -125,7 +125,7 @@ TEST(Reader, filter_positions) {
     for (uint32_t j = 0; j < data[0].size(); ++j) {
         ASSERT_EQ(data[0].read_ids[j], expected_read_ids[0][j]);
         ASSERT_EQ(data[0].base(j), CharToInt[expected_bases[0][j]]);
-        ASSERT_EQ(data[0].cell_id(j), expected_cell_ids[0][j]);
+        ASSERT_EQ(data[0].group_id(j), expected_cell_ids[0][j]);
     }
 
     check_binary("data/three_rows.pileup.bin", 1, "", data, 4, max_len);
@@ -162,7 +162,7 @@ TEST(Reader, group_by_two) {
         for (uint32_t j = 0; j < data[i].size(); ++j) {
             ASSERT_EQ(data[i].read_ids[j], expected_read_ids[i][j]);
             ASSERT_EQ(data[i].base(j), CharToInt[expected_bases[i][j]]);
-            ASSERT_EQ(data[i].cell_id(j), expected_cell_ids[i][j]);
+            ASSERT_EQ(data[i].group_id(j), expected_cell_ids[i][j]);
         }
     }
 
@@ -201,7 +201,7 @@ TEST(Reader, group_using_file) {
         for (uint32_t j = 0; j < data[i].size(); ++j) {
             ASSERT_EQ(data[i].read_ids[j], expected_read_ids[i][j]);
             ASSERT_EQ(data[i].base(j), CharToInt[expected_bases[i][j]]);
-            ASSERT_EQ(data[i].cell_id(j), expected_cell_ids[i][j]);
+            ASSERT_EQ(data[i].group_id(j), expected_cell_ids[i][j]);
         }
     }
 

@@ -126,7 +126,6 @@ bool Filter::is_significant(const PosData &pos_data, uint16_t *coverage) {
 
 std::pair<std::vector<std::vector<PosData>>, double>
 Filter::filter(const std::vector<std::vector<PosData>> &pos_data,
-               const std::vector<uint16_t> &id_to_group,
                const std::vector<uint32_t> &id_to_pos,
                const std::string &marker,
                uint32_t num_threads) {
@@ -145,11 +144,11 @@ Filter::filter(const std::vector<std::vector<PosData>> &pos_data,
             const PosData &pd = pos_data[chr_idx][pos_idx];
             std::array<uint16_t, 4> base_count = { 0, 0, 0, 0 };
             for (uint32_t cell_idx = 0; cell_idx < pd.size(); ++cell_idx) {
-                if (id_to_pos[id_to_group[pd.cell_id(cell_idx)]] == NO_POS) {
+                if (id_to_pos[pd.group_id(cell_idx)] == NO_POS) {
                     continue;
                 }
                 read_ids.push_back(pd.read_ids[cell_idx]);
-                cell_ids_and_bases.push_back(pd.cell_ids_bases[cell_idx]);
+                cell_ids_and_bases.push_back(pd.group_ids_bases[cell_idx]);
                 base_count[pd.base(cell_idx)]++;
             }
 

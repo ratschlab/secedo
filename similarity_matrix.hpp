@@ -31,12 +31,10 @@ enum class Normalization {
  * happens to be shorter than 200, then some reads will overlap. If the DNA fragment happens to be
  * longer than 200, then the middle of the fragment won't be processed. This unprocessed part is
  * called the "insert" and its length the "insert length".
- * @param id_to_group maps multiple cell ids into the same group in order to artificially increase
- * coverage (when no increased coverage is needed, this is the identity permutation)
- * @param cell_id_to_cell_idx re-maps the original cell group ids (as they appear in #pos_data) so
+ * @param group_id_to_pos re-maps the original cell group ids (as they appear in #pos_data) so
  * that they form a continuous sequence starting with 0. At the first clustering step, this mapping
  * is simply the identity. At subsequent clustering steps, it maps the cells in the cluster to
- * 0..cell_count. If a cell_id is not in the current group, then cell_id_to_cell_idx[cell_id] is -1,
+ * 0..cell_count. If a cell_id is not in the current group, then group_id_to_pos[cell_id] is -1,
  * but the filtering step made sure that no such cells are present in @pos_data
  * @param mutation_rate estimated mutation rate
  * @param homozygous_rate estimated probability that a loci is homozygous (it wasn't filtered
@@ -53,8 +51,7 @@ enum class Normalization {
 Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t num_cells,
                              uint32_t max_fragment_length,
-                             const std::vector<uint16_t> &id_to_group,
-                             const std::vector<uint32_t> &cell_id_to_cell_idx,
+                             const std::vector<uint32_t> &group_id_to_pos,
                              double mutation_rate,
                              double homozygous_rate,
                              double seq_error_rate,

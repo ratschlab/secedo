@@ -45,8 +45,8 @@ void check_content(const std::vector<PosData> &data) {
         ASSERT_EQ(1, data[i].read_ids[1]);
         ASSERT_EQ(0, data[i].base(0));
         ASSERT_EQ(2, data[i].base(1));
-        ASSERT_EQ(0, data[i].cell_id(0));
-        ASSERT_EQ(1, data[i].cell_id(1));
+        ASSERT_EQ(0, data[i].group_id(0));
+        ASSERT_EQ(1, data[i].group_id(1));
     }
     for (uint32_t i = 4; i < 9; ++i) {
         ASSERT_EQ(2, data[i].size());
@@ -54,8 +54,8 @@ void check_content(const std::vector<PosData> &data) {
         ASSERT_EQ(1, data[i].read_ids[1]);
         ASSERT_EQ(1, data[i].base(0));
         ASSERT_EQ(3, data[i].base(1));
-        ASSERT_EQ(0, data[i].cell_id(0));
-        ASSERT_EQ(1, data[i].cell_id(1));
+        ASSERT_EQ(0, data[i].group_id(0));
+        ASSERT_EQ(1, data[i].group_id(1));
     }
 }
 

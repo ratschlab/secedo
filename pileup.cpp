@@ -329,8 +329,8 @@ std::vector<PosData> pileup_bams(const std::vector<std::filesystem::path> &bam_f
             out_bin.write(reinterpret_cast<char *>(&coverage), sizeof(coverage));
             out_bin.write(reinterpret_cast<char *>(pd.read_ids.data()),
                           coverage * sizeof(pd.read_ids[0]));
-            out_bin.write(reinterpret_cast<char *>(pd.cell_ids_bases.data()),
-                          coverage * sizeof(pd.cell_ids_bases[0]));
+            out_bin.write(reinterpret_cast<char *>(pd.group_ids_bases.data()),
+                          coverage * sizeof(pd.group_ids_bases[0]));
         }
 
         for (uint32_t i = 0; i < MAX_INSERT_SIZE; ++i) {

@@ -332,7 +332,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
     }
     logger()->info("Filtering significant positions...");
     Filter filter(seq_error_rate);
-    auto [pos_data, coverage] = filter.filter(pds, id_to_group, id_to_pos, marker, num_threads);
+    auto [pos_data, coverage] = filter.filter(pds, id_to_pos, marker, num_threads);
     std::ofstream filtered(std::filesystem::path(out_dir) / ("significant_positions" + marker));
     for (uint32_t i = 0; i < pos_data.size(); ++i) {
         for (uint32_t j = 0; j < pos_data[i].size(); ++j) {
@@ -350,11 +350,11 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
     uint32_t n_cells_subcluster = pos_to_id.size();
     uint32_t n_cells_total = id_to_group.size();
     Matd sim_mat = computeSimilarityMatrix(pos_data, n_cells_subcluster, max_read_length,
-                                           id_to_group, id_to_pos, mutation_rate, homozygous_rate,
+                                           id_to_pos, mutation_rate, homozygous_rate,
                                            seq_error_rate, num_threads, marker, normalization);
 
     logger()->info("Performing spectral clustering...");
-    std::vector<double> cluster; // size n_cells
+    std::vector<double> cluster; // size n_cells_subcluster
     Termination termination = parse_termination(termination_str);
     ClusteringType clustering_type = parse_clustering_type(clustering_type_str);
     uint32_t num_clusters = spectral_clustering(sim_mat, clustering_type, termination, out_dir,
@@ -366,7 +366,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
     std::vector<uint16_t> id_to_cluster(n_cells_total);
     for (uint16_t cell_id = 0; cell_id < n_cells_total; ++cell_id) {
         uint16_t pos = id_to_pos[id_to_group[cell_id]];
-        id_to_cluster[cell_id] = pos == NO_POS ? NO_POS : cluster[pos];
+        id_to_cluster[cell_id] = (pos == NO_POS ? NO_POS : cluster[pos]);
     }
     write_vec(std::filesystem::path(out_dir) / ("spectral_clustering" + marker), id_to_cluster);
 

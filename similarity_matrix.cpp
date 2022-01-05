@@ -171,7 +171,8 @@ double log_prob_same_genotype(uint32_t x_s, uint32_t x_d, const Cache &c, Matd &
 
 struct Read {
     std::vector<char> bases; // the DNA sequence corresponding to this read
-    uint32_t cell_id;
+    // the cell group id (same as cell id if not artificially increasing coverage)
+    uint32_t group_id;
     // the positions for each base in bases (they are not necessarily continuous, as only relevant
     // positions are kept)
     std::vector<uint32_t> pos;
@@ -188,8 +189,7 @@ struct Read {
 void compare_with_reads(const std::unordered_map<uint32_t, Read> &active_reads,
                         const std::deque<uint32_t> &active_keys,
                         uint32_t start_idx,
-                        const std::vector<uint16_t> &id_to_group,
-                        const std::vector<uint32_t> &cell_id_to_cell_idx,
+                        const std::vector<uint32_t> &group_id_to_pos,
                         const Cache &cache,
                         Vec2<std::tuple<uint32_t, uint32_t, double>> &updates_same,
                         Vec2<std::tuple<uint32_t, uint32_t, double>> &updates_diff,
@@ -205,8 +205,8 @@ void compare_with_reads(const std::unordered_map<uint32_t, Read> &active_reads,
         if (read2.pos.empty()) {
             continue;
         }
-        uint32_t index1 = cell_id_to_cell_idx[id_to_group[read1.cell_id]];
-        uint32_t index2 = cell_id_to_cell_idx[id_to_group[read2.cell_id]];
+        uint32_t index1 = group_id_to_pos[read1.group_id];
+        uint32_t index2 = group_id_to_pos[read2.group_id];
 
         // if a removed paired read that doesn't match happens to be the first read, then it's
         // not anymore guaranteed that the active_reads are sorted by the first position
@@ -295,8 +295,7 @@ void normalize(const std::string &normalization, Matd *similarity_matrix) {
 Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                              uint32_t num_cells,
                              uint32_t max_fragment_length,
-                             const std::vector<uint16_t> &id_to_group,
-                             const std::vector<uint32_t> &cell_id_to_cell_idx,
+                             const std::vector<uint32_t> &group_id_to_pos,
                              double mutation_rate,
                              double homozygous_rate,
                              double seq_error_rate,
@@ -359,9 +358,8 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                 for (uint32_t i = 0; i < completed; ++i) {
                     // compute its overlaps with all other active reads, i.e. all
                     // reads that have some bases in the last max_fragment_length positions
-                    compare_with_reads(active_reads, active_keys, i, id_to_group,
-                                       cell_id_to_cell_idx, cache, updates_same, updates_diff,
-                                       log_probs_same, log_probs_diff,
+                    compare_with_reads(active_reads, active_keys, i, group_id_to_pos, cache,
+                                       updates_same, updates_diff, log_probs_same, log_probs_diff,
                                        combs_xs_xd[omp_get_thread_num()]);
                 }
                 apply_updates(updates_same, mat_same);
@@ -379,7 +377,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
                 auto read_it = active_reads.find(pd.read_ids[i]);
                 const char curr_base = pd.base(i);
                 if (read_it == active_reads.end()) { // a new read just started
-                    Read read = { { curr_base }, pd.cell_id(i), { pd.position }, pd.position };
+                    Read read = { { curr_base }, pd.group_id(i), { pd.position }, pd.position };
                     active_reads[pd.read_ids[i]] = read;
                     active_keys.push_back(pd.read_ids[i]);
                 } else {
@@ -414,7 +412,7 @@ Matd computeSimilarityMatrix(const std::vector<std::vector<PosData>> &pos_data,
 #pragma omp parallel for num_threads(num_threads)
     for (uint32_t i = 0; i < active_keys.size(); ++i) {
         // compare with all other reads in active_reads
-        compare_with_reads(active_reads, active_keys, i, id_to_group, cell_id_to_cell_idx, cache,
+        compare_with_reads(active_reads, active_keys, i, group_id_to_pos, cache,
                            updates_same, updates_diff, log_probs_same, log_probs_diff,
                            combs_xs_xd[omp_get_thread_num()]);
     }
