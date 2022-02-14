@@ -1,0 +1,9 @@
+channels:
+  - conda-forge
+dependencies:
+  - cxx-compiler
+  - make
+  - cmake
+  - openmp
+  - openblas
+

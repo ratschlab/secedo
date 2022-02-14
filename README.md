@@ -49,3 +49,12 @@ You will need enough RAM to fit the pileups and a bit of extra - we were able to
 
 Take a look at [breast_cancer/variant_call.sh](https://github.
 com/ratschlab/secedo/blob/main/experiments/breast_cancer/variant_call.sh) for inspiration on how to use `SECEDO`.
+
+## FAQ
+### Installation
+1. Error at compilation: filesystem not available:
+```
+/secedo/./util/util.hpp:7:10: fatal error: filesystem: No such file or directory
+```
+Please make sure you have gcc > 8.0.1 or clang > 7. Filesystem is a relatively recent addition to the C++ standard 
+(introduced in C++17, so earlier compilers don't have it at all, or have it part of experimental)
