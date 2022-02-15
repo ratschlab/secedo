@@ -4,6 +4,7 @@ dependencies:
   - cxx-compiler
   - make
   - cmake
+  - hdf5
   - openmp
   - openblas
 

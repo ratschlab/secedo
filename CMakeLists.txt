@@ -108,13 +108,16 @@ gtest_discover_tests(tests)
 file(COPY tests/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 install(
-    TARGETS pileup
+    TARGETS pileup variant_calling similarity_matrix spectral_clustering expectation_maximization BamTools util
+    progress_bar armadillo spdlog
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
 
 install(
     TARGETS secedo
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+   )
