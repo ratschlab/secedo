@@ -10,7 +10,7 @@ withultra-low coverage](coming soon)
 ## Using bioconda
 If you don't have conda/bioconda installed on your system yet, follow [these instructions](https://bioconda.github.
 io/user/install.html) to set it up. You can then install secedo using:
-```bash
+```console
 conda install secedo
 ```
 ## Building from source (Mac or Linux)
@@ -21,7 +21,7 @@ conda install secedo
 * openblas
 
 Clone the latest version of the code from the git repository:
-```
+```console
 git clone https://github.com/ratschlab/secedo.git
 ```
 * `sudo apt-get install libblas-dev` (Linux) or `brew install cmake gcc@9 libomp openblas` (for Mac, for M1 Macs remove gcc@9)
