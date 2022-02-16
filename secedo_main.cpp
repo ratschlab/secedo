@@ -152,6 +152,10 @@ DEFINE_string(clustering,
 
 //============================================================================
 int main(int argc, char *argv[]) {
+    if (argc == 1) {
+        gflags::ShowUsageWithFlags(argv[0]);
+        exit(1);
+    }
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     spdlog::set_level(spdlog::level::from_str(FLAGS_log_level));

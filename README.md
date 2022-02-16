@@ -11,7 +11,7 @@ withultra-low coverage](coming soon)
 If you don't have conda/bioconda installed on your system yet, follow [these instructions](https://bioconda.github.
 io/user/install.html) to set it up. You can then install secedo using:
 ```console
-conda install secedo
+conda install -c conda-forge -c bioconda secedo
 ```
 ## Building from source (Mac or Linux)
 ### Prerequisites
