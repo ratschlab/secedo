@@ -6,20 +6,20 @@ clustering of the cells and, optionally, VCF files pinpointing the changes relat
 `SECEDO` is descirbed in detail in the following paper: [Clustering cells based on single-cell DNA-sequencing data 
 withultra-low coverage](coming soon)
 
-## Prerequisites
+# Installation
+## Using bioconda
+If you don't have conda/bioconda installed on your system yet, follow [these instructions](https://bioconda.github.
+io/user/install.html) to set it up. You can then install secedo using:
+```bash
+conda install secedo
+```
+## Building from source (Mac or Linux)
+### Prerequisites
 * GNU GCC with C++17 (gcc-8.0.1 or higher), LLVM Clang (clang-7 or higher), or AppleClang
 * cmake 3.13 or newer
 * omp
 * openblas
 
-## Installation
-### Using bioconda
-If you don't have conda/bioconda installed on your system yet, follow [these instructions](https://bioconda.github.
-io/user/install.html) to set it up. You can then install secedo using:
-```asm
-conda install secedo
-```
-### Building from source (Mac or Linux)
 Clone the latest version of the code from the git repository:
 ```
 git clone https://github.com/ratschlab/secedo.git
