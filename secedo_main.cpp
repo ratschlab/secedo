@@ -156,6 +156,7 @@ int main(int argc, char *argv[]) {
         gflags::ShowUsageWithFlags(argv[0]);
         exit(1);
     }
+    gflags::SetUsageMessage("secedo -i <input_dir> -o <output_dir> arguments");
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     spdlog::set_level(spdlog::level::from_str(FLAGS_log_level));
