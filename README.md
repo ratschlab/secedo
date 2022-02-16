@@ -13,11 +13,17 @@ withultra-low coverage](coming soon)
 * openblas
 
 ## Installation
+### Using bioconda
+If you don't have conda/bioconda installed on your system yet, follow [these instructions](https://bioconda.github.
+io/user/install.html) to set it up. You can then install secedo using:
+```asm
+conda install secedo
+```
+### Building from source (Mac or Linux)
 Clone the latest version of the code from the git repository:
 ```
 git clone https://github.com/ratschlab/secedo.git
 ```
-### Building (Mac or Linux)
 * `sudo apt-get install libblas-dev` (Linux) or `brew install cmake gcc@9 libomp openblas` (for Mac, for M1 Macs remove gcc@9)
 * `mkdir secedo/build; cd secedo/build` 
 * `cmake .. -DCMAKE_BUILD_TYPE=Release` (Linux and M1 Macs) or `cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/local/bin/gcc-9 -DCMAKE_CXX_COMPILER=/usr/local/bin/g++-9 ..` (for Intel-based Macs)
