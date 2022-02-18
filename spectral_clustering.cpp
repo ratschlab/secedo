@@ -284,7 +284,7 @@ uint32_t spectral_clustering(const Matd &similarity,
     // stop if either we couldn't fit the 2/3-component GMMs or if the 1-component GMM fits better
     bool is_done = (!statuses[1] && !statuses[2] && !statuses[3]) || termination == Termination::AIC
             ? (aics[0] < aics[1] && aics[0] < aics[2] && aics[0] < aics[3])
-            : (bics[0] < bics[1] && bics[0] < bics[2] && aics[0] < aics[3]);
+            : (bics[0] < bics[1] && bics[0] < bics[2] && bics[0] < bics[3]);
     if (is_done) {
         logger()->trace("Simple Gaussian Model matches data better - stopping the clustering");
         return 1;

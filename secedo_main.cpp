@@ -23,7 +23,7 @@ DEFINE_double(mutation_rate,
 // as 'interesting' due to sequencing errors)
 DEFINE_double(homozygous_filtered_rate,
               0.5,
-              "The faction of homozygous non-informative loci, i.e. the probability that cells "
+              "The fraction of homozygous non-informative loci, i.e. the probability that cells "
               "at a filtered locus actually have identical homozygous genotype.");
 
 // While the value above refers to the filtered loci, this value refers to all loci and it simply
