@@ -211,7 +211,7 @@ TEST_P(DivideClusters, TwoClusters) {
     auto [clustering, termination, use_arma_kmeans] = GetParam();
 
     // generate data for 100 cells, divided into 2 groups of 50 cells
-    constexpr uint32_t num_cells = 200;
+    constexpr uint32_t num_cells = 100;
     constexpr uint32_t num_pos = 5000; // total positions, about half will be significant
     constexpr double avg_coverage = 0.2; // average per-cell coverage
 
