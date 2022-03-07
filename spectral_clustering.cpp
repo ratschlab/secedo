@@ -151,10 +151,10 @@ uint32_t spectral_clustering(const Matd &similarity,
         }
     }
 
-    // decide if it seems there are two different clusters, by fitting a Gaussian Mixture Model to
-    // the first 5 eigenvectors. We fit one model with 1 component, and one model with 2 components,
-    // and then we compare which model fits the data best using AIC and BIC we assume the
-    // coordinates for cells within one cluster are normally distributed
+    // decide if it seems there are two or more different clusters, by fitting a Gaussian Mixture
+    // Model to the first 5 eigenvectors. We fit one model with 1 component, one model with 2
+    // components, etc. and then we compare which model fits the data best using AIC and BIC we
+    // assume the coordinates for cells within one cluster are normally distributed
     // ->fit a Gaussian Mixture Model with 1 component and 2 components, compare using AIC, BIC
 
     if (eigenvectors.n_cols < 2) {
@@ -163,12 +163,12 @@ uint32_t spectral_clustering(const Matd &similarity,
     }
 
     // the first 5 non-trivial eigenvectors used for GMM
-    arma::mat cell_coord = eigenvectors.cols(1, std::min(5ull, eigenvectors.n_cols - 1)).t();
+    arma::mat cell_coord_1_5 = eigenvectors.cols(1, std::min(5ull, eigenvectors.n_cols - 1)).t();
 
     constexpr uint32_t max_clusters = 4;
 
-    // the first 3 eigenvectors (including trivial), used for the k-means classification
-    arma::mat eigenv
+    // the first 2 eigenvectors (including trivial), used for the k-means classification
+    arma::mat cell_coord_0_2
             = eigenvectors.cols(0, std::min(2U, static_cast<uint32_t>(eigenvectors.n_cols - 1)));
 
     std::vector<arma::gmm_full> gmms(max_clusters);
@@ -180,16 +180,17 @@ uint32_t spectral_clustering(const Matd &similarity,
     std::vector<bool> statuses(max_clusters);
 
     for (uint32_t i = 0; i < max_clusters; ++i) {
-        statuses[i] = gmms[i].learn(cell_coord, i + 1 /* components */, arma::eucl_dist,
+        statuses[i] = gmms[i].learn(cell_coord_1_5, i + 1 /* components */, arma::eucl_dist,
                                     arma::random_subset, 10, 5, 1e-10, false);
-        aics[i] = aic(gmms[i], cell_coord);
-        bics[i] = bic(gmms[i], cell_coord);
-        gmm_probs[i] = gmms[i].avg_log_p(cell_coord);
+        aics[i] = aic(gmms[i], cell_coord_1_5);
+        bics[i] = bic(gmms[i], cell_coord_1_5);
+        gmm_probs[i] = gmms[i].avg_log_p(cell_coord_1_5);
         KMeans kmeans;
-        kmeans.run(eigenv, i + 1, 100, 10);
+        kmeans.run(cell_coord_0_2, i + 1, 100, 10);
         inertia[i] = kmeans.inertia();
     }
 
+    // the gaps are only used to decide if we attempt to cluster in 2, 3 or 4 groups
     for (uint32_t i = 1; i < max_clusters; ++i) {
         gaps[i - 1] = inertia[i - 1] - inertia[i];
     }
@@ -283,8 +284,8 @@ uint32_t spectral_clustering(const Matd &similarity,
 
     // stop if either we couldn't fit the 2/3-component GMMs or if the 1-component GMM fits better
     bool is_done = (!statuses[1] && !statuses[2] && !statuses[3]) || termination == Termination::AIC
-            ? (aics[0] < aics[1] && aics[0] < aics[2] && aics[0] < aics[3])
-            : (bics[0] < bics[1] && bics[0] < bics[2] && bics[0] < bics[3]);
+            ? (aics[0] < std::min({ aics[1], aics[2], aics[3] }))
+            : (bics[0] < std::min({ bics[1], bics[2], bics[3] }));
     if (is_done) {
         logger()->trace("Simple Gaussian Model matches data better - stopping the clustering");
         return 1;
@@ -387,7 +388,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
     std::vector<std::vector<uint32_t>> id_to_pos_new(
             num_clusters, std::vector<uint32_t>(id_to_pos.size(), NO_POS));
 
-    //TODO: move this computation out of the function
+    // TODO: move this computation out of the function
     std::unordered_map<uint16_t, std::vector<uint16_t>> group_id_to_cell_ids;
     for (uint32_t i = 0; i < id_to_group.size(); ++i) {
         group_id_to_cell_ids[id_to_group[i]].push_back(i);
@@ -399,14 +400,14 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
             if (std::abs(cluster[cell_idx] - c) < 0.05) {
                 id_to_pos_new[c][group_id] = pos_to_id_new[c].size();
                 pos_to_id_new[c].push_back(group_id);
-                for (uint32_t cell_id: group_id_to_cell_ids[group_id]) {
+                for (uint32_t cell_id : group_id_to_cell_ids[group_id]) {
                     clusters->at(cell_id) = *cluster_idx + c;
                 }
                 assigned = true;
             }
         }
         if (!assigned) { // set to 0 cluster id of cells that couldn't be assigned to a cluster
-            for (uint32_t cell_id: group_id_to_cell_ids[group_id]) {
+            for (uint32_t cell_id : group_id_to_cell_ids[group_id]) {
                 clusters->at(cell_id) = 0;
             }
         }

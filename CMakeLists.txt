@@ -109,7 +109,7 @@ file(COPY tests/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 install(
     TARGETS pileup variant_calling similarity_matrix spectral_clustering expectation_maximization BamTools util
-    progress_bar armadillo spdlog
+    progress_bar armadillo spdlog pileup_lib
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

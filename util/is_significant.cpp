@@ -5,6 +5,8 @@
 #include <cfenv>
 #include <numeric>
 
+// these values were computed using scripts/K.r and correspond to the optimal threshold (acc to
+// Youden's J) for a 50-50 split between cells
 std::vector<double> Filter::Ks = {
     -1.601,  -1.394,  -1.386,  -1.386,  -1.386,  -1.399,   -3.673,   -11.48,  -27.492,  -43.502,
     -43.502, -75.524, -59.513, -83.529, -91.535, -123.556, -131.562, -139.56, -163.583, -163.583

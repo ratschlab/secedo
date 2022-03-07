@@ -46,7 +46,7 @@ Termination parse_termination(const std::string &str_termination);
 Matd laplacian(const Matd &a);
 
 /**
- * Clusters a group of points defined by the similarity matrix into 2 groups.
+ * Clusters a group of points defined by the similarity matrix into 2 to 4 groups.
  * @param similarity square matrix with elements in [0,1]. similarity[i][j] measures the similarity
  * between point i and point j, where 1 means identical and 0 means not at all similar.
  * @param clustering the clustering variant to use
