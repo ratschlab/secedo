@@ -53,8 +53,11 @@ This will run the clustering and variant calling on the pileup files available i
 
 You will need enough RAM to fit the pileups and a bit of extra - we were able to process 8K cells in 32GB of RAM, so this shouldn't be an issue. 
 
-Take a look at [breast_cancer/variant_call.sh](https://github.
-com/ratschlab/secedo/blob/main/experiments/breast_cancer/variant_call.sh) for inspiration on how to use `SECEDO`.
+Take a look at [breast_cancer/variant_call.sh](https://github.com/ratschlab/secedo/blob/main/experiments/breast_cancer/variant_call.sh) for inspiration on how to use `SECEDO`.
+
+# Evaluation
+SECEDO was evaluated on synthetic and real datasets. [This repository](https://github.com/ratschlab/secedo-evaluation/) () contains all the evaluation results.
+
 
 ## FAQ
 ### Installation
