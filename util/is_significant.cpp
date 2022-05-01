@@ -65,7 +65,9 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
         return false;
     }
 
-    if (base_count[2] + base_count[1] + base_count[0] < 5) { // not convincing
+    // as simple as it looks, this condition improves results on the synthetic dataset
+    // see https://github.com/ratschlab/secedo-evaluation/commit/9822fcc63e028011eaa1e60c398101021e0eb64c
+    if (base_count[2] + base_count[1] + base_count[0] < 5) {
         return false;
     }
 
