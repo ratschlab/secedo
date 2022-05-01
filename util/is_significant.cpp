@@ -14,8 +14,10 @@ std::vector<double> Filter::Ks = {
 
 
 const double log_1_4 = std::log(1. / 4);
-const double hetero_prior = 0.001;
-const double mut_prior = 0.001; // very generous, it's typically 1e-5 or less
+// based on Bryc, K., Patterson, N., and Reich, D. (2013). A novel approach
+// to estimating heterozygosity from low-coverage genome sequence.
+const double hetero_prior = 0.0005;
+const double mut_prior = 1e-6; // very generous, it's typically 1e-5 or less
 const double homo_prior = 1 - hetero_prior - mut_prior; // not hetero and no somatic mutation
 const double log_homo_prior = std::log(hetero_prior);
 
