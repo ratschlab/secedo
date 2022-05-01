@@ -150,6 +150,10 @@ uint8_t chromosome_to_id(const std::string &chromosome) {
         }
         return (chromosome == "X") ? 22 : 23;
     } else {
+        if (converted > 22) {
+            logger()->error("Invalid chromosome: {}. Must be 1..22, X, Y", chromosome);
+            std::exit(1);
+        }
         return converted - 1;
     }
 }
