@@ -65,6 +65,10 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
         return false;
     }
 
+    if (base_count[2] + base_count[1] + base_count[0] < 5) { // not convincing
+        return false;
+    }
+
     if (base_count[3] < 1.5 * base_count[2]) {
         return false;
     }
