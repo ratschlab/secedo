@@ -7,10 +7,13 @@
 
 // these values were computed using scripts/K.r and correspond to the optimal threshold (acc to
 // Youden's J) for a 50-50 split between cells
-std::vector<double> Filter::Ks = {
-    -1.601,  -1.394,  -1.386,  -1.386,  -1.386,  -1.399,   -3.673,   -11.48,  -27.492,  -43.502,
-    -43.502, -75.524, -59.513, -83.529, -91.535, -123.556, -131.562, -139.56, -163.583, -163.583
-};
+// new values. computed for p_mut=1e-6, p_het=5e-4
+std::vector<double> Filter::Ks
+        = { -1.52859626647315, -1.38967447346712, -1.38787138908447, -1.38780282263764,
+            -1.387805349423,   -1.38882047800373, -1.49793700616569, -6.19975747800726,
+            -22.197881249831,  -38.2046765807324, -38.2046769835162, -70.2261446634383,
+            -54.2154105303641, -78.2315117307532, -86.2368787980699, -118.258347067337,
+            -126.263714134653, -134.26908120197,  -158.28518240392,  -158.28518240392 };
 
 
 const double log_1_4 = std::log(1. / 4);
@@ -66,7 +69,8 @@ bool Filter::is_significant(std::array<uint16_t, 4> &base_count) {
     }
 
     // as simple as it looks, this condition improves results on the synthetic dataset
-    // see https://github.com/ratschlab/secedo-evaluation/commit/9822fcc63e028011eaa1e60c398101021e0eb64c
+    // see
+    // https://github.com/ratschlab/secedo-evaluation/commit/9822fcc63e028011eaa1e60c398101021e0eb64c
     if (base_count[2] + base_count[1] + base_count[0] < 5) {
         return false;
     }

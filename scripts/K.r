@@ -6,9 +6,9 @@
 
 ### Euler number
 e <- exp(1)
-homo_prior = 0.998
-hetero_prior = 1e-3
-mut_prior = 1e-5
+hetero_prior = 0.0005
+mut_prior = 1e-6
+homo_prior = 1 - hetero_prior - mut_prior
 factorials = NULL
 
 comp_fact <- function() {
