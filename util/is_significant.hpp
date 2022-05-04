@@ -14,11 +14,12 @@ class Filter {
   private:
     // thresholds K to use for pre-processing; values for coverage 10, 20, 30, ... 200
     // always the largest values for any tumour proportion, rounded up to one decimal place
-    static std::vector<double> Ks;
+    static std::vector<std::vector<double>> Ks;
 
     std::vector<double> log_factorial;
 
     double theta;
+    uint8_t cell_proportion;
     double log_theta_3;
     double log_one_minus_theta;
 
@@ -27,8 +28,16 @@ class Filter {
   public:
     /**
      * @param theta sequencing error rate (e.g. ~0.01 on Illumina machines with phred > 20)
+     * @param cell_proportion estimated proportion for the cells in the 2 clusters. This is
+     * always 4 (corresponding to 50%), except at the first level of clustering when users
+     * may specify an estimated tumor proportion). Valid values are:
+     *  0: 10-90 split
+     *  1: 20-80 split
+     *  2: 30-70 split
+     *  3: 40-60 split
+     *  4: 50-50 split
      */
-    Filter(double theta);
+    Filter(double theta, uint8_t cell_proportion = 4);
 
     /**
      * Decides if a given position is worth keeping, i.e. it will be useful in distinguishing cell

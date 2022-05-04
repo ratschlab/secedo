@@ -66,6 +66,15 @@ DEFINE_string(clustering_type,
               "SPECTRAL6",
               "How to perform spectral clustering. One of FIEDLER, SPECTRAL2, SPECTRAL6. "
               "See spectral_clustering.hpp for details.");
+static bool ValidateClusteringType(const char *flagname, const std::string &value) {
+    if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6") {
+        printf("Invalid value for --%s: %s.\nShould be one of FIEDLER, SPECTRAL2, SPECTRAL6\n",
+               flagname, value.c_str());
+        return false;
+    }
+    return true;
+}
+DEFINE_validator(clustering_type, ValidateClusteringType);
 
 DEFINE_bool(expectation_maximization,
             false,
@@ -82,15 +91,20 @@ DEFINE_string(map_file,
               "If not empty, maps positions in --reference_genome to positions in the haploid "
               "genome that --reference_genome is based on (e.g. to GRCh38)");
 
-static bool ValidateClusteringType(const char *flagname, const std::string &value) {
-    if (value != "FIEDLER" && value != "SPECTRAL2" && value != "SPECTRAL6") {
-        printf("Invalid value for --%s: %s.\nShould be one of FIEDLER, SPECTRAL2, SPECTRAL6\n",
-               flagname, value.c_str());
+static bool ValidateTumorPurity(const char *flagname, uint32_t value) {
+    if (value <1 || value >5) {
+        printf("Invalid value for --%s: %s.\nShould be 1,2,3,4, or 5\n",
+               flagname, std::to_string(value).c_str());
         return false;
     }
     return true;
 }
-DEFINE_validator(clustering_type, ValidateClusteringType);
+DEFINE_uint32(tumor_purity,
+             5U,
+             "Estimated tumor purity (proportion of healthy vs total cells). Only used in "
+             "the first level of clustering. Values can be 1->10%/90%, 2->20%/80%, 3->30%/70%, "
+             "4->40%/60% or 5->50%");
+DEFINE_validator(tumor_purity, ValidateTumorPurity);
 
 DEFINE_uint32(min_cluster_size,
               100,
@@ -283,7 +297,7 @@ int main(int argc, char *argv[]) {
                        FLAGS_mutation_rate, FLAGS_homozygous_filtered_rate, FLAGS_seq_error_rate,
                        FLAGS_num_threads, FLAGS_o, FLAGS_normalization, FLAGS_termination,
                        FLAGS_clustering_type, FLAGS_arma_kmeans, FLAGS_expectation_maximization,
-                       FLAGS_min_cluster_size, "", &clusters, &cluster_idx);
+                       FLAGS_min_cluster_size, FLAGS_tumor_purity - 1, "", &clusters, &cluster_idx);
     } else {
         logger()->info("Using provided clustering file {}", FLAGS_clustering);
         clusters = int_split<uint16_t>(read_file(FLAGS_clustering), ',');

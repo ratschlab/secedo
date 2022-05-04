@@ -4,13 +4,13 @@ project(SNVBasedClustering)
 #set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /opt/local/lib)
 #set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} /opt/local/include)
 
+# no warnings
+string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Wfatal-errors ${OpenMP_CXX_FLAGS}")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 find_package(OpenMP REQUIRED)
-# no warnings
-string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Wfatal-errors ${OpenMP_CXX_FLAGS}")
 
 # only use sse4 on x86 processor (i.e. not on ARM-based M1 Macs)
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
@@ -32,9 +32,6 @@ target_compile_options(progress_bar PUBLIC -fPIC)
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 
-# added later because gflags has errors on GCC
-string(APPEND CMAKE_CXX_FLAGS " -Werror")
-
 # Armadillo Linear algebra library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/armadillo-10.3.0 EXCLUDE_FROM_ALL)
 target_compile_options(armadillo PUBLIC -Wno-unused-parameter)
@@ -46,6 +43,8 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/spdlog EXCLUDE_FROM_ALL)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/bamtools/src)
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/bamtools EXCLUDE_FROM_ALL)
 
+# added later because gflags and bamtools have warnings on Clang and GCC
+string(APPEND CMAKE_CXX_FLAGS " -Werror")
 
 file(GLOB util_files util/*.cpp)
 add_library(util ${util_files})

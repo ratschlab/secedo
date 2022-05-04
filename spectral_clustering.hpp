@@ -93,6 +93,12 @@ uint32_t spectral_clustering(const Matd &similarity,
  * @param out_dir where to output the clustering results
  * @param normalization the type of normalization to use for the similiarity matrix (see the flag
  * with the same name)
+ * @param termination_str termination condition type (AIC or BIC)
+ * @param clustering_type_str type of clustering (FIDLER, SPECTRAL2 or SPECTRAL6)
+ * @param use_arma_kmeans if true, use Armadillo to compute kmneans rather than our own function
+ * @param use_expectation_maximization if true, refine clustering using EM
+ * @param min_cluster_size don't subdivide clusters with fewer elements than this
+ * @param cell_proportion the estimated proportion of cells, assuming a 2-way cluster
  * @param marker marks the current sub-cluster; for example AB means we are in the second
  * sub-cluster (B) of the first cluster (A)
  * @param[in, out] clusters vector of size num_cells, will contain the final clustering assignment.
@@ -116,6 +122,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
                     bool use_arma_kmeans,
                     bool use_expectation_maximization,
                     uint32_t min_cluster_size,
+                    uint8_t cell_proportion,
                     const std::string marker,
                     std::vector<uint16_t> *clusters,
                     uint16_t *cluster_idx);

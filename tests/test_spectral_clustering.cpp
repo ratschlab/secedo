@@ -255,7 +255,7 @@ TEST_P(DivideClusters, TwoClusters) {
     uint16_t cluster_idx = 1;
     divide_cluster({ pds }, max_read_length, id_to_group, id_to_pos, pos_to_id, mutation_rate,
                    homozygous_rate, seq_error_rate, num_threads, "data/", normalization, "BIC",
-                   clustering, use_arma_kmeans, false, min_cluster_size, "", &clusters,
+                   clustering, use_arma_kmeans, false, min_cluster_size, 4, "", &clusters,
                    &cluster_idx);
 
     uint32_t num_clusters = *std::max_element(clusters.begin(), clusters.end());

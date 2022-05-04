@@ -324,6 +324,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
                     bool use_arma_kmeans,
                     bool use_expectation_maximization,
                     uint32_t min_cluster_size,
+                    uint8_t cell_proportion,
                     const std::string marker,
                     std::vector<uint16_t> *clusters,
                     uint16_t *cluster_idx) {
@@ -426,7 +427,7 @@ void divide_cluster(const std::vector<std::vector<PosData>> &pds,
             divide_cluster(pds, max_read_length, id_to_group, id_to_pos_new[c], pos_to_id_new[c],
                            mutation_rate, homozygous_rate, seq_error_rate, num_threads, out_dir,
                            normalization, termination_str, clustering_type_str, use_arma_kmeans,
-                           use_expectation_maximization, min_cluster_size,
+                           use_expectation_maximization, min_cluster_size, 4 /* 50-50 split*/,
                            marker + static_cast<char>('A' + c), clusters, cluster_idx);
         }
     }
